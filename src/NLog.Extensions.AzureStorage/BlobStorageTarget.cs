@@ -107,7 +107,7 @@ namespace NLog.Extensions.AzureStorage
                     //add each message for the destination append blob
                     foreach (var asyncLogEventInfo in blobBucket.Value)
                     {
-                        logMessage.AppendLine(asyncLogEventInfo.LogEvent.FormattedMessage);
+                        logMessage.AppendLine(Layout.Render(asyncLogEventInfo.LogEvent));
                     }
 
                     _appendBlob.AppendText(logMessage.ToString());
