@@ -28,7 +28,8 @@ namespace NLog.Extensions.AzureStorage
             foreach (var input in inputs)
             {
                 var keyValue = keySelector(input);
-                if (!retVal.TryGetValue(keyValue, out List<TValue> eventsInBucket))
+                var eventsInBucket = new List<TValue>();
+                if (!retVal.TryGetValue(keyValue, out eventsInBucket))
                 {
                     eventsInBucket = new List<TValue>();
                     retVal.Add(keyValue, eventsInBucket);

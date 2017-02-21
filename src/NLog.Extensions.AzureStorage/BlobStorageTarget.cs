@@ -181,7 +181,7 @@ namespace NLog.Extensions.AzureStorage
                 Container names must be from 3 through 63 characters long.
             */
             InternalLogger.Trace("Requested Container Name: {0}", requestedContainerName);
-            var validContainerPattern = "^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$";
+            const string validContainerPattern = "^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$";
             var loweredRequestedContainerName = requestedContainerName.ToLower();
             if (Regex.Match(loweredRequestedContainerName, validContainerPattern).Success)
             {
@@ -190,10 +190,10 @@ namespace NLog.Extensions.AzureStorage
                 return loweredRequestedContainerName;
             }
             InternalLogger.Trace("Requested Container Name violates Azure naming rules! Attempting to clean.");
-            var trimLeadingPattern = "^.*?(?=[a-zA-Z0-9])";
-            var trimTrailingPattern = "(?<=[a-zA-Z0-9]).*?";
-            var trimFobiddenCharactersPattern = "[^a-zA-Z0-9-]";
-            var trimExtraHyphensPattern = "-+";
+            const string trimLeadingPattern = "^.*?(?=[a-zA-Z0-9])";
+            const string trimTrailingPattern = "(?<=[a-zA-Z0-9]).*?";
+            const string trimFobiddenCharactersPattern = "[^a-zA-Z0-9-]";
+            const string trimExtraHyphensPattern = "-+";
 
             var pass1 = Regex.Replace(requestedContainerName, trimFobiddenCharactersPattern, String.Empty, RegexOptions.None);
             var pass2 = Regex.Replace(pass1, trimTrailingPattern, String.Empty, RegexOptions.RightToLeft);
