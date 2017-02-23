@@ -8,6 +8,7 @@ using NLog.Common;
 using NLog.Config;
 using NLog.Layouts;
 using NLog.Targets;
+using Microsoft.Azure;
 
 namespace NLog.Extensions.AzureStorage
 {
@@ -26,8 +27,8 @@ namespace NLog.Extensions.AzureStorage
         private SortHelpers.KeySelector<AsyncLogEventInfo, string> _getBlobNameDelegate;
         private SortHelpers.KeySelector<AsyncLogEventInfo, string> _getContainerNameDelegate;
 
-        [RequiredParameter]
         public string ConnectionString { get; set; }
+        public string ConnectionStringKey { get; set; }
 
         [RequiredParameter]
         public Layout Container { get; set; }
@@ -42,6 +43,15 @@ namespace NLog.Extensions.AzureStorage
         protected override void InitializeTarget()
         {
             base.InitializeTarget();
+            if(String.IsNullOrWhiteSpace(ConnectionString) && !String.IsNullOrWhiteSpace(ConnectionStringKey))
+            {
+                ConnectionString = CloudConfigurationManager.GetSetting(ConnectionStringKey);
+            }
+            if (String.IsNullOrWhiteSpace(ConnectionString))
+            {
+                InternalLogger.Error("AzureBlobStorageWrapper: A ConnectionString or ConnectionStringKey is required.");
+                throw new Exception("A ConnectionString or ConnectionStringKey is required");
+            }
             _client = CloudStorageAccount.Parse(ConnectionString).CreateCloudBlobClient();
 
             InternalLogger.Trace("AzureBlobStorageWrapper - Initialized");

@@ -33,7 +33,7 @@ namespace NLog.Extensions.AzureStorage.IntegrationTest
             {
                 logger.Error("We threw an exception", ex);
             }
-            
+
             Console.ReadLine();
         }
     }
