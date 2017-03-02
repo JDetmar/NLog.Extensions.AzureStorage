@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>NLog.Extensions.AzureStorage</id>
+    <version>$BuildVersion$</version>
+    <title>NLog.Extensions.AzureStorage</title>
+    <authors>jdetmar</authors>
+    <owners>jdetmar</owners>
+    <licenseUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>NLog target that supports Blob and table storage in single nuget package.
+Can use queued batches to greatly improve performance. Recommended to use as a async target.</description>
+    <releaseNotes>Initial version.</releaseNotes>
+    <copyright>Copyright 2017</copyright>
+    <tags>nlog azure blob target</tags>
+	<dependencies>
+          <dependency id="NLog" version="4.4.2" />
+          <dependency id="WindowsAzure.Storage" version="5.0.2" />
+        </dependencies>
+  </metadata>
+</package>

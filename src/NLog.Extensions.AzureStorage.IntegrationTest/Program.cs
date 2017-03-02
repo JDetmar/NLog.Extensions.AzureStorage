@@ -21,7 +21,7 @@ namespace NLog.Extensions.AzureStorage.IntegrationTest
                 logger.Info("Info Message: " + i);
                 logger.Warn("Warn Message: " + i);
                 logger.Error("Error Message: " + i);
-                logger.Fatal("Fata Message: " + i);
+                logger.Fatal("Fatal Message: " + i);
                 Thread.Sleep(10);
             }
 
@@ -31,7 +31,7 @@ namespace NLog.Extensions.AzureStorage.IntegrationTest
             }
             catch (Exception ex)
             {
-                logger.Error("We threw an exception", ex);
+                logger.Error(ex, "We threw an exception");
             }
 
             Console.ReadLine();
