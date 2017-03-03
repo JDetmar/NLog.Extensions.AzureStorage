@@ -8,6 +8,7 @@
     <owners>jdetmar</owners>
     <licenseUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/LICENSE</licenseUrl>
     <projectUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage</projectUrl>
+	  <iconUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/raw/master/logo64.png?raw=true</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>NLog target that supports Blob and table storage in single nuget package.
 Can use queued batches to greatly improve performance. Recommended to use as a async target.</description>
