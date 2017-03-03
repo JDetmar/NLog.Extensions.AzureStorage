@@ -21,4 +21,4 @@ after_build:
 
     nuget pack NLog.Extensions.AzureStorage\NLog.Extensions.AzureStorage.nuspec
 artifacts:
-- path: '**\NLog.Extensions.AzureStorage.nupkg'
+- path: '**\NLog.Extensions.AzureStorage*.nupkg'
