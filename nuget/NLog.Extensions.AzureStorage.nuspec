@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>NLog.Extensions.AzureStorage</id>
-    <version>$version$</version>
+    <version>1.0.4</version>
     <title>NLog.Extensions.AzureStorage</title>
     <authors>jdetmar</authors>
     <owners>jdetmar</owners>
