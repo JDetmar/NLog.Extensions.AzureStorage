@@ -1,37 +1,87 @@
-## Welcome to GitHub Pages
+# NLog.Extensions.AzureStorage [![AppVeyor](https://img.shields.io/appveyor/ci/JDetmar/nlog-extensions-azurestorage.svg)](https://ci.appveyor.com/project/JDetmar/nlog-extensions-azurestorage) [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureStorage.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureStorage/)
 
-You can use the [editor on GitHub](https://github.com/JDetmar/NLog.Extensions.AzureStorage/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+![logo](logo64.png?raw=true)
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+NLog Target for Azure Blob and Table Storage.
 
-### Markdown
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+## Blob Configuration
 
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+### Syntax
+```xml
+<targets>
+  <target xsi:type="AzureBlobStorage"
+          name="String"
+          layout="Layout"
+          blobName="Layout"
+          connectionString="String"
+          connectionStringKey="String"
+          container="Layout" />
+</targets>
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
 
-### Jekyll Themes
+### Parameters
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/JDetmar/NLog.Extensions.AzureStorage/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+_name_ - Name of the target.
 
-### Support or Contact
+_layout_ - Text to be rendered. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required. 
 
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+_blobName_ - BlobName. [Layout](https://github.com/NLog/NLog/wiki/Layouts)  
+
+_connectionString_ - Azure storage connection string. Must provide either _connectionString_ or _connectionStringKey_.
+
+_connectionStringKey_ - App key name of Azure storage connection string. Must provide either _connectionString_ or _connectionStringKey_.
+
+_container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+
+
+## Table Configuration
+
+### Syntax
+```xml
+<targets>
+  <target xsi:type="AzureTableStorage"
+          name="String"
+          layout="Layout"
+          connectionString="String"
+          connectionStringKey="String"
+          tableName="Layout" />
+</targets>
+```
+### Parameters
+
+_name_ - Name of the target.
+
+_layout_ - Text to be rendered. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required. 
+
+_connectionString_ - Azure storage connection string. Must provide either _connectionString_ or _connectionStringKey_.
+
+_connectionStringKey_ - App key name of Azure storage connection string. Must provide either _connectionString_ or _connectionStringKey_.
+
+_tableName_ - Azure table name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+
+
+## Sample Configuration
+
+```xml
+<targets async="true">
+    <target type="AzureBlobStorage"
+            name="AzureEmulator"
+            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
+            connectionString="UseDevelopmentStorage=true;"
+            container="${level}"
+            blobName="${date:universalTime=true:format=yyyy-MM-dd}/${date:universalTime=true:format=HH}.log" />
+    <target type="AzureBlobStorage"
+            name="Azure"
+            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
+            connectionStringKey="storageConnectionString"
+            container="${machinename}"
+            blobName="${logger}/${date:universalTime=true:format=yy-MM-dd}/${date:universalTime=true:format=mm}.log" />
+    <target type="AzureTableStorage"
+            name="AzureTable"
+            connectionStringKey="storageConnectionString"
+            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
+            tableName="NlogTable" />
+</targets>
+```
