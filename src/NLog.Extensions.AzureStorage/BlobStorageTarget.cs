@@ -9,6 +9,7 @@ using NLog.Config;
 using NLog.Layouts;
 using NLog.Targets;
 using Microsoft.Azure;
+using System.Configuration;
 
 namespace NLog.Extensions.AzureStorage
 {
@@ -43,14 +44,28 @@ namespace NLog.Extensions.AzureStorage
         protected override void InitializeTarget()
         {
             base.InitializeTarget();
-            if(String.IsNullOrWhiteSpace(ConnectionString) && !String.IsNullOrWhiteSpace(ConnectionStringKey))
+            if (String.IsNullOrWhiteSpace(ConnectionString) && !String.IsNullOrWhiteSpace(ConnectionStringKey))
             {
                 ConnectionString = CloudConfigurationManager.GetSetting(ConnectionStringKey);
             }
             if (String.IsNullOrWhiteSpace(ConnectionString))
             {
-                InternalLogger.Error("AzureBlobStorageWrapper: A ConnectionString or ConnectionStringKey is required.");
-                throw new Exception("A ConnectionString or ConnectionStringKey is required");
+                var cs = ConfigurationManager.ConnectionStrings[ConnectionStringKey];
+                if (cs == null)
+                {
+                    InternalLogger.Error("AzureBlobStorageWrapper: A ConnectionString or ConnectionStringKey is required.");
+                    throw new Exception("A ConnectionString or ConnectionStringKey is required");
+                }
+                else
+                {
+                    ConnectionString = cs.ConnectionString;
+                }
+
+                if (String.IsNullOrWhiteSpace(ConnectionString))
+                {
+                    InternalLogger.Error("AzureBlobStorageWrapper: A ConnectionString or ConnectionStringKey is required.");
+                    throw new Exception("A ConnectionString or ConnectionStringKey is required");
+                }
             }
             _client = CloudStorageAccount.Parse(ConnectionString).CreateCloudBlobClient();
 
@@ -92,7 +107,7 @@ namespace NLog.Extensions.AzureStorage
                 _getContainerNameDelegate = c => Container.Render(c.LogEvent);
 
             var containerBuckets = SortHelpers.BucketSort(logEvents, _getContainerNameDelegate);
-            
+
             //Iterate over all the containers being written to
             foreach (var containerBucket in containerBuckets)
             {
@@ -166,7 +181,7 @@ namespace NLog.Extensions.AzureStorage
                 }
                 catch (StorageException storageException)
                 {
-                    InternalLogger.Error(storageException,"NLog.Extensions.AzureStorage failed to get a reference to storage container.");
+                    InternalLogger.Error(storageException, "NLog.Extensions.AzureStorage failed to get a reference to storage container.");
                     throw;
                 }
 
