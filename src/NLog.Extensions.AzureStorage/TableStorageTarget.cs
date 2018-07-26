@@ -1,16 +1,16 @@
-﻿using NLog.Targets;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using NLog.Common;
 using NLog.Config;
 using NLog.Layouts;
+using NLog.Targets;
+#if !NETSTANDARD
+using System.Configuration;
 using Microsoft.Azure;
-using Microsoft.WindowsAzure.Storage;
-using System.Text.RegularExpressions;
+#endif
 
 namespace NLog.Extensions.AzureStorage
 {
@@ -23,15 +23,22 @@ namespace NLog.Extensions.AzureStorage
     {
         private CloudTableClient _client;
         private CloudTable _table;
+        private string _machineName;
 
         //Delegates for bucket sorting
         private SortHelpers.KeySelector<AsyncLogEventInfo, string> _getTableNameDelegate;
 
-        public string ConnectionString { get; set; }
+        public string ConnectionString { get => (_connectionString as SimpleLayout)?.Text ?? null; set => _connectionString = value; }
+        private Layout _connectionString;
         public string ConnectionStringKey { get; set; }
 
         [RequiredParameter]
         public Layout TableName { get; set; }
+
+        public TableStorageTarget()
+        {
+            OptimizeBufferReuse = true;
+        }
 
         /// <summary>
         /// Initializes the target. Can be used by inheriting classes
@@ -40,16 +47,31 @@ namespace NLog.Extensions.AzureStorage
         protected override void InitializeTarget()
         {
             base.InitializeTarget();
-            if (String.IsNullOrWhiteSpace(ConnectionString) && !String.IsNullOrWhiteSpace(ConnectionStringKey))
+
+            _machineName = GetMachineName();
+
+            var connectionString = _connectionString != null ? RenderLogEvent(_connectionString, LogEventInfo.CreateNullEvent()) : string.Empty;
+#if !NETSTANDARD
+            if (!string.IsNullOrWhiteSpace(ConnectionStringKey))
             {
-                ConnectionString = CloudConfigurationManager.GetSetting(ConnectionStringKey);
+                connectionString = CloudConfigurationManager.GetSetting(ConnectionStringKey);
+                if (String.IsNullOrWhiteSpace(connectionString))
+                    connectionString = ConfigurationManager.ConnectionStrings[ConnectionStringKey]?.ConnectionString;
+                if (string.IsNullOrWhiteSpace(connectionString))
+                {
+                    InternalLogger.Error($"AzureTableStorageTarget: No ConnectionString found with ConnectionStringKey: {ConnectionStringKey}.");
+                    throw new Exception($"No ConnectionString found with ConnectionStringKey: {ConnectionStringKey}.");
+                }
             }
-            if (String.IsNullOrWhiteSpace(ConnectionString))
+#endif
+
+            if (String.IsNullOrWhiteSpace(connectionString))
             {
-                InternalLogger.Error("AzureTableStorageWrapper: A ConnectionString or ConnectionStringKey is required.");
+                InternalLogger.Error("AzureTableStorageTarget: A ConnectionString or ConnectionStringKey is required.");
                 throw new Exception("A ConnectionString or ConnectionStringKey is required");
             }
-            _client = CloudStorageAccount.Parse(ConnectionString).CreateCloudTableClient();
+
+            _client = CloudStorageAccount.Parse(connectionString).CreateCloudTableClient();
 
             InternalLogger.Trace("AzureTableStorageWrapper - Initialized");
         }
@@ -64,14 +86,14 @@ namespace NLog.Extensions.AzureStorage
             if (String.IsNullOrEmpty(logEvent.Message))
                 return;
 
-            var tempTableName = TableName.Render(logEvent);
+            var tempTableName = RenderLogEvent(TableName, logEvent);
             var tableNameFinal = CheckAndRepairTableNamingRules(tempTableName);
-            var logMessage = string.Concat(Layout.Render(logEvent), Environment.NewLine);
 
             InitializeTable(tableNameFinal);
-            var entity = new NLogEntity(logEvent, Layout);
+            var layoutMessage = RenderLogEvent(Layout, logEvent);
+            var entity = new NLogEntity(logEvent, layoutMessage, _machineName);
             var insertOperation = TableOperation.Insert(entity);
-            _table.Execute(insertOperation);
+            TableExecute(_table, insertOperation);
         }
 
         /// <summary>
@@ -82,6 +104,12 @@ namespace NLog.Extensions.AzureStorage
         /// <param name="logEvents">Logging events to be written out.</param>
         protected override void Write(IList<AsyncLogEventInfo> logEvents)
         {
+            if (logEvents.Count <= 1)
+            {
+                base.Write(logEvents);
+                return;
+            }
+
             //must sort into containers and then into the blobs for the container
             if (_getTableNameDelegate == null)
                 _getTableNameDelegate = c => TableName.Render(c.LogEvent);
@@ -97,17 +125,49 @@ namespace NLog.Extensions.AzureStorage
                 //add each message for the destination table limit batch to 100 elements
                 foreach (var asyncLogEventInfo in tableBucket.Value)
                 {
-                    var entity = new NLogEntity(asyncLogEventInfo.LogEvent, Layout);
+                    var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
+                    var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName);
                     batch.Insert(entity);
                     if (batch.Count == 100)
                     {
-                        _table.ExecuteBatch(batch);
+                        TableExecuteBatch(_table, batch);
                         batch.Clear();
                     }
                 }
-                if(batch.Count > 0)
-                    _table.ExecuteBatch(batch);
+
+                if (batch.Count > 0)
+                    TableExecuteBatch(_table, batch);
+
+                foreach (var asyncLogEventInfo in tableBucket.Value)
+                    asyncLogEventInfo.Continuation(null);
             }
+        }
+
+        private static void TableExecute(CloudTable cloudTable, TableOperation insertOperation)
+        {
+#if NETSTANDARD
+            cloudTable.ExecuteAsync(insertOperation).GetAwaiter().GetResult();
+#else
+            cloudTable.Execute(insertOperation);
+#endif
+        }
+
+        private static void TableExecuteBatch(CloudTable cloudTable, TableBatchOperation batch)
+        {
+#if NETSTANDARD
+            cloudTable.ExecuteBatchAsync(batch).GetAwaiter().GetResult();
+#else
+            cloudTable.ExecuteBatch(batch);
+#endif
+        }
+
+        private void TableCreateIfNotExists(CloudTable cloudTable)
+        {
+#if NETSTANDARD
+            cloudTable.CreateIfNotExistsAsync().GetAwaiter().GetResult();
+#else
+            cloudTable.CreateIfNotExists();
+#endif
         }
 
         /// <summary>
@@ -121,11 +181,11 @@ namespace NLog.Extensions.AzureStorage
                 _table = _client.GetTableReference(tableName);
                 try
                 {
-                    _table.CreateIfNotExists();
+                    TableCreateIfNotExists(_table);
                 }
                 catch (StorageException storageException)
                 {
-                    InternalLogger.Error(storageException, "NLog.Extensions.AzureStorage failed to get a reference to storage table.");
+                    InternalLogger.Error(storageException, "AzureTableStorageTarget: failed to get a reference to storage table.");
                     throw;
                 }
             }
@@ -157,12 +217,38 @@ namespace NLog.Extensions.AzureStorage
             if (String.IsNullOrWhiteSpace(cleanedTableName) || cleanedTableName.Length > 63 || cleanedTableName.Length < 3)
             {
                 var tableDefault = String.Concat("Logs");
-                InternalLogger.Error("Invalid table Name provided: {0} | Using default: {1}", tableName, tableDefault);
+                InternalLogger.Error("AzureTableStorageTarget: Invalid table Name provided: {0} | Using default: {1}", tableName, tableDefault);
                 return tableDefault;
             }
-            InternalLogger.Trace("Using provided table name: {0}", tableName);
+            InternalLogger.Trace("AzureTableStorageTarget: Using provided table name: {0}", tableName);
             return tableName;
         }
 
+        /// <summary>
+        /// Gets the machine name
+        /// </summary>
+        private static string GetMachineName()
+        {
+            return TryLookupValue(() => Environment.GetEnvironmentVariable("COMPUTERNAME"), "COMPUTERNAME")
+                ?? TryLookupValue(() => Environment.GetEnvironmentVariable("HOSTNAME"), "HOSTNAME")
+#if !NETSTANDARD1_3
+                ?? TryLookupValue(() => Environment.MachineName, "MachineName")
+#endif
+                ?? TryLookupValue(() => System.Net.Dns.GetHostName(), "DnsHostName");
+        }
+
+        private static string TryLookupValue(Func<string> lookupFunc, string lookupType)
+        {
+            try
+            {
+                string lookupValue = lookupFunc()?.Trim();
+                return string.IsNullOrEmpty(lookupValue) ? null : lookupValue;
+            }
+            catch (Exception ex)
+            {
+                NLog.Common.InternalLogger.Warn(ex, "AzureTableStorageTarget: Failed to lookup {0}", lookupType);
+                return null;
+            }
+        }
     }
 }

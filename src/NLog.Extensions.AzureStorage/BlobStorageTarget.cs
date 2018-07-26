@@ -8,8 +8,10 @@ using NLog.Common;
 using NLog.Config;
 using NLog.Layouts;
 using NLog.Targets;
+#if !NETSTANDARD
 using Microsoft.Azure;
 using System.Configuration;
+#endif
 
 namespace NLog.Extensions.AzureStorage
 {
@@ -28,7 +30,8 @@ namespace NLog.Extensions.AzureStorage
         private SortHelpers.KeySelector<AsyncLogEventInfo, string> _getBlobNameDelegate;
         private SortHelpers.KeySelector<AsyncLogEventInfo, string> _getContainerNameDelegate;
 
-        public string ConnectionString { get; set; }
+        public string ConnectionString { get => (_connectionString as SimpleLayout)?.Text ?? null; set => _connectionString = value; }
+        private Layout _connectionString;
         public string ConnectionStringKey { get; set; }
 
         [RequiredParameter]
@@ -37,6 +40,11 @@ namespace NLog.Extensions.AzureStorage
         [RequiredParameter]
         public Layout BlobName { get; set; }
 
+        public BlobStorageTarget()
+        {
+            OptimizeBufferReuse = true;
+        }
+
         /// <summary>
         /// Initializes the target. Can be used by inheriting classes
         /// to initialize logging.
@@ -44,30 +52,29 @@ namespace NLog.Extensions.AzureStorage
         protected override void InitializeTarget()
         {
             base.InitializeTarget();
-            if (String.IsNullOrWhiteSpace(ConnectionString) && !String.IsNullOrWhiteSpace(ConnectionStringKey))
-            {
-                ConnectionString = CloudConfigurationManager.GetSetting(ConnectionStringKey);
-            }
-            if (String.IsNullOrWhiteSpace(ConnectionString))
-            {
-                var cs = ConfigurationManager.ConnectionStrings[ConnectionStringKey];
-                if (cs == null)
-                {
-                    InternalLogger.Error("AzureBlobStorageWrapper: A ConnectionString or ConnectionStringKey is required.");
-                    throw new Exception("A ConnectionString or ConnectionStringKey is required");
-                }
-                else
-                {
-                    ConnectionString = cs.ConnectionString;
-                }
 
-                if (String.IsNullOrWhiteSpace(ConnectionString))
+            var connectionString = _connectionString != null ? RenderLogEvent(_connectionString, LogEventInfo.CreateNullEvent()) : string.Empty;
+#if !NETSTANDARD
+            if (!string.IsNullOrWhiteSpace(ConnectionStringKey))
+            {
+                connectionString = CloudConfigurationManager.GetSetting(ConnectionStringKey);
+                if (String.IsNullOrWhiteSpace(connectionString))
+                    connectionString = ConfigurationManager.ConnectionStrings[ConnectionStringKey]?.ConnectionString;
+                if (string.IsNullOrWhiteSpace(connectionString))
                 {
-                    InternalLogger.Error("AzureBlobStorageWrapper: A ConnectionString or ConnectionStringKey is required.");
-                    throw new Exception("A ConnectionString or ConnectionStringKey is required");
+                    InternalLogger.Error($"AzureBlobStorageTarget: No ConnectionString found with ConnectionStringKey: {ConnectionStringKey}.");
+                    throw new Exception($"No ConnectionString found with ConnectionStringKey: {ConnectionStringKey}.");
                 }
             }
-            _client = CloudStorageAccount.Parse(ConnectionString).CreateCloudBlobClient();
+#endif
+
+            if (String.IsNullOrWhiteSpace(connectionString))
+            {
+                InternalLogger.Error("AzureBlobStorageTarget: A ConnectionString or ConnectionStringKey is required.");
+                throw new Exception("A ConnectionString or ConnectionStringKey is required");
+            }
+
+            _client = CloudStorageAccount.Parse(connectionString).CreateCloudBlobClient();
 
             InternalLogger.Trace("AzureBlobStorageWrapper - Initialized");
         }
@@ -82,16 +89,15 @@ namespace NLog.Extensions.AzureStorage
             if (String.IsNullOrEmpty(logEvent.Message))
                 return;
 
-            var cn = Container.Render(logEvent);
-            var bn = BlobName.Render(logEvent);
+            var containerName = RenderLogEvent(Container, logEvent);
+            var blobName = RenderLogEvent(BlobName, logEvent);
+            var layoutMessage = RenderLogEvent(Layout, logEvent);
+            var logMessage = string.Concat(layoutMessage, Environment.NewLine);
 
-            var containerName = CheckAndRepairContainerNamingRules(cn);
-            var blobName = CheckAndRepairBlobNamingRules(bn);
-            var logMessage = string.Concat(Layout.Render(logEvent), Environment.NewLine);
-
+            containerName = CheckAndRepairContainerNamingRules(containerName);
             InitializeContainer(containerName);
-            InitializeBlob(blobName);
-            _appendBlob.AppendText(logMessage);
+
+            AppendBlobText(containerName, blobName, logMessage);
         }
 
         /// <summary>
@@ -102,9 +108,15 @@ namespace NLog.Extensions.AzureStorage
         /// <param name="logEvents">Logging events to be written out.</param>
         protected override void Write(IList<AsyncLogEventInfo> logEvents)
         {
+            if (logEvents.Count <= 1)
+            {
+                base.Write(logEvents);
+                return;
+            }
+
             //must sort into containers and then into the blobs for the container
             if (_getContainerNameDelegate == null)
-                _getContainerNameDelegate = c => Container.Render(c.LogEvent);
+                _getContainerNameDelegate = c => RenderLogEvent(Container, c.LogEvent);
 
             var containerBuckets = SortHelpers.BucketSort(logEvents, _getContainerNameDelegate);
 
@@ -112,30 +124,29 @@ namespace NLog.Extensions.AzureStorage
             foreach (var containerBucket in containerBuckets)
             {
                 var containerName = CheckAndRepairContainerNamingRules(containerBucket.Key);
-                InitializeContainer(containerName);
 
                 if (_getBlobNameDelegate == null)
-                    _getBlobNameDelegate = c => BlobName.Render(c.LogEvent);
+                    _getBlobNameDelegate = c => RenderLogEvent(BlobName, c.LogEvent);
 
                 var blobBuckets = SortHelpers.BucketSort(containerBucket.Value, _getBlobNameDelegate);
 
                 //Iterate over all the blobs in the container to be written to
                 foreach (var blobBucket in blobBuckets)
                 {
-                    var blobName = CheckAndRepairBlobNamingRules(blobBucket.Key);
-
-                    InitializeBlob(blobName);
-
                     //Initilize StringBuilder size based on number of items to write. Default StringBuilder initialization size is 16 characters.
                     var logMessage = new StringBuilder(blobBucket.Value.Count * 128);
 
                     //add each message for the destination append blob
                     foreach (var asyncLogEventInfo in blobBucket.Value)
                     {
-                        logMessage.AppendLine(Layout.Render(asyncLogEventInfo.LogEvent));
+                        var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
+                        logMessage.AppendLine(layoutMessage);
                     }
 
-                    _appendBlob.AppendText(logMessage.ToString());
+                    AppendBlobText(containerName, blobBucket.Key, logMessage.ToString());
+
+                    foreach (var asyncLogEventInfo in blobBucket.Value)
+                        asyncLogEventInfo.Continuation(null);
                 }
             }
         }
@@ -143,23 +154,33 @@ namespace NLog.Extensions.AzureStorage
         /// <summary>
         /// Initializes the BLOB.
         /// </summary>
-        /// <param name="blobName">Name of the BLOB.</param>
-        private void InitializeBlob(string blobName)
+        /// <param name="blobName">Name of the BLOB.</param>/// <param name="containerName">Name of the container.</param>
+        private void InitializeBlob(string blobName, string containerName)
         {
             if (_appendBlob == null || _appendBlob.Name != blobName)
             {
                 _appendBlob = _container.GetAppendBlobReference(blobName);
 
-                if (!_appendBlob.Exists())
+#if NETSTANDARD
+                bool blobExists = _appendBlob.ExistsAsync().GetAwaiter().GetResult();
+#else
+                bool blobExists = _appendBlob.Exists();
+#endif
+                if (!blobExists)
                 {
                     try
                     {
                         _appendBlob.Properties.ContentType = "text/plain";
+
+#if NETSTANDARD
+                        _appendBlob.CreateOrReplaceAsync().GetAwaiter().GetResult();
+#else
                         _appendBlob.CreateOrReplace(AccessCondition.GenerateIfNotExistsCondition());
+#endif
                     }
                     catch (StorageException ex)
                     {
-                        InternalLogger.Error(ex, "Initialize Blob Exception");
+                        InternalLogger.Error(ex, "AzureBlobStorageTarget: failed to initialize blob: {0} in container: {1}", blobName, containerName);
                         throw;
                     }
                 }
@@ -177,7 +198,11 @@ namespace NLog.Extensions.AzureStorage
                 _container = _client.GetContainerReference(containerName);
                 try
                 {
+#if NETSTANDARD
+                    _container.CreateIfNotExistsAsync().GetAwaiter().GetResult();
+#else
                     _container.CreateIfNotExists();
+#endif
                 }
                 catch (StorageException storageException)
                 {
@@ -187,6 +212,18 @@ namespace NLog.Extensions.AzureStorage
 
                 _appendBlob = null;
             }
+        }
+
+        private void AppendBlobText(string containerName, string blobName, string logMessage)
+        {
+            blobName = CheckAndRepairBlobNamingRules(blobName);
+            InitializeBlob(blobName, containerName);
+
+#if NESTANDARD
+            _appendBlob.AppendText(logMessage);
+#else
+            _appendBlob.AppendTextAsync(logMessage).GetAwaiter().GetResult();
+#endif
         }
 
         /// <summary>
@@ -205,16 +242,35 @@ namespace NLog.Extensions.AzureStorage
                 All letters in a container name must be lowercase.
                 Container names must be from 3 through 63 characters long.
             */
-            InternalLogger.Trace("Requested Container Name: {0}", requestedContainerName);
+            InternalLogger.Trace("AzureTableStorageTarget: Requested Container Name: {0}", requestedContainerName);
+            requestedContainerName = requestedContainerName?.Trim() ?? string.Empty;
+            bool validContainerName = requestedContainerName.Length > 0;
+            for (int i = 0; i < requestedContainerName.Length; ++i)
+            {
+                char chr = requestedContainerName[i];
+                if (chr >= 'A' && chr <= 'Z')
+                    continue;
+                if (chr >= 'a' && chr <= 'z')
+                    continue;
+                if (chr >= '0' && chr <= '9')
+                    continue;
+                if (chr == '_' || chr == '-' || chr == '.')
+                    continue;
+                validContainerName = false;
+                break;
+            }
+            if (validContainerName)
+                return requestedContainerName;
+
             const string validContainerPattern = "^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$";
             var loweredRequestedContainerName = requestedContainerName.ToLower();
             if (Regex.Match(loweredRequestedContainerName, validContainerPattern).Success)
             {
-                InternalLogger.Trace("Using Container Name: {0}", loweredRequestedContainerName);
+                InternalLogger.Trace("AzureTableStorageTarget: Using Container Name: {0}", loweredRequestedContainerName);
                 //valid name okay to lower and use
                 return loweredRequestedContainerName;
             }
-            InternalLogger.Trace("Requested Container Name violates Azure naming rules! Attempting to clean.");
+            InternalLogger.Trace("AzureTableStorageTarget: Requested Container Name violates Azure naming rules! Attempting to clean.");
             const string trimLeadingPattern = "^.*?(?=[a-zA-Z0-9])";
             const string trimTrailingPattern = "(?<=[a-zA-Z0-9]).*?";
             const string trimFobiddenCharactersPattern = "[^a-zA-Z0-9-]";
@@ -227,7 +283,7 @@ namespace NLog.Extensions.AzureStorage
             var loweredCleanedContainerName = pass4.ToLower();
             if (Regex.Match(loweredCleanedContainerName, validContainerPattern).Success)
             {
-                InternalLogger.Trace("Using Cleaned Container name: {0}", loweredCleanedContainerName);
+                InternalLogger.Trace("AzureTableStorageTarget: Using Cleaned Container name: {0}", loweredCleanedContainerName);
                 return loweredCleanedContainerName;
             }
             return "defaultlog";
@@ -255,12 +311,11 @@ namespace NLog.Extensions.AzureStorage
             if (String.IsNullOrWhiteSpace(blobName) || blobName.Length > 1024)
             {
                 var blobDefault = String.Concat("Log-", DateTime.UtcNow.ToString("yy-MM-dd"), ".log");
-                InternalLogger.Error("Invalid Blob Name provided: {0} | Using default: {1}", blobName, blobDefault);
+                InternalLogger.Error("AzureTableStorageTarget: Invalid Blob Name provided: {0} | Using default: {1}", blobName, blobDefault);
                 return blobDefault;
             }
-            InternalLogger.Trace("Using provided blob name: {0}", blobName);
+            InternalLogger.Trace("AzureTableStorageTarget: Using provided blob name: {0}", blobName);
             return blobName;
         }
-
     }
 }
