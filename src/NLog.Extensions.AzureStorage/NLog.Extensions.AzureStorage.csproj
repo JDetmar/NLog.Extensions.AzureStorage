@@ -3,6 +3,10 @@
   <PropertyGroup>
     <TargetFrameworks>net452;netstandard1.3;netstandard2.0</TargetFrameworks>
 
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <Version>1.0.7</Version>
+    
     <Description>
 NLog target that supports Blob and table storage in single nuget package.
 Can use queued batches to greatly improve performance. Recommended to use as a async target.
@@ -10,8 +14,6 @@ Can use queued batches to greatly improve performance. Recommended to use as a a
     <Authors>jdetmar</Authors>
     <CurrentYear>$([System.DateTime]::Now.ToString(yyyy))</CurrentYear>
     <Copyright>Copyright (c) $(CurrentYear) - jdetmar</Copyright>
-
-    <Version>1.0.7</Version>
 
     <PackageTags>NLog;azure;blob;log;logging</PackageTags>
     <PackageIconUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/raw/master/logo64.png?raw=true</PackageIconUrl>

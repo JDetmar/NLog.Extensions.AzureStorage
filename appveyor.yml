@@ -3,7 +3,7 @@ image: Visual Studio 2017
 configuration: Release
 
 before_build:
-- cmd: msbuild /t:Restore,Pack src\NLog.Extensions.AzureStorage
+- cmd: msbuild /t:Restore,Pack src\NLog.Extensions.AzureStorage /p:Configuration=Release /verbosity:minimal
 
 artifacts:
 - path: '**\NLog.Extensions.AzureStorage*.nupkg'

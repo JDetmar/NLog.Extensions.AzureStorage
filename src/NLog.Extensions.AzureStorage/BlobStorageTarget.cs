@@ -154,7 +154,8 @@ namespace NLog.Extensions.AzureStorage
         /// <summary>
         /// Initializes the BLOB.
         /// </summary>
-        /// <param name="blobName">Name of the BLOB.</param>/// <param name="containerName">Name of the container.</param>
+        /// <param name="blobName">Name of the BLOB.</param>
+        /// <param name="containerName">Name of the container.</param>
         private void InitializeBlob(string blobName, string containerName)
         {
             if (_appendBlob == null || _appendBlob.Name != blobName)
