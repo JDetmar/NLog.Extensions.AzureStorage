@@ -1,24 +1,9 @@
 version: 1.0.{build}
+image: Visual Studio 2017
 configuration: Release
-assembly_info:
-  patch: true
-  file: '**\AssemblyInfo.*'
-  assembly_version: '{version}'
-  assembly_file_version: '{version}'
-  assembly_informational_version: '{version}'
+
 before_build:
-- cmd: nuget restore src\NLog.Extensions.AzureStorage.sln
-build:
-  verbosity: minimal
-after_build:
-- cmd: >-
-    mkdir NLog.Extensions.AzureStorage\lib\net45
+- cmd: msbuild /t:Restore,Pack src\NLog.Extensions.AzureStorage /p:Configuration=Release /verbosity:minimal
 
-    xcopy src\NLog.Extensions.AzureStorage\bin\Release\NLog.Extensions.AzureStorage.dll NLog.Extensions.AzureStorage\lib\net45 /y
-
-    xcopy nuget\NLog.Extensions.AzureStorage.nuspec NLog.Extensions.AzureStorage /y
-
-
-    nuget pack NLog.Extensions.AzureStorage\NLog.Extensions.AzureStorage.nuspec
 artifacts:
 - path: '**\NLog.Extensions.AzureStorage*.nupkg'

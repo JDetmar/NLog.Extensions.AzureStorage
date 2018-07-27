@@ -1,11 +1,6 @@
-﻿using Microsoft.WindowsAzure.Storage.Table;
+﻿using System;
+using Microsoft.WindowsAzure.Storage.Table;
 using NLog.Layouts;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NLog.Extensions.AzureStorage
 {
@@ -21,15 +16,14 @@ namespace NLog.Extensions.AzureStorage
         public string FullMessage { get; set; }
         public string MachineName { get; set; }
 
-
-        public NLogEntity(LogEventInfo logEvent, Layout layout)
+        public NLogEntity(LogEventInfo logEvent, string layoutMessage, string machineName)
         {
-            FullMessage = layout.Render(logEvent);
+            FullMessage = layoutMessage;
             Level = logEvent.Level.Name;
             LoggerName = logEvent.LoggerName;
             Message = logEvent.Message;
             LogTimeStamp = logEvent.TimeStamp.ToString();
-            MachineName = Environment.MachineName;
+            MachineName = machineName;
             if(logEvent.Exception != null)
             {
                 Exception = logEvent.Exception.Message;
@@ -39,7 +33,7 @@ namespace NLog.Extensions.AzureStorage
                     InnerException = logEvent.Exception.InnerException.ToString();
                 }
             }
-            RowKey = String.Format("{0}__{1}", (DateTime.MaxValue.Ticks - DateTime.UtcNow.Ticks).ToString("d19"), Guid.NewGuid());
+            RowKey = string.Concat((DateTime.MaxValue.Ticks - DateTime.UtcNow.Ticks).ToString("d19"), "__", Guid.NewGuid().ToString());
             PartitionKey = LoggerName;
         }
         public NLogEntity() { }
