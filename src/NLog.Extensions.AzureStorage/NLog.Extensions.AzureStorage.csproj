@@ -5,7 +5,7 @@
 
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>1.0.7</Version>
+    <Version>1.0.8</Version>
     
     <Description>
 NLog target that supports Blob and table storage in single nuget package.
@@ -20,7 +20,7 @@ Can use queued batches to greatly improve performance. Recommended to use as a a
     <PackageProjectUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>git://github.com/fluent/NLog.Targets.Fluentd</RepositoryUrl>
+    <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
