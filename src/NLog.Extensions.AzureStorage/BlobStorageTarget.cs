@@ -89,15 +89,26 @@ namespace NLog.Extensions.AzureStorage
             if (String.IsNullOrEmpty(logEvent.Message))
                 return;
 
-            var containerName = RenderLogEvent(Container, logEvent);
-            var blobName = RenderLogEvent(BlobName, logEvent);
-            var layoutMessage = RenderLogEvent(Layout, logEvent);
-            var logMessage = string.Concat(layoutMessage, Environment.NewLine);
+            string containerName = string.Empty;
+            string blobName = string.Empty;
 
-            containerName = CheckAndRepairContainerNamingRules(containerName);
-            InitializeContainer(containerName);
+            try
+            {
+                containerName = RenderLogEvent(Container, logEvent);
+                blobName = RenderLogEvent(BlobName, logEvent);
+                var layoutMessage = RenderLogEvent(Layout, logEvent);
+                var logMessage = string.Concat(layoutMessage, Environment.NewLine);
 
-            AppendBlobText(containerName, blobName, logMessage);
+                containerName = CheckAndRepairContainerNamingRules(containerName);
+                blobName = CheckAndRepairBlobNamingRules(blobName);
+                InitializeContainer(containerName);
+                AppendBlobText(blobName, logMessage);
+            }
+            catch (StorageException ex)
+            {
+                InternalLogger.Error(ex, "AzureBlobStorageTarget: failed writing to blob: {0} in container: {1}", blobName, containerName);
+                throw;
+            }
         }
 
         /// <summary>
@@ -123,30 +134,43 @@ namespace NLog.Extensions.AzureStorage
             //Iterate over all the containers being written to
             foreach (var containerBucket in containerBuckets)
             {
-                var containerName = CheckAndRepairContainerNamingRules(containerBucket.Key);
+                string containerName = containerBucket.Key;
+                string blobName = string.Empty;
 
-                if (_getBlobNameDelegate == null)
-                    _getBlobNameDelegate = c => RenderLogEvent(BlobName, c.LogEvent);
-
-                var blobBuckets = SortHelpers.BucketSort(containerBucket.Value, _getBlobNameDelegate);
-
-                //Iterate over all the blobs in the container to be written to
-                foreach (var blobBucket in blobBuckets)
+                try
                 {
-                    //Initilize StringBuilder size based on number of items to write. Default StringBuilder initialization size is 16 characters.
-                    var logMessage = new StringBuilder(blobBucket.Value.Count * 128);
+                    containerName = CheckAndRepairContainerNamingRules(containerBucket.Key);
+                    InitializeContainer(containerName);
 
-                    //add each message for the destination append blob
-                    foreach (var asyncLogEventInfo in blobBucket.Value)
+                    if (_getBlobNameDelegate == null)
+                        _getBlobNameDelegate = c => RenderLogEvent(BlobName, c.LogEvent);
+
+                    var blobBuckets = SortHelpers.BucketSort(containerBucket.Value, _getBlobNameDelegate);
+
+                    //Iterate over all the blobs in the container to be written to
+                    foreach (var blobBucket in blobBuckets)
                     {
-                        var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
-                        logMessage.AppendLine(layoutMessage);
+                        //Initilize StringBuilder size based on number of items to write. Default StringBuilder initialization size is 16 characters.
+                        var logMessage = new StringBuilder(blobBucket.Value.Count * 128);
+
+                        //add each message for the destination append blob
+                        foreach (var asyncLogEventInfo in blobBucket.Value)
+                        {
+                            var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
+                            logMessage.AppendLine(layoutMessage);
+                        }
+
+                        blobName = CheckAndRepairBlobNamingRules(blobBucket.Key);
+                        AppendBlobText(blobName, logMessage.ToString());
+
+                        foreach (var asyncLogEventInfo in blobBucket.Value)
+                            asyncLogEventInfo.Continuation(null);
                     }
-
-                    AppendBlobText(containerName, blobBucket.Key, logMessage.ToString());
-
-                    foreach (var asyncLogEventInfo in blobBucket.Value)
-                        asyncLogEventInfo.Continuation(null);
+                }
+                catch (StorageException ex)
+                {
+                    InternalLogger.Error(ex, "AzureBlobStorageTarget: failed writing to blob: {0} in container: {1}", blobName, containerName);
+                    throw;
                 }
             }
         }
@@ -155,8 +179,7 @@ namespace NLog.Extensions.AzureStorage
         /// Initializes the BLOB.
         /// </summary>
         /// <param name="blobName">Name of the BLOB.</param>
-        /// <param name="containerName">Name of the container.</param>
-        private void InitializeBlob(string blobName, string containerName)
+        private void InitializeBlob(string blobName)
         {
             if (_appendBlob == null || _appendBlob.Name != blobName)
             {
@@ -169,21 +192,13 @@ namespace NLog.Extensions.AzureStorage
 #endif
                 if (!blobExists)
                 {
-                    try
-                    {
-                        _appendBlob.Properties.ContentType = "text/plain";
+                    _appendBlob.Properties.ContentType = "text/plain";
 
 #if NETSTANDARD
-                        _appendBlob.CreateOrReplaceAsync().GetAwaiter().GetResult();
+                    _appendBlob.CreateOrReplaceAsync().GetAwaiter().GetResult();
 #else
-                        _appendBlob.CreateOrReplace(AccessCondition.GenerateIfNotExistsCondition());
+                    _appendBlob.CreateOrReplace(AccessCondition.GenerateIfNotExistsCondition());
 #endif
-                    }
-                    catch (StorageException ex)
-                    {
-                        InternalLogger.Error(ex, "AzureBlobStorageTarget: failed to initialize blob: {0} in container: {1}", blobName, containerName);
-                        throw;
-                    }
                 }
             }
         }
@@ -215,15 +230,14 @@ namespace NLog.Extensions.AzureStorage
             }
         }
 
-        private void AppendBlobText(string containerName, string blobName, string logMessage)
+        private void AppendBlobText(string blobName, string logMessage)
         {
-            blobName = CheckAndRepairBlobNamingRules(blobName);
-            InitializeBlob(blobName, containerName);
+            InitializeBlob(blobName);
 
-#if NESTANDARD
-            _appendBlob.AppendText(logMessage);
-#else
+#if NETSTANDARD
             _appendBlob.AppendTextAsync(logMessage).GetAwaiter().GetResult();
+#else
+            _appendBlob.AppendText(logMessage);
 #endif
         }
 
