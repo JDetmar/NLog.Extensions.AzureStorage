@@ -16,13 +16,13 @@ namespace NLog.Extensions.AzureStorage
         public string FullMessage { get; set; }
         public string MachineName { get; set; }
 
-        public NLogEntity(LogEventInfo logEvent, string layoutMessage, string machineName)
+        public NLogEntity(LogEventInfo logEvent, string layoutMessage, string machineName, string logTimeStampFormat)
         {
             FullMessage = layoutMessage;
             Level = logEvent.Level.Name;
             LoggerName = logEvent.LoggerName;
             Message = logEvent.Message;
-            LogTimeStamp = logEvent.TimeStamp.ToString();
+            LogTimeStamp = logEvent.TimeStamp.ToString(logTimeStampFormat);
             MachineName = machineName;
             if(logEvent.Exception != null)
             {
