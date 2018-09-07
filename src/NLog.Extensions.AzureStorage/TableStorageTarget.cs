@@ -92,7 +92,7 @@ namespace NLog.Extensions.AzureStorage
 
             InitializeTable(tableNameFinal);
             var layoutMessage = RenderLogEvent(Layout, logEvent);
-            var entity = new NLogEntity(logEvent, layoutMessage, _machineName);
+            var entity = new NLogEntity(logEvent, layoutMessage, _machineName, logEvent.LoggerName);
             var insertOperation = TableOperation.Insert(entity);
             TableExecute(_table, insertOperation);
         }
@@ -134,7 +134,7 @@ namespace NLog.Extensions.AzureStorage
                     foreach (var asyncLogEventInfo in partitionBucket.Value)
                     {
                         var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
-                        var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName);
+                        var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName, partitionBucket.Key);
                         batch.Insert(entity);
                         if (batch.Count == 100)
                         {
@@ -145,10 +145,10 @@ namespace NLog.Extensions.AzureStorage
 
                     if (batch.Count > 0)
                         TableExecuteBatch(_table, batch);
-                }
 
-                foreach (var asyncLogEventInfo in tableBucket.Value)
-                    asyncLogEventInfo.Continuation(null);
+                    foreach (var asyncLogEventInfo in partitionBucket.Value)
+                        asyncLogEventInfo.Continuation(null);
+                }
             }
         }
 
