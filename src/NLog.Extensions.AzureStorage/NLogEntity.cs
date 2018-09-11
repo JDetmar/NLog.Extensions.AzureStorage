@@ -16,7 +16,7 @@ namespace NLog.Extensions.AzureStorage
         public string FullMessage { get; set; }
         public string MachineName { get; set; }
 
-        public NLogEntity(LogEventInfo logEvent, string layoutMessage, string machineName)
+        public NLogEntity(LogEventInfo logEvent, string layoutMessage, string machineName, string partitionKey)
         {
             FullMessage = layoutMessage;
             Level = logEvent.Level.Name;
@@ -34,7 +34,7 @@ namespace NLog.Extensions.AzureStorage
                 }
             }
             RowKey = string.Concat((DateTime.MaxValue.Ticks - DateTime.UtcNow.Ticks).ToString("d19"), "__", Guid.NewGuid().ToString());
-            PartitionKey = LoggerName;
+            PartitionKey = partitionKey;
         }
         public NLogEntity() { }
     }

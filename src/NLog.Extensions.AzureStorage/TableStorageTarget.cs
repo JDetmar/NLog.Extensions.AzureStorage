@@ -27,6 +27,7 @@ namespace NLog.Extensions.AzureStorage
 
         //Delegates for bucket sorting
         private SortHelpers.KeySelector<AsyncLogEventInfo, string> _getTableNameDelegate;
+        private SortHelpers.KeySelector<AsyncLogEventInfo, string> _getPartitionKeyDelegate;
 
         public string ConnectionString { get => (_connectionString as SimpleLayout)?.Text ?? null; set => _connectionString = value; }
         private Layout _connectionString;
@@ -91,7 +92,7 @@ namespace NLog.Extensions.AzureStorage
 
             InitializeTable(tableNameFinal);
             var layoutMessage = RenderLogEvent(Layout, logEvent);
-            var entity = new NLogEntity(logEvent, layoutMessage, _machineName);
+            var entity = new NLogEntity(logEvent, layoutMessage, _machineName, logEvent.LoggerName);
             var insertOperation = TableOperation.Insert(entity);
             TableExecute(_table, insertOperation);
         }
@@ -113,6 +114,8 @@ namespace NLog.Extensions.AzureStorage
             //must sort into containers and then into the blobs for the container
             if (_getTableNameDelegate == null)
                 _getTableNameDelegate = c => TableName.Render(c.LogEvent);
+            if (_getPartitionKeyDelegate == null)
+                _getPartitionKeyDelegate = c => c.LogEvent.LoggerName;
 
             var tableBuckets = SortHelpers.BucketSort(logEvents, _getTableNameDelegate);
 
@@ -121,25 +124,31 @@ namespace NLog.Extensions.AzureStorage
             {
                 var tableNameFinal = CheckAndRepairTableNamingRules(tableBucket.Key);
                 InitializeTable(tableNameFinal);
-                var batch = new TableBatchOperation();
-                //add each message for the destination table limit batch to 100 elements
-                foreach (var asyncLogEventInfo in tableBucket.Value)
+
+                //iterate over all the partition keys or we will get a System.ArgumentException: 'All entities in a given batch must have the same partition key.'
+                var partitionBuckets = SortHelpers.BucketSort(tableBucket.Value, _getPartitionKeyDelegate);
+                foreach (var partitionBucket in partitionBuckets)
                 {
-                    var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
-                    var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName);
-                    batch.Insert(entity);
-                    if (batch.Count == 100)
+                    var batch = new TableBatchOperation();
+                    //add each message for the destination table partition limit batch to 100 elements
+                    foreach (var asyncLogEventInfo in partitionBucket.Value)
                     {
-                        TableExecuteBatch(_table, batch);
-                        batch.Clear();
+                        var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
+                        var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName, partitionBucket.Key);
+                        batch.Insert(entity);
+                        if (batch.Count == 100)
+                        {
+                            TableExecuteBatch(_table, batch);
+                            batch.Clear();
+                        }
                     }
+
+                    if (batch.Count > 0)
+                        TableExecuteBatch(_table, batch);
+
+                    foreach (var asyncLogEventInfo in partitionBucket.Value)
+                        asyncLogEventInfo.Continuation(null);
                 }
-
-                if (batch.Count > 0)
-                    TableExecuteBatch(_table, batch);
-
-                foreach (var asyncLogEventInfo in tableBucket.Value)
-                    asyncLogEventInfo.Continuation(null);
             }
         }
 
