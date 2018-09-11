@@ -46,7 +46,8 @@ _container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/w
           layout="Layout"
           connectionString="String"
           connectionStringKey="String"
-          tableName="Layout" />
+          tableName="Layout" 
+		  logTimeStampFormat="O"/>
 </targets>
 ```
 ### Parameters
@@ -60,6 +61,8 @@ _connectionString_ - Azure storage connection string. Must provide either _conne
 _connectionStringKey_ - App key name of Azure storage connection string. Must provide either _connectionString_ or _connectionStringKey_.
 
 _tableName_ - Azure table name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+
+_logTimeStampFormat_ - Default Log TimeStamp is set to 'O' for [Round-trip](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings#the-round-trip-o-o-format-specifier) format if not specified.
 
 
 ## Sample Configuration
