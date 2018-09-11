@@ -36,6 +36,8 @@ namespace NLog.Extensions.AzureStorage
         [RequiredParameter]
         public Layout TableName { get; set; }
 
+        public string LogTimeStampFormat { get; set; } = "O";
+
         public TableStorageTarget()
         {
             OptimizeBufferReuse = true;
@@ -92,7 +94,7 @@ namespace NLog.Extensions.AzureStorage
 
             InitializeTable(tableNameFinal);
             var layoutMessage = RenderLogEvent(Layout, logEvent);
-            var entity = new NLogEntity(logEvent, layoutMessage, _machineName, logEvent.LoggerName);
+            var entity = new NLogEntity(logEvent, layoutMessage, _machineName, logEvent.LoggerName, LogTimeStampFormat);
             var insertOperation = TableOperation.Insert(entity);
             TableExecute(_table, insertOperation);
         }
@@ -134,7 +136,7 @@ namespace NLog.Extensions.AzureStorage
                     foreach (var asyncLogEventInfo in partitionBucket.Value)
                     {
                         var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
-                        var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName, partitionBucket.Key);
+                        var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName, partitionBucket.Key, LogTimeStampFormat);
                         batch.Insert(entity);
                         if (batch.Count == 100)
                         {
