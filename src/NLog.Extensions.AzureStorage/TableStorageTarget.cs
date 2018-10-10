@@ -26,8 +26,34 @@ namespace NLog.Extensions.AzureStorage
         private string _machineName;
 
         //Delegates for bucket sorting
-        private SortHelpers.KeySelector<AsyncLogEventInfo, string> _getTableNameDelegate;
-        private SortHelpers.KeySelector<AsyncLogEventInfo, string> _getPartitionKeyDelegate;
+        private SortHelpers.KeySelector<AsyncLogEventInfo, TablePartitionKey> _getTablePartitionNameDelegate;
+        struct TablePartitionKey : IEquatable<TablePartitionKey>
+        {
+            public readonly string TableName;
+            public readonly string PartitionId;
+
+            public TablePartitionKey(string tableName, string partitionId)
+            {
+                TableName = tableName;
+                PartitionId = partitionId;
+            }
+
+            public bool Equals(TablePartitionKey other)
+            {
+                return TableName == other.TableName &&
+                       PartitionId == other.PartitionId;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return (obj is TablePartitionKey) && Equals((TablePartitionKey)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return TableName.GetHashCode() ^ PartitionId.GetHashCode();
+            }
+        }
 
         public string ConnectionString { get => (_connectionString as SimpleLayout)?.Text ?? null; set => _connectionString = value; }
         private Layout _connectionString;
@@ -114,43 +140,40 @@ namespace NLog.Extensions.AzureStorage
             }
 
             //must sort into containers and then into the blobs for the container
-            if (_getTableNameDelegate == null)
-                _getTableNameDelegate = c => TableName.Render(c.LogEvent);
-            if (_getPartitionKeyDelegate == null)
-                _getPartitionKeyDelegate = c => c.LogEvent.LoggerName;
+            if (_getTablePartitionNameDelegate == null)
+                _getTablePartitionNameDelegate = c => new TablePartitionKey(RenderLogEvent(TableName, c.LogEvent), c.LogEvent.LoggerName ?? string.Empty);
 
-            var tableBuckets = SortHelpers.BucketSort(logEvents, _getTableNameDelegate);
+            var partitionBuckets = SortHelpers.BucketSort(logEvents, _getTablePartitionNameDelegate);
 
             //Iterate over all the tables being written to
-            foreach (var tableBucket in tableBuckets)
+            var currentTableName = default(KeyValuePair<string, string>);
+            foreach (var partitionBucket in partitionBuckets)
             {
-                var tableNameFinal = CheckAndRepairTableNamingRules(tableBucket.Key);
+                var tableNameFinal = currentTableName.Key == partitionBucket.Key.TableName
+                    ? currentTableName.Value
+                    : (currentTableName = new KeyValuePair<string, string>(partitionBucket.Key.TableName, CheckAndRepairTableNamingRules(partitionBucket.Key.TableName))).Value;
                 InitializeTable(tableNameFinal);
 
                 //iterate over all the partition keys or we will get a System.ArgumentException: 'All entities in a given batch must have the same partition key.'
-                var partitionBuckets = SortHelpers.BucketSort(tableBucket.Value, _getPartitionKeyDelegate);
-                foreach (var partitionBucket in partitionBuckets)
+                var batch = new TableBatchOperation();
+                //add each message for the destination table partition limit batch to 100 elements
+                foreach (var asyncLogEventInfo in partitionBucket.Value)
                 {
-                    var batch = new TableBatchOperation();
-                    //add each message for the destination table partition limit batch to 100 elements
-                    foreach (var asyncLogEventInfo in partitionBucket.Value)
+                    var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
+                    var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName, partitionBucket.Key.PartitionId, LogTimeStampFormat);
+                    batch.Insert(entity);
+                    if (batch.Count == 100)
                     {
-                        var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
-                        var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName, partitionBucket.Key, LogTimeStampFormat);
-                        batch.Insert(entity);
-                        if (batch.Count == 100)
-                        {
-                            TableExecuteBatch(_table, batch);
-                            batch.Clear();
-                        }
-                    }
-
-                    if (batch.Count > 0)
                         TableExecuteBatch(_table, batch);
-
-                    foreach (var asyncLogEventInfo in partitionBucket.Value)
-                        asyncLogEventInfo.Continuation(null);
+                        batch.Clear();
+                    }
                 }
+
+                if (batch.Count > 0)
+                    TableExecuteBatch(_table, batch);
+
+                foreach (var asyncLogEventInfo in partitionBucket.Value)
+                    asyncLogEventInfo.Continuation(null);
             }
         }
 
@@ -220,6 +243,10 @@ namespace NLog.Extensions.AzureStorage
                 Table names must be from 3 to 63 characters long.
                 Some table names are reserved, including "tables". Attempting to create a table with a reserved table name returns error code 404 (Bad Request).
             */
+            var simpleValidName = tableName?.Length <= 63 ? AzureNameHelpers.EnsureValidName(tableName) : null;
+            if (simpleValidName?.Length >= 3)
+                return simpleValidName;
+
             const string trimLeadingPattern = "^.*?(?=[a-zA-Z])";
             const string trimFobiddenCharactersPattern = "[^a-zA-Z0-9-]";
 

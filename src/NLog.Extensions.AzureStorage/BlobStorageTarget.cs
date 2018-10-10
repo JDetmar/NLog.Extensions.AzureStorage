@@ -27,8 +27,34 @@ namespace NLog.Extensions.AzureStorage
         private CloudBlobContainer _container;
 
         //Delegates for bucket sorting
-        private SortHelpers.KeySelector<AsyncLogEventInfo, string> _getBlobNameDelegate;
-        private SortHelpers.KeySelector<AsyncLogEventInfo, string> _getContainerNameDelegate;
+        private SortHelpers.KeySelector<AsyncLogEventInfo, ContainerBlobKey> _getContainerBlobNameDelegate;
+        struct ContainerBlobKey : IEquatable<ContainerBlobKey>
+        {
+            public readonly string ContainerName;
+            public readonly string BlobName;
+
+            public ContainerBlobKey(string containerName, string blobName)
+            {
+                ContainerName = containerName;
+                BlobName = blobName;
+            }
+
+            public bool Equals(ContainerBlobKey other)
+            {
+                return ContainerName == other.ContainerName &&
+                       BlobName == other.BlobName;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return (obj is ContainerBlobKey) && Equals((ContainerBlobKey)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return ContainerName.GetHashCode() ^ BlobName.GetHashCode();
+            }
+        }
 
         public string ConnectionString { get => (_connectionString as SimpleLayout)?.Text ?? null; set => _connectionString = value; }
         private Layout _connectionString;
@@ -126,46 +152,43 @@ namespace NLog.Extensions.AzureStorage
             }
 
             //must sort into containers and then into the blobs for the container
-            if (_getContainerNameDelegate == null)
-                _getContainerNameDelegate = c => RenderLogEvent(Container, c.LogEvent);
+            if (_getContainerBlobNameDelegate == null)
+                _getContainerBlobNameDelegate = c => new ContainerBlobKey(RenderLogEvent(Container, c.LogEvent), RenderLogEvent(BlobName, c.LogEvent));
 
-            var containerBuckets = SortHelpers.BucketSort(logEvents, _getContainerNameDelegate);
+            var blobBuckets = SortHelpers.BucketSort(logEvents, _getContainerBlobNameDelegate);
 
             //Iterate over all the containers being written to
-            foreach (var containerBucket in containerBuckets)
+            var currentContainerName = default(KeyValuePair<string, string>);
+            StringBuilder logMessage = null;
+            foreach (var blobBucket in blobBuckets)
             {
-                string containerName = containerBucket.Key;
+                string containerName = blobBucket.Key.ContainerName;
                 string blobName = string.Empty;
+
+                //Initilize StringBuilder size based on number of items to write. Default StringBuilder initialization size is 16 characters.
+                logMessage = logMessage ?? new StringBuilder(blobBucket.Value.Count * 128);
+                logMessage.Length = 0;
 
                 try
                 {
-                    containerName = CheckAndRepairContainerNamingRules(containerBucket.Key);
+                    containerName = currentContainerName.Key == blobBucket.Key.ContainerName
+                        ? currentContainerName.Value
+                        : (currentContainerName = new KeyValuePair<string, string>(blobBucket.Key.ContainerName, CheckAndRepairContainerNamingRules(blobBucket.Key.ContainerName))).Value;
+
                     InitializeContainer(containerName);
 
-                    if (_getBlobNameDelegate == null)
-                        _getBlobNameDelegate = c => RenderLogEvent(BlobName, c.LogEvent);
-
-                    var blobBuckets = SortHelpers.BucketSort(containerBucket.Value, _getBlobNameDelegate);
-
-                    //Iterate over all the blobs in the container to be written to
-                    foreach (var blobBucket in blobBuckets)
+                    //add each message for the destination append blob
+                    foreach (var asyncLogEventInfo in blobBucket.Value)
                     {
-                        //Initilize StringBuilder size based on number of items to write. Default StringBuilder initialization size is 16 characters.
-                        var logMessage = new StringBuilder(blobBucket.Value.Count * 128);
-
-                        //add each message for the destination append blob
-                        foreach (var asyncLogEventInfo in blobBucket.Value)
-                        {
-                            var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
-                            logMessage.AppendLine(layoutMessage);
-                        }
-
-                        blobName = CheckAndRepairBlobNamingRules(blobBucket.Key);
-                        AppendBlobText(blobName, logMessage.ToString());
-
-                        foreach (var asyncLogEventInfo in blobBucket.Value)
-                            asyncLogEventInfo.Continuation(null);
+                        var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
+                        logMessage.AppendLine(layoutMessage);
                     }
+
+                    blobName = CheckAndRepairBlobNamingRules(blobBucket.Key.BlobName);
+                    AppendBlobText(blobName, logMessage.ToString());
+
+                    foreach (var asyncLogEventInfo in blobBucket.Value)
+                        asyncLogEventInfo.Continuation(null);
                 }
                 catch (StorageException ex)
                 {
@@ -258,25 +281,11 @@ namespace NLog.Extensions.AzureStorage
                 Container names must be from 3 through 63 characters long.
             */
             InternalLogger.Trace("AzureTableStorageTarget: Requested Container Name: {0}", requestedContainerName);
-            requestedContainerName = requestedContainerName?.Trim() ?? string.Empty;
-            bool validContainerName = requestedContainerName.Length > 0;
-            for (int i = 0; i < requestedContainerName.Length; ++i)
-            {
-                char chr = requestedContainerName[i];
-                if (chr >= 'A' && chr <= 'Z')
-                    continue;
-                if (chr >= 'a' && chr <= 'z')
-                    continue;
-                if (chr >= '0' && chr <= '9')
-                    continue;
-                if (chr == '_' || chr == '-' || chr == '.')
-                    continue;
-                validContainerName = false;
-                break;
-            }
-            if (validContainerName)
-                return requestedContainerName;
+            var simpleValidName = requestedContainerName?.Length <= 63 ? AzureNameHelpers.EnsureValidName(requestedContainerName, ensureToLower: true) : null;
+            if (simpleValidName?.Length >= 3)
+                return simpleValidName;
 
+            requestedContainerName = requestedContainerName?.Trim() ?? string.Empty;
             const string validContainerPattern = "^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$";
             var loweredRequestedContainerName = requestedContainerName.ToLower();
             if (Regex.Match(loweredRequestedContainerName, validContainerPattern).Success)
