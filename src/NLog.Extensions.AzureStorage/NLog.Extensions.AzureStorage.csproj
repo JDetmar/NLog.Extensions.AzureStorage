@@ -5,12 +5,11 @@
 
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>1.0.9</Version>
+    <Version>1.0.10</Version>
     
-    <Description>
-NLog target that supports Blob and table storage in single nuget package.
+    <Description>NLog target that supports Blob and table storage in single nuget package.
 Can use queued batches to greatly improve performance. Recommended to use as a async target.
-    </Description>
+</Description>
     <Authors>jdetmar</Authors>
     <CurrentYear>$([System.DateTime]::Now.ToString(yyyy))</CurrentYear>
     <Copyright>Copyright (c) $(CurrentYear) - jdetmar</Copyright>
@@ -21,6 +20,8 @@ Can use queued batches to greatly improve performance. Recommended to use as a a
     <PackageLicenseUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
+    <PackageReleaseNotes>## Performance
+- Partition LogEvents using a single Dictionary to reduce allocations (@snakefoot)</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
