@@ -5,7 +5,7 @@
 
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>1.0.10</Version>
+    <Version>1.0.11</Version>
     
     <Description>NLog target that supports Blob and table storage in single nuget package.
 Can use queued batches to greatly improve performance. Recommended to use as a async target.
@@ -21,6 +21,7 @@ Can use queued batches to greatly improve performance. Recommended to use as a a
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageReleaseNotes>## Performance
+- CheckAndRepair Azure Names now caches the result for faster reuse (@snakefoot)
 - Partition LogEvents using a single Dictionary to reduce allocations (@snakefoot)</PackageReleaseNotes>
   </PropertyGroup>
 
