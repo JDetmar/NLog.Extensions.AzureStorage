@@ -25,6 +25,7 @@ namespace NLog.Extensions.AzureStorage
         private CloudBlobClient _client;
         private CloudAppendBlob _appendBlob;
         private CloudBlobContainer _container;
+        private readonly Dictionary<string, string> _containerNameCache = new Dictionary<string, string>();
 
         //Delegates for bucket sorting
         private SortHelpers.KeySelector<AsyncLogEventInfo, ContainerBlobKey> _getContainerBlobNameDelegate;
@@ -115,18 +116,17 @@ namespace NLog.Extensions.AzureStorage
             if (String.IsNullOrEmpty(logEvent.Message))
                 return;
 
-            string containerName = string.Empty;
-            string blobName = string.Empty;
+            string containerName = RenderLogEvent(Container, logEvent);
+            string blobName = RenderLogEvent(BlobName, logEvent);
 
             try
             {
-                containerName = RenderLogEvent(Container, logEvent);
-                blobName = RenderLogEvent(BlobName, logEvent);
+                containerName = LookupValidContainerName(containerName);
+                blobName = CheckAndRepairBlobNamingRules(blobName);
+
                 var layoutMessage = RenderLogEvent(Layout, logEvent);
                 var logMessage = string.Concat(layoutMessage, Environment.NewLine);
 
-                containerName = CheckAndRepairContainerNamingRules(containerName);
-                blobName = CheckAndRepairBlobNamingRules(blobName);
                 InitializeContainer(containerName);
                 AppendBlobText(blobName, logMessage);
             }
@@ -158,12 +158,11 @@ namespace NLog.Extensions.AzureStorage
             var blobBuckets = SortHelpers.BucketSort(logEvents, _getContainerBlobNameDelegate);
 
             //Iterate over all the containers being written to
-            var currentContainerName = default(KeyValuePair<string, string>);
             StringBuilder logMessage = null;
             foreach (var blobBucket in blobBuckets)
             {
                 string containerName = blobBucket.Key.ContainerName;
-                string blobName = string.Empty;
+                string blobName = blobBucket.Key.BlobName;
 
                 //Initilize StringBuilder size based on number of items to write. Default StringBuilder initialization size is 16 characters.
                 logMessage = logMessage ?? new StringBuilder(blobBucket.Value.Count * 128);
@@ -171,9 +170,7 @@ namespace NLog.Extensions.AzureStorage
 
                 try
                 {
-                    containerName = currentContainerName.Key == blobBucket.Key.ContainerName
-                        ? currentContainerName.Value
-                        : (currentContainerName = new KeyValuePair<string, string>(blobBucket.Key.ContainerName, CheckAndRepairContainerNamingRules(blobBucket.Key.ContainerName))).Value;
+                    containerName = LookupValidContainerName(containerName);
 
                     InitializeContainer(containerName);
 
@@ -192,7 +189,7 @@ namespace NLog.Extensions.AzureStorage
                 }
                 catch (StorageException ex)
                 {
-                    InternalLogger.Error(ex, "AzureBlobStorageTarget: failed writing to blob: {0} in container: {1}", blobName, containerName);
+                    InternalLogger.Error(ex, "AzureBlobStorageTarget: failed writing batch to blob: {0} in container: {1}", blobName, containerName);
                     throw;
                 }
             }
@@ -264,6 +261,19 @@ namespace NLog.Extensions.AzureStorage
 #endif
         }
 
+        private string LookupValidContainerName(string requestedContainerName)
+        {
+            if (_containerNameCache.TryGetValue(requestedContainerName, out var validContainerName))
+                return validContainerName;
+
+            if (_containerNameCache.Count > 1000)
+                _containerNameCache.Clear();
+
+            validContainerName = CheckAndRepairContainerNamingRules(requestedContainerName);
+            _containerNameCache[requestedContainerName] = validContainerName;
+            return validContainerName;
+        }
+
         /// <summary>
         /// Checks the and repairs container name acording to the Azure naming rules.
         /// </summary>
@@ -272,11 +282,11 @@ namespace NLog.Extensions.AzureStorage
         private static string CheckAndRepairContainerNamingRules(string requestedContainerName)
         {
             /*  https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/naming-and-referencing-containers--blobs--and-metadata
-                Container Names
+            Container Names
                 A container name must be a valid DNS name, conforming to the following naming rules:
                 Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
-                Every dash (-) character must be immediately preceded and followed by a letter or number; 
-                    consecutive dashes are not permitted in container names.
+                Every dash (-) character must be immediately preceded and followed by a letter or number,
+                consecutive dashes are not permitted in container names.
                 All letters in a container name must be lowercase.
                 Container names must be from 3 through 63 characters long.
             */
@@ -294,12 +304,15 @@ namespace NLog.Extensions.AzureStorage
                 //valid name okay to lower and use
                 return loweredRequestedContainerName;
             }
+
             InternalLogger.Trace("AzureTableStorageTarget: Requested Container Name violates Azure naming rules! Attempting to clean.");
+
             const string trimLeadingPattern = "^.*?(?=[a-zA-Z0-9])";
             const string trimTrailingPattern = "(?<=[a-zA-Z0-9]).*?";
             const string trimFobiddenCharactersPattern = "[^a-zA-Z0-9-]";
             const string trimExtraHyphensPattern = "-+";
 
+            requestedContainerName = requestedContainerName.Replace('.', '-').Replace('_', '-').Replace('\\', '-').Replace('/', '-').Replace(' ', '-').Trim(new[] { '-' });
             var pass1 = Regex.Replace(requestedContainerName, trimFobiddenCharactersPattern, String.Empty, RegexOptions.None);
             var pass2 = Regex.Replace(pass1, trimTrailingPattern, String.Empty, RegexOptions.RightToLeft);
             var pass3 = Regex.Replace(pass2, trimLeadingPattern, String.Empty, RegexOptions.None);

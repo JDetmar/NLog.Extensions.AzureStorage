@@ -24,6 +24,7 @@ namespace NLog.Extensions.AzureStorage
         private CloudTableClient _client;
         private CloudTable _table;
         private string _machineName;
+        private readonly Dictionary<string, string> _tableNameCache = new Dictionary<string, string>();
 
         //Delegates for bucket sorting
         private SortHelpers.KeySelector<AsyncLogEventInfo, TablePartitionKey> _getTablePartitionNameDelegate;
@@ -115,14 +116,22 @@ namespace NLog.Extensions.AzureStorage
             if (String.IsNullOrEmpty(logEvent.Message))
                 return;
 
-            var tempTableName = RenderLogEvent(TableName, logEvent);
-            var tableNameFinal = CheckAndRepairTableNamingRules(tempTableName);
+            var tableName = RenderLogEvent(TableName, logEvent);
+            try
+            {
+                tableName = LookupValidTableName(tableName);
 
-            InitializeTable(tableNameFinal);
-            var layoutMessage = RenderLogEvent(Layout, logEvent);
-            var entity = new NLogEntity(logEvent, layoutMessage, _machineName, logEvent.LoggerName, LogTimeStampFormat);
-            var insertOperation = TableOperation.Insert(entity);
-            TableExecute(_table, insertOperation);
+                InitializeTable(tableName);
+                var layoutMessage = RenderLogEvent(Layout, logEvent);
+                var entity = new NLogEntity(logEvent, layoutMessage, _machineName, logEvent.LoggerName, LogTimeStampFormat);
+                var insertOperation = TableOperation.Insert(entity);
+                TableExecute(_table, insertOperation);
+            }
+            catch (StorageException ex)
+            {
+                InternalLogger.Error(ex, "AzureTableStorageTarget: failed writing to table: {0}", tableName);
+                throw;
+            }
         }
 
         /// <summary>
@@ -146,34 +155,42 @@ namespace NLog.Extensions.AzureStorage
             var partitionBuckets = SortHelpers.BucketSort(logEvents, _getTablePartitionNameDelegate);
 
             //Iterate over all the tables being written to
-            var currentTableName = default(KeyValuePair<string, string>);
             foreach (var partitionBucket in partitionBuckets)
             {
-                var tableNameFinal = currentTableName.Key == partitionBucket.Key.TableName
-                    ? currentTableName.Value
-                    : (currentTableName = new KeyValuePair<string, string>(partitionBucket.Key.TableName, CheckAndRepairTableNamingRules(partitionBucket.Key.TableName))).Value;
-                InitializeTable(tableNameFinal);
+                var tableName = partitionBucket.Key.TableName;
 
-                //iterate over all the partition keys or we will get a System.ArgumentException: 'All entities in a given batch must have the same partition key.'
-                var batch = new TableBatchOperation();
-                //add each message for the destination table partition limit batch to 100 elements
-                foreach (var asyncLogEventInfo in partitionBucket.Value)
+                try
                 {
-                    var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
-                    var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName, partitionBucket.Key.PartitionId, LogTimeStampFormat);
-                    batch.Insert(entity);
-                    if (batch.Count == 100)
+                    tableName = LookupValidTableName(tableName);
+
+                    InitializeTable(tableName);
+
+                    //iterate over all the partition keys or we will get a System.ArgumentException: 'All entities in a given batch must have the same partition key.'
+                    var batch = new TableBatchOperation();
+                    //add each message for the destination table partition limit batch to 100 elements
+                    foreach (var asyncLogEventInfo in partitionBucket.Value)
                     {
-                        TableExecuteBatch(_table, batch);
-                        batch.Clear();
+                        var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
+                        var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName, partitionBucket.Key.PartitionId, LogTimeStampFormat);
+                        batch.Insert(entity);
+                        if (batch.Count == 100)
+                        {
+                            TableExecuteBatch(_table, batch);
+                            batch.Clear();
+                        }
                     }
+
+                    if (batch.Count > 0)
+                        TableExecuteBatch(_table, batch);
+
+                    foreach (var asyncLogEventInfo in partitionBucket.Value)
+                        asyncLogEventInfo.Continuation(null);
                 }
-
-                if (batch.Count > 0)
-                    TableExecuteBatch(_table, batch);
-
-                foreach (var asyncLogEventInfo in partitionBucket.Value)
-                    asyncLogEventInfo.Continuation(null);
+                catch (StorageException ex)
+                {
+                    InternalLogger.Error(ex, "AzureTableStorageTarget: failed writing batch to table: {0}", tableName);
+                    throw;
+                }
             }
         }
 
@@ -225,6 +242,19 @@ namespace NLog.Extensions.AzureStorage
             }
         }
 
+        private string LookupValidTableName(string requestedTableName)
+        {
+            if (_tableNameCache.TryGetValue(requestedTableName, out var validTableName))
+                return validTableName;
+
+            if (_tableNameCache.Count > 1000)
+                _tableNameCache.Clear();
+
+            validTableName = CheckAndRepairTableNamingRules(requestedTableName);
+            _tableNameCache[requestedTableName] = validTableName;
+            return validTableName;
+        }
+
         //TODO: update rules
         /// <summary>
         /// Checks the and repairs table name acording to the Azure naming rules.
@@ -233,9 +263,8 @@ namespace NLog.Extensions.AzureStorage
         /// <returns></returns>
         private static string CheckAndRepairTableNamingRules(string tableName)
         {
-            /*  
-                table Names
-
+            /*  http://msdn.microsoft.com/en-us/library/windowsazure/dd179338.aspx
+            Table Names:
                 Table names must be unique within an account.
                 Table names may contain only alphanumeric characters.
                 Table names cannot begin with a numeric character.
@@ -254,7 +283,7 @@ namespace NLog.Extensions.AzureStorage
             var cleanedTableName = Regex.Replace(pass1, trimLeadingPattern, String.Empty, RegexOptions.None);
             if (String.IsNullOrWhiteSpace(cleanedTableName) || cleanedTableName.Length > 63 || cleanedTableName.Length < 3)
             {
-                var tableDefault = String.Concat("Logs");
+                var tableDefault = "Logs";
                 InternalLogger.Error("AzureTableStorageTarget: Invalid table Name provided: {0} | Using default: {1}", tableName, tableDefault);
                 return tableDefault;
             }
