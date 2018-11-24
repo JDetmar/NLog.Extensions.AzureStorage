@@ -27,8 +27,6 @@ namespace NLog.Extensions.AzureStorage
         [RequiredParameter]
         public Layout QueueName { get; set; }
 
-        public string LogTimeStampFormat { get; set; } = "O";
-
         public QueueStorageTarget()
         {
             OptimizeBufferReuse = true;
@@ -116,7 +114,7 @@ namespace NLog.Extensions.AzureStorage
                 }
                 catch (StorageException storageException)
                 {
-                    InternalLogger.Error(storageException, "AzureQueueStorageTarget(Name={0}): Failed creating queue {1}", Name, queueName);
+                    InternalLogger.Error(storageException, "AzureQueueStorageTarget(Name={0}): Failed to create reference to queue {1}", Name, queueName);
                     throw;
                 }
             }

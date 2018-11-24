@@ -40,6 +40,8 @@ _connectionStringKey_ - App key name of Azure storage connection string. Must pr
 
 _container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
+_contentType_ - Azure blob ContentType (Default = text/plain)
+
 
 ## Table Configuration
 

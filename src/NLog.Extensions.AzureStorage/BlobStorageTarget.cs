@@ -63,6 +63,8 @@ namespace NLog.Extensions.AzureStorage
         [RequiredParameter]
         public Layout BlobName { get; set; }
 
+        public string ContentType { get; set; } = "text/plain";
+
         public BlobStorageTarget()
         {
             OptimizeBufferReuse = true;
@@ -197,7 +199,7 @@ namespace NLog.Extensions.AzureStorage
 #endif
                 if (!blobExists)
                 {
-                    _appendBlob.Properties.ContentType = "text/plain";
+                    _appendBlob.Properties.ContentType = ContentType;
 
 #if NETSTANDARD
                     _appendBlob.CreateOrReplaceAsync().GetAwaiter().GetResult();
@@ -216,9 +218,9 @@ namespace NLog.Extensions.AzureStorage
         {
             if (_container == null || _container.Name != containerName)
             {
-                _container = _client.GetContainerReference(containerName);
                 try
                 {
+                    _container = _client.GetContainerReference(containerName);
 #if NETSTANDARD
                     _container.CreateIfNotExistsAsync().GetAwaiter().GetResult();
 #else
@@ -227,7 +229,7 @@ namespace NLog.Extensions.AzureStorage
                 }
                 catch (StorageException storageException)
                 {
-                    InternalLogger.Error(storageException, "NLog.Extensions.AzureStorage failed to get a reference to storage container.");
+                    InternalLogger.Error(storageException, "AzureBlobStorageTarget(Name={0}): Failed to create reference to container: {1}.", Name, containerName);
                     throw;
                 }
 
@@ -288,10 +290,10 @@ namespace NLog.Extensions.AzureStorage
             if (String.IsNullOrWhiteSpace(blobName) || blobName.Length > 1024)
             {
                 var blobDefault = String.Concat("Log-", DateTime.UtcNow.ToString("yy-MM-dd"), ".log");
-                InternalLogger.Error("AzureTableStorageTarget: Invalid Blob Name provided: {0} | Using default: {1}", blobName, blobDefault);
+                InternalLogger.Error("AzureBlobStorageTarget: Invalid Blob Name provided: {0} | Using default: {1}", blobName, blobDefault);
                 return blobDefault;
             }
-            InternalLogger.Trace("AzureTableStorageTarget: Using provided blob name: {0}", blobName);
+            InternalLogger.Trace("AzureBlobStorageTarget: Using provided blob name: {0}", blobName);
             return blobName;
         }
     }
