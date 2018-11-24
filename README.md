@@ -3,13 +3,17 @@
 ![logo](logo64.png?raw=true)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage?ref=badge_shield)
 
-NLog Target for Azure Blob and Table Storage.
+NLog Targets for Azure Blob, Table and Queue Storage 
 
 
 ## Blob Configuration
 
 ### Syntax
 ```xml
+<extensions>
+  <add assembly="NLog.Extensions.AzureStorage" /> 
+</extensions>
+
 <targets>
   <target xsi:type="AzureBlobStorage"
           name="String"
@@ -41,6 +45,10 @@ _container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/w
 
 ### Syntax
 ```xml
+<extensions>
+  <add assembly="NLog.Extensions.AzureStorage" /> 
+</extensions>
+
 <targets>
   <target xsi:type="AzureTableStorage"
           name="String"
@@ -48,7 +56,7 @@ _container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/w
           connectionString="String"
           connectionStringKey="String"
           tableName="Layout" 
-		  logTimeStampFormat="O"/>
+          logTimeStampFormat="O"/>
 </targets>
 ```
 ### Parameters
@@ -65,10 +73,44 @@ _tableName_ - Azure table name. [Layout](https://github.com/NLog/NLog/wiki/Layou
 
 _logTimeStampFormat_ - Default Log TimeStamp is set to 'O' for [Round-trip](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings#the-round-trip-o-o-format-specifier) format if not specified.
 
+## Queue Configuration
+
+### Syntax
+```xml
+<extensions>
+  <add assembly="NLog.Extensions.AzureStorage" /> 
+</extensions>
+
+<targets>
+  <target xsi:type="AzureQueueStorage"
+          name="String"
+          layout="Layout"
+          queueName="Layout"
+          connectionString="String"
+          connectionStringKey="String" />
+</targets>
+```
+
+### Parameters
+
+_name_ - Name of the target.
+
+_layout_ - Queue Message Text to be rendered. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required. 
+
+_queueName_ - QueueName. [Layout](https://github.com/NLog/NLog/wiki/Layouts)  
+
+_connectionString_ - Azure storage connection string. Must provide either _connectionString_ or _connectionStringKey_.
+
+_connectionStringKey_ - App key name of Azure storage connection string. Must provide either _connectionString_ or _connectionStringKey_.
+
 
 ## Sample Configuration
 
 ```xml
+<extensions>
+  <add assembly="NLog.Extensions.AzureStorage" /> 
+</extensions>
+
 <targets async="true">
     <target type="AzureBlobStorage"
             name="AzureEmulator"
