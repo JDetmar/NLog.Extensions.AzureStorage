@@ -1,17 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using NLog.Common;
 using NLog.Config;
 using NLog.Layouts;
 using NLog.Targets;
-#if !NETSTANDARD
-using Microsoft.Azure;
-using System.Configuration;
-#endif
 
 namespace NLog.Extensions.AzureStorage
 {
@@ -25,7 +20,8 @@ namespace NLog.Extensions.AzureStorage
         private CloudBlobClient _client;
         private CloudAppendBlob _appendBlob;
         private CloudBlobContainer _container;
-        private readonly Dictionary<string, string> _containerNameCache = new Dictionary<string, string>();
+        private readonly AzureStorageNameCache _containerNameCache = new AzureStorageNameCache();
+        private readonly Func<string, string> _checkAndRepairContainerNameDelegate;
 
         //Delegates for bucket sorting
         private SortHelpers.KeySelector<AsyncLogEventInfo, ContainerBlobKey> _getContainerBlobNameDelegate;
@@ -70,6 +66,7 @@ namespace NLog.Extensions.AzureStorage
         public BlobStorageTarget()
         {
             OptimizeBufferReuse = true;
+            _checkAndRepairContainerNameDelegate = CheckAndRepairContainerNamingRules;
         }
 
         /// <summary>
@@ -80,30 +77,18 @@ namespace NLog.Extensions.AzureStorage
         {
             base.InitializeTarget();
 
-            var connectionString = _connectionString != null ? RenderLogEvent(_connectionString, LogEventInfo.CreateNullEvent()) : string.Empty;
-#if !NETSTANDARD
-            if (!string.IsNullOrWhiteSpace(ConnectionStringKey))
+            string connectionString = string.Empty;
+            try
             {
-                connectionString = CloudConfigurationManager.GetSetting(ConnectionStringKey);
-                if (String.IsNullOrWhiteSpace(connectionString))
-                    connectionString = ConfigurationManager.ConnectionStrings[ConnectionStringKey]?.ConnectionString;
-                if (string.IsNullOrWhiteSpace(connectionString))
-                {
-                    InternalLogger.Error($"AzureBlobStorageTarget: No ConnectionString found with ConnectionStringKey: {ConnectionStringKey}.");
-                    throw new Exception($"No ConnectionString found with ConnectionStringKey: {ConnectionStringKey}.");
-                }
+                connectionString = ConnectionStringHelper.LookupConnectionString(_connectionString, ConnectionStringKey);
+                _client = CloudStorageAccount.Parse(connectionString).CreateCloudBlobClient();
+                InternalLogger.Trace("AzureBlobStorageTarget - Initialized");
             }
-#endif
-
-            if (String.IsNullOrWhiteSpace(connectionString))
+            catch (Exception ex)
             {
-                InternalLogger.Error("AzureBlobStorageTarget: A ConnectionString or ConnectionStringKey is required.");
-                throw new Exception("A ConnectionString or ConnectionStringKey is required");
+                InternalLogger.Error(ex, "AzureBlobStorageTarget(Name={0}): Failed to create BlobClient with connectionString={1}.", Name, connectionString);
+                throw;
             }
-
-            _client = CloudStorageAccount.Parse(connectionString).CreateCloudBlobClient();
-
-            InternalLogger.Trace("AzureBlobStorageWrapper - Initialized");
         }
 
         /// <summary>
@@ -121,7 +106,7 @@ namespace NLog.Extensions.AzureStorage
 
             try
             {
-                containerName = LookupValidContainerName(containerName);
+                containerName = CheckAndRepairContainerName(containerName);
                 blobName = CheckAndRepairBlobNamingRules(blobName);
 
                 var layoutMessage = RenderLogEvent(Layout, logEvent);
@@ -170,7 +155,7 @@ namespace NLog.Extensions.AzureStorage
 
                 try
                 {
-                    containerName = LookupValidContainerName(containerName);
+                    containerName = CheckAndRepairContainerName(containerName);
 
                     InitializeContainer(containerName);
 
@@ -261,69 +246,24 @@ namespace NLog.Extensions.AzureStorage
 #endif
         }
 
-        private string LookupValidContainerName(string requestedContainerName)
+        private string CheckAndRepairContainerName(string containerName)
         {
-            if (_containerNameCache.TryGetValue(requestedContainerName, out var validContainerName))
-                return validContainerName;
-
-            if (_containerNameCache.Count > 1000)
-                _containerNameCache.Clear();
-
-            validContainerName = CheckAndRepairContainerNamingRules(requestedContainerName);
-            _containerNameCache[requestedContainerName] = validContainerName;
-            return validContainerName;
+            return _containerNameCache.LookupStorageName(containerName, _checkAndRepairContainerNameDelegate);
         }
 
-        /// <summary>
-        /// Checks the and repairs container name acording to the Azure naming rules.
-        /// </summary>
-        /// <param name="requestedContainerName">Name of the requested container.</param>
-        /// <returns></returns>
-        private static string CheckAndRepairContainerNamingRules(string requestedContainerName)
+        private string CheckAndRepairContainerNamingRules(string containerName)
         {
-            /*  https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/naming-and-referencing-containers--blobs--and-metadata
-            Container Names
-                A container name must be a valid DNS name, conforming to the following naming rules:
-                Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
-                Every dash (-) character must be immediately preceded and followed by a letter or number,
-                consecutive dashes are not permitted in container names.
-                All letters in a container name must be lowercase.
-                Container names must be from 3 through 63 characters long.
-            */
-            InternalLogger.Trace("AzureTableStorageTarget: Requested Container Name: {0}", requestedContainerName);
-            var simpleValidName = requestedContainerName?.Length <= 63 ? AzureNameHelpers.EnsureValidName(requestedContainerName, ensureToLower: true) : null;
-            if (simpleValidName?.Length >= 3)
-                return simpleValidName;
-
-            requestedContainerName = requestedContainerName?.Trim() ?? string.Empty;
-            const string validContainerPattern = "^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$";
-            var loweredRequestedContainerName = requestedContainerName.ToLower();
-            if (Regex.Match(loweredRequestedContainerName, validContainerPattern).Success)
+            InternalLogger.Trace("AzureBlobStorageTarget(Name={0}): Requested Container Name: {1}", Name, containerName);
+            string validContainerName = AzureStorageNameCache.CheckAndRepairContainerNamingRules(containerName);
+            if (validContainerName == containerName.ToLowerInvariant())
             {
-                InternalLogger.Trace("AzureTableStorageTarget: Using Container Name: {0}", loweredRequestedContainerName);
-                //valid name okay to lower and use
-                return loweredRequestedContainerName;
+                InternalLogger.Trace("AzureBlobStorageTarget(Name={0}): Using Container Name: {0}", Name, validContainerName);
             }
-
-            InternalLogger.Trace("AzureTableStorageTarget: Requested Container Name violates Azure naming rules! Attempting to clean.");
-
-            const string trimLeadingPattern = "^.*?(?=[a-zA-Z0-9])";
-            const string trimTrailingPattern = "(?<=[a-zA-Z0-9]).*?";
-            const string trimFobiddenCharactersPattern = "[^a-zA-Z0-9-]";
-            const string trimExtraHyphensPattern = "-+";
-
-            requestedContainerName = requestedContainerName.Replace('.', '-').Replace('_', '-').Replace('\\', '-').Replace('/', '-').Replace(' ', '-').Trim(new[] { '-' });
-            var pass1 = Regex.Replace(requestedContainerName, trimFobiddenCharactersPattern, String.Empty, RegexOptions.None);
-            var pass2 = Regex.Replace(pass1, trimTrailingPattern, String.Empty, RegexOptions.RightToLeft);
-            var pass3 = Regex.Replace(pass2, trimLeadingPattern, String.Empty, RegexOptions.None);
-            var pass4 = Regex.Replace(pass3, trimExtraHyphensPattern, "-", RegexOptions.None);
-            var loweredCleanedContainerName = pass4.ToLower();
-            if (Regex.Match(loweredCleanedContainerName, validContainerPattern).Success)
+            else
             {
-                InternalLogger.Trace("AzureTableStorageTarget: Using Cleaned Container name: {0}", loweredCleanedContainerName);
-                return loweredCleanedContainerName;
+                InternalLogger.Trace("AzureBlobStorageTarget(Name={0}): Using Cleaned Container name: {0}", Name, validContainerName);
             }
-            return "defaultlog";
+            return validContainerName;
         }
 
         /// <summary>
