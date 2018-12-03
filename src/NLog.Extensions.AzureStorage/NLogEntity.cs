@@ -26,11 +26,27 @@ namespace NLog.Extensions.AzureStorage
             MachineName = machineName;
             if(logEvent.Exception != null)
             {
-                Exception = logEvent.Exception.Message;
-                StackTrace = logEvent.Exception.StackTrace;
-                if (logEvent.Exception.InnerException != null)
+                var exception = logEvent.Exception;
+                var innerException = exception.InnerException;
+                if (exception is AggregateException aggregateException)
                 {
-                    InnerException = logEvent.Exception.InnerException.ToString();
+                    var innerExceptions = aggregateException.Flatten();
+                    if (innerExceptions.InnerExceptions?.Count == 1)
+                    {
+                        exception = innerExceptions.InnerExceptions[0];
+                        innerException = null;
+                    }
+                    else
+                    {
+                        innerException = innerExceptions;
+                    }
+                }
+
+                Exception = string.Concat(exception.Message, " - ", exception.GetType().ToString());
+                StackTrace = exception.StackTrace;
+                if (innerException != null)
+                {
+                    InnerException = innerException.ToString();
                 }
             }
             RowKey = string.Concat((DateTime.MaxValue.Ticks - DateTime.UtcNow.Ticks).ToString("d19"), "__", Guid.NewGuid().ToString());
