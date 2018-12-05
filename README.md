@@ -1,7 +1,5 @@
-# NLog.Extensions.AzureStorage [![AppVeyor](https://img.shields.io/appveyor/ci/JDetmar/nlog-extensions-azurestorage.svg)](https://ci.appveyor.com/project/JDetmar/nlog-extensions-azurestorage) [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureStorage.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureStorage/)
-
+# NLog.Extensions.AzureStorage [![AppVeyor](https://img.shields.io/appveyor/ci/JDetmar/nlog-extensions-azurestorage.svg)](https://ci.appveyor.com/project/JDetmar/nlog-extensions-azurestorage) [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureStorage.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureStorage/)[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage?ref=badge_shield)
 ![logo](logo64.png?raw=true)
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage?ref=badge_shield)
 
 NLog Targets for Azure Blob, Table and Queue Storage 
 
@@ -131,9 +129,14 @@ _connectionStringKey_ - App key name of Azure storage connection string. Must pr
             connectionStringKey="storageConnectionString"
             layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
             tableName="NlogTable" />
+	<target type="AzureQueueStorage"
+            name="AzureQueue"
+            connectionStringKey="storageConnectionString"
+            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
+            queueName="NlogQueue" />
 </targets>
 ```
 
 
 ## License
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage?ref=badge_large)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage.svg?type=small)](https://app.fossa.io/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage?ref=badge_small)
