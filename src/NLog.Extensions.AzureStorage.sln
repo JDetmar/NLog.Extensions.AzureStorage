@@ -3,9 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26206.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NLog.Extensions.AzureStorage", "NLog.Extensions.AzureStorage\NLog.Extensions.AzureStorage.csproj", "{6B22DDCB-8C6F-491E-96A3-526034BAA47B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureStorage", "NLog.Extensions.AzureStorage\NLog.Extensions.AzureStorage.csproj", "{6B22DDCB-8C6F-491E-96A3-526034BAA47B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NLog.Extensions.AzureStorage.IntegrationTest", "NLog.Extensions.AzureStorage.IntegrationTest\NLog.Extensions.AzureStorage.IntegrationTest.csproj", "{BD4E0EB2-99DB-41CB-A46B-DC573A7573CA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EACADB54-1A72-4CEE-AF3A-5AEDC3CB553A}"
+	ProjectSection(SolutionItems) = preProject
+		..\README.md = ..\README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,5 +49,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {57F963D5-962F-4205-B49E-B4CCE3888D73}
 	EndGlobalSection
 EndGlobal

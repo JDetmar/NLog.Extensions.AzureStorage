@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using NLog.Common;
 using NLog.Config;
 using NLog.Layouts;
 using NLog.Targets;
-#if !NETSTANDARD
-using System.Configuration;
-using Microsoft.Azure;
-#endif
 
 namespace NLog.Extensions.AzureStorage
 {
@@ -24,7 +19,8 @@ namespace NLog.Extensions.AzureStorage
         private CloudTableClient _client;
         private CloudTable _table;
         private string _machineName;
-        private readonly Dictionary<string, string> _tableNameCache = new Dictionary<string, string>();
+        private readonly AzureStorageNameCache _containerNameCache = new AzureStorageNameCache();
+        private readonly Func<string, string> _checkAndRepairTableNameDelegate;
 
         //Delegates for bucket sorting
         private SortHelpers.KeySelector<AsyncLogEventInfo, TablePartitionKey> _getTablePartitionNameDelegate;
@@ -68,6 +64,7 @@ namespace NLog.Extensions.AzureStorage
         public TableStorageTarget()
         {
             OptimizeBufferReuse = true;
+            _checkAndRepairTableNameDelegate = CheckAndRepairTableNamingRules;
         }
 
         /// <summary>
@@ -80,30 +77,18 @@ namespace NLog.Extensions.AzureStorage
 
             _machineName = GetMachineName();
 
-            var connectionString = _connectionString != null ? RenderLogEvent(_connectionString, LogEventInfo.CreateNullEvent()) : string.Empty;
-#if !NETSTANDARD
-            if (!string.IsNullOrWhiteSpace(ConnectionStringKey))
+            string connectionString = string.Empty;
+            try
             {
-                connectionString = CloudConfigurationManager.GetSetting(ConnectionStringKey);
-                if (String.IsNullOrWhiteSpace(connectionString))
-                    connectionString = ConfigurationManager.ConnectionStrings[ConnectionStringKey]?.ConnectionString;
-                if (string.IsNullOrWhiteSpace(connectionString))
-                {
-                    InternalLogger.Error($"AzureTableStorageTarget: No ConnectionString found with ConnectionStringKey: {ConnectionStringKey}.");
-                    throw new Exception($"No ConnectionString found with ConnectionStringKey: {ConnectionStringKey}.");
-                }
+                connectionString = ConnectionStringHelper.LookupConnectionString(_connectionString, ConnectionStringKey);
+                _client = CloudStorageAccount.Parse(connectionString).CreateCloudTableClient();
+                InternalLogger.Trace("AzureTableStorageTarget - Initialized");
             }
-#endif
-
-            if (String.IsNullOrWhiteSpace(connectionString))
+            catch (Exception ex)
             {
-                InternalLogger.Error("AzureTableStorageTarget: A ConnectionString or ConnectionStringKey is required.");
-                throw new Exception("A ConnectionString or ConnectionStringKey is required");
+                InternalLogger.Error(ex, "AzureTableStorageTarget(Name={0}): Failed to create TableClient with connectionString={1}.", Name, connectionString);
+                throw;
             }
-
-            _client = CloudStorageAccount.Parse(connectionString).CreateCloudTableClient();
-
-            InternalLogger.Trace("AzureTableStorageWrapper - Initialized");
         }
 
         /// <summary>
@@ -119,7 +104,7 @@ namespace NLog.Extensions.AzureStorage
             var tableName = RenderLogEvent(TableName, logEvent);
             try
             {
-                tableName = LookupValidTableName(tableName);
+                tableName = CheckAndRepairTableName(tableName);
 
                 InitializeTable(tableName);
                 var layoutMessage = RenderLogEvent(Layout, logEvent);
@@ -161,7 +146,7 @@ namespace NLog.Extensions.AzureStorage
 
                 try
                 {
-                    tableName = LookupValidTableName(tableName);
+                    tableName = CheckAndRepairTableName(tableName);
 
                     InitializeTable(tableName);
 
@@ -242,53 +227,24 @@ namespace NLog.Extensions.AzureStorage
             }
         }
 
-        private string LookupValidTableName(string requestedTableName)
+        private string CheckAndRepairTableName(string tableName)
         {
-            if (_tableNameCache.TryGetValue(requestedTableName, out var validTableName))
-                return validTableName;
-
-            if (_tableNameCache.Count > 1000)
-                _tableNameCache.Clear();
-
-            validTableName = CheckAndRepairTableNamingRules(requestedTableName);
-            _tableNameCache[requestedTableName] = validTableName;
-            return validTableName;
+            return _containerNameCache.LookupStorageName(tableName, _checkAndRepairTableNameDelegate);
         }
 
-        //TODO: update rules
-        /// <summary>
-        /// Checks the and repairs table name acording to the Azure naming rules.
-        /// </summary>
-        /// <param name="tableName">Name of the table.</param>
-        /// <returns></returns>
-        private static string CheckAndRepairTableNamingRules(string tableName)
+        private string CheckAndRepairTableNamingRules(string tableName)
         {
-            /*  http://msdn.microsoft.com/en-us/library/windowsazure/dd179338.aspx
-            Table Names:
-                Table names must be unique within an account.
-                Table names may contain only alphanumeric characters.
-                Table names cannot begin with a numeric character.
-                Table names are case-insensitive.
-                Table names must be from 3 to 63 characters long.
-                Some table names are reserved, including "tables". Attempting to create a table with a reserved table name returns error code 404 (Bad Request).
-            */
-            var simpleValidName = tableName?.Length <= 63 ? AzureNameHelpers.EnsureValidName(tableName) : null;
-            if (simpleValidName?.Length >= 3)
-                return simpleValidName;
-
-            const string trimLeadingPattern = "^.*?(?=[a-zA-Z])";
-            const string trimFobiddenCharactersPattern = "[^a-zA-Z0-9-]";
-
-            var pass1 = Regex.Replace(tableName, trimFobiddenCharactersPattern, String.Empty, RegexOptions.None);
-            var cleanedTableName = Regex.Replace(pass1, trimLeadingPattern, String.Empty, RegexOptions.None);
-            if (String.IsNullOrWhiteSpace(cleanedTableName) || cleanedTableName.Length > 63 || cleanedTableName.Length < 3)
+            InternalLogger.Trace("AzureTableStorageTarget(Name={0}): Requested Table Name: {1}", Name, tableName);
+            string validTableName = AzureStorageNameCache.CheckAndRepairTableNamingRules(tableName);
+            if (validTableName == tableName)
             {
-                var tableDefault = "Logs";
-                InternalLogger.Error("AzureTableStorageTarget: Invalid table Name provided: {0} | Using default: {1}", tableName, tableDefault);
-                return tableDefault;
+                InternalLogger.Trace("AzureTableStorageTarget(Name={0}): Using Table Name: {0}", Name, validTableName);
             }
-            InternalLogger.Trace("AzureTableStorageTarget: Using provided table name: {0}", tableName);
-            return tableName;
+            else
+            {
+                InternalLogger.Trace("AzureTableStorageTarget(Name={0}): Using Cleaned Table name: {0}", Name, validTableName);
+            }
+            return validTableName;
         }
 
         /// <summary>
@@ -313,7 +269,7 @@ namespace NLog.Extensions.AzureStorage
             }
             catch (Exception ex)
             {
-                NLog.Common.InternalLogger.Warn(ex, "AzureTableStorageTarget: Failed to lookup {0}", lookupType);
+                InternalLogger.Warn(ex, "AzureTableStorageTarget: Failed to lookup {0}", lookupType);
                 return null;
             }
         }
