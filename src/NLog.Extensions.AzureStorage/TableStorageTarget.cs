@@ -61,6 +61,12 @@ namespace NLog.Extensions.AzureStorage
 
         public string LogTimeStampFormat { get; set; } = "O";
 
+        /// <summary>
+        /// Gets or sets a list of additional fields to add to the elasticsearch document.
+        /// </summary>
+        [ArrayParameter(typeof(DynEntityProperty), "contextproperty")]
+        public IList<DynEntityProperty> ContextProperties { get; set; } = new List<DynEntityProperty>();
+
         public TableStorageTarget()
         {
             OptimizeBufferReuse = true;
@@ -155,9 +161,8 @@ namespace NLog.Extensions.AzureStorage
                     //add each message for the destination table partition limit batch to 100 elements
                     foreach (var asyncLogEventInfo in partitionBucket.Value)
                     {
-                        var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
-                        var entity = new NLogEntity(asyncLogEventInfo.LogEvent, layoutMessage, _machineName, partitionBucket.Key.PartitionId, LogTimeStampFormat);
-                        batch.Insert(entity);
+                        var tableEntity = CreateTableEntity(asyncLogEventInfo.LogEvent, partitionBucket.Key.PartitionId);
+                        batch.Insert(tableEntity);
                         if (batch.Count == 100)
                         {
                             TableExecuteBatch(_table, batch);
@@ -176,6 +181,33 @@ namespace NLog.Extensions.AzureStorage
                     InternalLogger.Error(ex, "AzureTableStorageTarget: failed writing batch to table: {0}", tableName);
                     throw;
                 }
+            }
+        }
+
+        private ITableEntity CreateTableEntity(LogEventInfo logEvent, string partitionKey)
+        {
+            if (ContextProperties.Count > 0)
+            {
+                DynamicTableEntity entity = new DynamicTableEntity();
+                entity.PartitionKey = partitionKey;
+                entity.RowKey = string.Concat((DateTime.MaxValue.Ticks - logEvent.TimeStamp.Ticks).ToString("d19"), "__", Guid.NewGuid().ToString());
+                entity.Properties.Add("LogTimeStamp", new EntityProperty(logEvent.TimeStamp.ToUniversalTime()));
+                for (int i = 0; i < ContextProperties.Count; ++i)
+                {
+                    var contextproperty = ContextProperties[i];
+                    if (string.IsNullOrEmpty(contextproperty.Name))
+                        continue;
+
+                    var propertyValue = contextproperty.Layout != null ? RenderLogEvent(contextproperty.Layout, logEvent) : string.Empty;
+                    entity.Properties.Add(contextproperty.Name, new EntityProperty(propertyValue));
+                }
+                return entity;
+            }
+            else
+            {
+                var layoutMessage = RenderLogEvent(Layout, logEvent);
+                var entity = new NLogEntity(logEvent, layoutMessage, _machineName, partitionKey, LogTimeStampFormat);
+                return entity;
             }
         }
 

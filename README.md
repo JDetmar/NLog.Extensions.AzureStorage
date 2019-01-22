@@ -75,6 +75,32 @@ _tableName_ - Azure table name. [Layout](https://github.com/NLog/NLog/wiki/Layou
 
 _logTimeStampFormat_ - Default Log TimeStamp is set to 'O' for [Round-trip](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings#the-round-trip-o-o-format-specifier) format if not specified.
 
+### DynamicTableEntity
+Instead of using the predefined NLogEntity-properties, then one can specify wanted properties:
+
+```xml
+<extensions>
+  <add assembly="NLog.Extensions.AzureStorage" /> 
+</extensions>
+
+<targets>
+  <target xsi:type="AzureTableStorage"
+          name="String"
+          connectionString="String"
+          connectionStringKey="String"
+          tableName="Layout">
+    <contextproperty name="Level" layout="${level}" />
+    <contextproperty name="LoggerName" layout="${logger}" />
+    <contextproperty name="Message" layout="${message:raw=true}" />
+    <contextproperty name="Exception" layout="${exception:format=tostring}" />
+    <contextproperty name="FullMessage" layout="${message}" />
+    <contextproperty name="MachineName" layout="${machinename}" />
+  </target>
+</targets>
+```
+
+It will by default always include the hardcoded property `LogTimeStamp` of type DateTime.
+
 ## Queue Configuration
 
 ### Syntax
