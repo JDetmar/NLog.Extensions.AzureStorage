@@ -24,12 +24,16 @@ namespace NLog.Extensions.AzureStorage
                     throw new ArgumentException($"No ConnectionString found with ConnectionStringKey: {connectionStringKey}.");
                 }
             }
-#endif
-
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 throw new ArgumentException("A ConnectionString or ConnectionStringKey is required");
             }
+#else
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new ArgumentException("ConnectionString is required");
+            }
+#endif
 
             return connectionString;
         }
