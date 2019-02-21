@@ -93,9 +93,15 @@ namespace NLog.Extensions.AzureStorage
         private void QueueCreateIfNotExists(CloudQueue cloudQueue)
         {
 #if NETSTANDARD
-            cloudQueue.CreateIfNotExistsAsync().GetAwaiter().GetResult();
+            if (!cloudQueue.ExistsAsync().GetAwaiter().GetResult())
+            {
+                cloudQueue.CreateIfNotExistsAsync().GetAwaiter().GetResult();
+            }
 #else
-            cloudQueue.CreateIfNotExists();
+            if (!cloudQueue.Exists())
+            {
+                cloudQueue.CreateIfNotExists();
+            }
 #endif
         }
 
