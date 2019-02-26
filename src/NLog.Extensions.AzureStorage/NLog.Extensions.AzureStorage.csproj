@@ -5,7 +5,7 @@
 
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     
     <Description>NLog target that supports Blob and table storage in single nuget package.
 Can use queued batches to greatly improve performance. Recommended to use as a async target.
@@ -20,11 +20,8 @@ Can use queued batches to greatly improve performance. Recommended to use as a a
     <PackageLicenseUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
-    <PackageReleaseNotes>## Feature
-- Support added for DynamicTableEntity (@snakefoot)
-
-## Bug Fixes
-- Corrected error message for netstandard connection string (@snakefoot)</PackageReleaseNotes>
+    <PackageReleaseNotes>## Enhancements
+- [#27](https://github.com/JDetmar/NLog.Extensions.AzureStorage/pull/27) Perform Exists check before CreateIfNotExists (@snakefoot)
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
