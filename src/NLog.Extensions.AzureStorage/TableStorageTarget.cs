@@ -232,9 +232,15 @@ namespace NLog.Extensions.AzureStorage
         private void TableCreateIfNotExists(CloudTable cloudTable)
         {
 #if NETSTANDARD
-            cloudTable.CreateIfNotExistsAsync().GetAwaiter().GetResult();
+            if (!cloudTable.ExistsAsync().GetAwaiter().GetResult())
+            {
+                cloudTable.CreateIfNotExistsAsync().GetAwaiter().GetResult();
+            }
 #else
-            cloudTable.CreateIfNotExists();
+            if (!cloudTable.Exists())
+            {
+                cloudTable.CreateIfNotExists();
+            }
 #endif
         }
 

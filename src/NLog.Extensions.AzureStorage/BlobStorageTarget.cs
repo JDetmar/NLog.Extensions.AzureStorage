@@ -222,9 +222,15 @@ namespace NLog.Extensions.AzureStorage
                 {
                     _container = _client.GetContainerReference(containerName);
 #if NETSTANDARD
-                    _container.CreateIfNotExistsAsync().GetAwaiter().GetResult();
+                    if (!_container.ExistsAsync().GetAwaiter().GetResult())
+                    {
+                        _container.CreateIfNotExistsAsync().GetAwaiter().GetResult();
+                    }
 #else
-                    _container.CreateIfNotExists();
+                    if (!_container.Exists())
+                    {
+                        _container.CreateIfNotExists();
+                    }
 #endif
                 }
                 catch (StorageException storageException)
