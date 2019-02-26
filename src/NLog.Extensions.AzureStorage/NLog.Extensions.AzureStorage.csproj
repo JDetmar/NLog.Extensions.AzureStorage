@@ -22,6 +22,7 @@ Can use queued batches to greatly improve performance. Recommended to use as a a
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageReleaseNotes>## Enhancements
 - [#27](https://github.com/JDetmar/NLog.Extensions.AzureStorage/pull/27) Perform Exists check before CreateIfNotExists (@snakefoot)
+    </PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
