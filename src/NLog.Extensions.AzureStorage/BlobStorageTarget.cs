@@ -22,6 +22,7 @@ namespace NLog.Extensions.AzureStorage
         private CloudBlobContainer _container;
         private readonly AzureStorageNameCache _containerNameCache = new AzureStorageNameCache();
         private readonly Func<string, string> _checkAndRepairContainerNameDelegate;
+        private readonly char[] _reusableEncodingBuffer = new char[64 * 1024];
 
         //Delegates for bucket sorting
         private SortHelpers.KeySelector<AsyncLogEventInfo, ContainerBlobKey> _getContainerBlobNameDelegate;
@@ -111,11 +112,11 @@ namespace NLog.Extensions.AzureStorage
                 containerName = CheckAndRepairContainerName(containerName);
                 blobName = CheckAndRepairBlobNamingRules(blobName);
 
-                var layoutMessage = RenderLogEvent(Layout, logEvent);
-                var logMessage = string.Concat(layoutMessage, Environment.NewLine);
-
+                var layoutMessage = RenderLogEvent(Layout, logEvent) ?? string.Empty;
+                var logMessageBytes = GenerateLogMessageBytes(layoutMessage, Environment.NewLine);
+                
                 InitializeContainer(containerName);
-                AppendBlobText(blobName, logMessage);
+                AppendBlobFromByteArray(blobName, logMessageBytes);
             }
             catch (StorageException ex)
             {
@@ -169,7 +170,8 @@ namespace NLog.Extensions.AzureStorage
                     }
 
                     blobName = CheckAndRepairBlobNamingRules(blobBucket.Key.BlobName);
-                    AppendBlobText(blobName, logMessage.ToString());
+                    var logMessageBytes = GenerateLogMessageBytes(logMessage);
+                    AppendBlobFromByteArray(blobName, logMessageBytes);
 
                     foreach (var asyncLogEventInfo in blobBucket.Value)
                         asyncLogEventInfo.Continuation(null);
@@ -243,15 +245,51 @@ namespace NLog.Extensions.AzureStorage
             }
         }
 
-        private void AppendBlobText(string blobName, string logMessage)
+        private void AppendBlobFromByteArray(string blobName, byte[] buffer)
         {
             InitializeBlob(blobName);
 
 #if NETSTANDARD
-            _appendBlob.AppendTextAsync(logMessage).GetAwaiter().GetResult();
+            _appendBlob.AppendFromByteArrayAsync(buffer, 0, buffer.Length).GetAwaiter().GetResult();
 #else
-            _appendBlob.AppendText(logMessage);
+            _appendBlob.AppendFromByteArray(buffer, 0, buffer.Length);
 #endif
+        }
+
+        /// <summary>
+        /// Skips string.ToCharArray allocation (if possible)
+        /// </summary>
+        private byte[] GenerateLogMessageBytes(string layoutMessage, string newLine)
+        {
+            newLine = newLine ?? string.Empty;
+            int totalLength = layoutMessage.Length + newLine.Length;
+            if (totalLength < _reusableEncodingBuffer.Length)
+            {
+                layoutMessage.CopyTo(0, _reusableEncodingBuffer, 0, layoutMessage.Length);
+                newLine.CopyTo(0, _reusableEncodingBuffer, layoutMessage.Length, newLine.Length);
+                return Encoding.UTF8.GetBytes(_reusableEncodingBuffer, 0, totalLength);
+            }
+            else
+            {
+                return Encoding.UTF8.GetBytes(string.Concat(layoutMessage, Environment.NewLine));
+            }
+        }
+
+        /// <summary>
+        /// Skips ToString-allocation and string.ToCharArray allocation (if possible)
+        /// </summary>
+        private byte[] GenerateLogMessageBytes(StringBuilder layoutMessage)
+        {
+            int totalLength = layoutMessage.Length;
+            if (totalLength < _reusableEncodingBuffer.Length)
+            {
+                layoutMessage.CopyTo(0, _reusableEncodingBuffer, 0, layoutMessage.Length);
+                return Encoding.UTF8.GetBytes(_reusableEncodingBuffer, 0, totalLength);
+            }
+            else
+            {
+                return Encoding.UTF8.GetBytes(layoutMessage.ToString());
+            }
         }
 
         private string CheckAndRepairContainerName(string containerName)
