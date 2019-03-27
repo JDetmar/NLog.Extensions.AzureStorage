@@ -22,7 +22,8 @@ namespace NLog.Extensions.AzureStorage
         private CloudBlobContainer _container;
         private readonly AzureStorageNameCache _containerNameCache = new AzureStorageNameCache();
         private readonly Func<string, string> _checkAndRepairContainerNameDelegate;
-        private readonly char[] _reusableEncodingBuffer = new char[64 * 1024];
+        private readonly char[] _reusableEncodingBuffer = new char[32 * 1024];  // Avoid large-object-heap
+        private readonly StringBuilder _reusableEncodingBuilder = new StringBuilder(1024);
 
         //Delegates for bucket sorting
         private SortHelpers.KeySelector<AsyncLogEventInfo, ContainerBlobKey> _getContainerBlobNameDelegate;
@@ -146,15 +147,12 @@ namespace NLog.Extensions.AzureStorage
             var blobBuckets = SortHelpers.BucketSort(logEvents, _getContainerBlobNameDelegate);
 
             //Iterate over all the containers being written to
-            StringBuilder logMessage = null;
             foreach (var blobBucket in blobBuckets)
             {
                 string containerName = blobBucket.Key.ContainerName;
                 string blobName = blobBucket.Key.BlobName;
 
-                //Initilize StringBuilder size based on number of items to write. Default StringBuilder initialization size is 16 characters.
-                logMessage = logMessage ?? new StringBuilder(blobBucket.Value.Count * 128);
-                logMessage.Length = 0;
+                _reusableEncodingBuilder.Length = 0;
 
                 try
                 {
@@ -166,11 +164,11 @@ namespace NLog.Extensions.AzureStorage
                     foreach (var asyncLogEventInfo in blobBucket.Value)
                     {
                         var layoutMessage = RenderLogEvent(Layout, asyncLogEventInfo.LogEvent);
-                        logMessage.AppendLine(layoutMessage);
+                        _reusableEncodingBuilder.AppendLine(layoutMessage);
                     }
 
                     blobName = CheckAndRepairBlobNamingRules(blobBucket.Key.BlobName);
-                    var logMessageBytes = GenerateLogMessageBytes(logMessage);
+                    var logMessageBytes = GenerateLogMessageBytes(_reusableEncodingBuilder);
                     AppendBlobFromByteArray(blobName, logMessageBytes);
 
                     foreach (var asyncLogEventInfo in blobBucket.Value)
@@ -180,6 +178,14 @@ namespace NLog.Extensions.AzureStorage
                 {
                     InternalLogger.Error(ex, "AzureBlobStorageTarget: failed writing batch to blob: {0} in container: {1}", blobName, containerName);
                     throw;
+                }
+                finally
+                {
+                    const int maxSize = 512 * 1024;
+                    if (_reusableEncodingBuilder.Length > maxSize)
+                    {
+                        _reusableEncodingBuilder.Remove(maxSize, _reusableEncodingBuilder.Length - maxSize);   // Releases all buffers
+                    }
                 }
             }
         }
