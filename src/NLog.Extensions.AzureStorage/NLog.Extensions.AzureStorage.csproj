@@ -5,7 +5,7 @@
 
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>1.1.3</Version>
+    <Version>1.1.4</Version>
 
     <Description>NLog target that supports Blob and table storage in single nuget package.
 Can use queued batches to greatly improve performance. Recommended to use as a async target.
@@ -20,8 +20,8 @@ Can use queued batches to greatly improve performance. Recommended to use as a a
     <PackageLicenseUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
-    <PackageReleaseNotes>## Enhancements
-- [#30](https://github.com/JDetmar/NLog.Extensions.AzureStorage/pull/30) Reduce memory allocation by reusing StringBuilder (@snakefoot)
+    <PackageReleaseNotes>## Fix
+- [#35](https://github.com/JDetmar/NLog.Extensions.AzureStorage/pull/35) Fix DynamicTableEntity (@nadetz)
     </PackageReleaseNotes>
   </PropertyGroup>
 
