@@ -113,8 +113,7 @@ namespace NLog.Extensions.AzureStorage
                 tableName = CheckAndRepairTableName(tableName);
 
                 InitializeTable(tableName);
-                //var layoutMessage = RenderLogEvent(Layout, logEvent);
-                //var entity = new NLogEntity(logEvent, layoutMessage, _machineName, logEvent.LoggerName, LogTimeStampFormat);
+                
                 var entity = CreateTableEntity(logEvent, logEvent.LoggerName);
                 var insertOperation = TableOperation.Insert(entity);
                 TableExecute(_table, insertOperation);
