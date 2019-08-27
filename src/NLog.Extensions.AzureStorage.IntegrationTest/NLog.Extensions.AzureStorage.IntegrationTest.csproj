@@ -8,9 +8,10 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>NLog.Extensions.AzureStorage.IntegrationTest</RootNamespace>
     <AssemblyName>NLog.Extensions.AzureStorage.IntegrationTest</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -33,10 +34,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <HintPath>..\packages\NLog.4.4.2\lib\net45\NLog.dll</HintPath>
+      <HintPath>..\packages\NLog.4.6.7\lib\net45\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -55,6 +61,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\NLog.Extensions.AzureEventHub\NLog.Extensions.AzureEventHub.csproj">
+      <Project>{cf5e1262-d006-4c3a-9a62-98c31a3ad5f0}</Project>
+      <Name>NLog.Extensions.AzureEventHub</Name>
+    </ProjectReference>
     <ProjectReference Include="..\NLog.Extensions.AzureStorage\NLog.Extensions.AzureStorage.csproj">
       <Project>{6b22ddcb-8c6f-491e-96a3-526034baa47b}</Project>
       <Name>NLog.Extensions.AzureStorage</Name>
