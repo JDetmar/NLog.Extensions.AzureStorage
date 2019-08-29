@@ -6,10 +6,13 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
     <Version>1.1.4</Version>
-
-    <Description>NLog target that supports Blob and table storage in single nuget package.
-Can use queued batches to greatly improve performance. Recommended to use as a async target.
-    </Description>
+    
+    <Description>NLog Targets for different Azure Cloud storage types:
+ - AzureBlobStorage : Writes to Azure Blob Storage
+ - AzureTableStorage : Writes to Azure Table Storage
+ - AzureQueueStorage : Writes to Azure Queue Storage
+ 
+Batching is supported for high performance, when wrapped in async target.</Description>
     <Authors>jdetmar</Authors>
     <CurrentYear>$([System.DateTime]::Now.ToString(yyyy))</CurrentYear>
     <Copyright>Copyright (c) $(CurrentYear) - jdetmar</Copyright>
