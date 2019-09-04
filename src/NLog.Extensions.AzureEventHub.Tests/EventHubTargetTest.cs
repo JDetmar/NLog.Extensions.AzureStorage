@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using NLog;
+using NLog.Targets;
 using Xunit;
 
 namespace NLog.Extensions.AzureEventHub.Test

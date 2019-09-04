@@ -133,7 +133,7 @@ _connectionStringKey_ - App key name of Azure storage connection string. Must pr
 ## EventHub Configuration
 AzureEventHub-target has its own dedicated nuget-package, because of special Microsoft.Azure.EventHubs dependency:
 
-[![AppVeyor](https://img.shields.io/appveyor/ci/JDetmar/nlog-extensions-azureeventhub.svg)](https://ci.appveyor.com/project/JDetmar/nlog-extensions-azurestorage) [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureEventHub.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureEventHub/) 
+[![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureEventHub.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureEventHub/) 
 
 ### Syntax
 ```xml

@@ -7,12 +7,15 @@ using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using NLog.Common;
 using NLog.Config;
+using NLog.Extensions.AzureEventHub;
 using NLog.Extensions.AzureStorage;
 using NLog.Layouts;
-using NLog.Targets;
 
-namespace NLog.Extensions.AzureEventHub
+namespace NLog.Targets
 {
+    /// <summary>
+    /// Azure Event Hubs NLog Target
+    /// </summary>
     [Target("AzureEventHub")]
     public class EventHubTarget : AsyncTaskTarget
     {
@@ -76,6 +79,12 @@ namespace NLog.Extensions.AzureEventHub
             if (_getEventHubPartitionKeyDelegate == null)
                 _getEventHubPartitionKeyDelegate = l => RenderLogEvent(PartitionKey, l);
 
+            if (logEvents.Count == 1)
+            {
+                var eventDataList = CreateEventDataList(logEvents, out var eventDataSize);
+                return WriteSingleBatchAsync(eventDataList, _getEventHubPartitionKeyDelegate(logEvents[0]));
+            }
+
             var partitionBuckets = SortHelpers.BucketSort(logEvents, _getEventHubPartitionKeyDelegate);
             IList<Task> multipleTasks = partitionBuckets.Count > 1 ? new List<Task>(partitionBuckets.Count) : null;
             foreach (var partitionBucket in partitionBuckets)
@@ -88,7 +97,7 @@ namespace NLog.Extensions.AzureEventHub
                     int batchSize = CalculateBatchSize(eventDataList, eventDataSize);
                     if (batchSize == eventDataList.Count)
                     {
-                        sendTask = WriteSingleBatch(eventDataList, partitionBucket.Key);
+                        sendTask = WriteSingleBatchAsync(eventDataList, partitionBucket.Key);
                     }
                     else
                     {
@@ -96,7 +105,7 @@ namespace NLog.Extensions.AzureEventHub
                         foreach (var batchItem in GenerateBatches(eventDataList, batchSize))
                         {
                             string partitionKey = partitionBucket.Key;
-                            sendTask = sendTask.ContinueWith(async p => await WriteSingleBatch(batchItem, partitionKey));
+                            sendTask = sendTask.ContinueWith(async p => await WriteSingleBatchAsync(batchItem, partitionKey).ConfigureAwait(false));
                         }
                     }
 
@@ -113,7 +122,7 @@ namespace NLog.Extensions.AzureEventHub
                 }
             }
 
-            return Task.WhenAll(multipleTasks ?? Array.Empty<Task>());
+            return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
         }
 
         IEnumerable<List<EventData>> GenerateBatches(IList<EventData> source, int batchSize)
@@ -122,7 +131,7 @@ namespace NLog.Extensions.AzureEventHub
                 yield return new List<EventData>(source.Skip(i).Take(batchSize));
         }
 
-        private Task WriteSingleBatch(IList<EventData> eventDataList, string partitionKey)
+        private Task WriteSingleBatchAsync(IList<EventData> eventDataList, string partitionKey)
         {
             return _eventHubService.SendAsync(eventDataList, partitionKey);
         }
@@ -132,16 +141,13 @@ namespace NLog.Extensions.AzureEventHub
             if (eventDataSize < 1024 * 1024)
                 return eventDataList.Count;
 
-            if (eventDataList.Count < 10)
-                return 1;
+            if (eventDataList.Count > 10)
+                return Math.Min(eventDataList.Count / 10, 100);
 
-            if (eventDataList.Count < 200)
-                return Math.Min(eventDataList.Count / 2, 10);
-
-            return 100;
+            return 1;
         }
 
-        private IList<EventData> CreateEventDataList(List<LogEventInfo> logEventList, out int eventDataSize)
+        private IList<EventData> CreateEventDataList(IList<LogEventInfo> logEventList, out int eventDataSize)
         {
             if (logEventList.Count == 0)
             {
