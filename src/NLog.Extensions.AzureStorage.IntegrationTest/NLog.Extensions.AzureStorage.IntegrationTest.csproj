@@ -65,9 +65,17 @@
       <Project>{cf5e1262-d006-4c3a-9a62-98c31a3ad5f0}</Project>
       <Name>NLog.Extensions.AzureEventHub</Name>
     </ProjectReference>
-    <ProjectReference Include="..\NLog.Extensions.AzureStorage\NLog.Extensions.AzureStorage.csproj">
-      <Project>{6b22ddcb-8c6f-491e-96a3-526034baa47b}</Project>
-      <Name>NLog.Extensions.AzureStorage</Name>
+    <ProjectReference Include="..\NLog.Extensions.AzureStorageBlob\NLog.Extensions.AzureStorageBlob.csproj">
+      <Project>{f3d95485-890d-4a85-864c-a793345ad5f5}</Project>
+      <Name>NLog.Extensions.AzureStorageBlob</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NLog.Extensions.AzureStorageQueue\NLog.Extensions.AzureStorageQueue.csproj">
+      <Project>{18fd9f9e-67f2-4f9c-aef7-579a357ec701}</Project>
+      <Name>NLog.Extensions.AzureStorageQueue</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NLog.Extensions.AzureStorageTable\NLog.Extensions.AzureStorageTable.csproj">
+      <Project>{ed3925a5-17bf-4289-b5e5-21d9d82eed76}</Project>
+      <Name>NLog.Extensions.AzureStorageTable</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

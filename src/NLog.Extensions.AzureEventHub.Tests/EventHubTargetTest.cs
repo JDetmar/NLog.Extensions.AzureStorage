@@ -14,7 +14,7 @@ namespace NLog.Extensions.AzureEventHub.Test
             var logFactory = new LogFactory();
             var logConfig = new Config.LoggingConfiguration(logFactory);
             logConfig.Variables["ConnectionString"] = nameof(EventHubTargetTest);
-            var eventHubService = new EventHubService();
+            var eventHubService = new EventHubServiceMock();
             var eventHubTarget = new EventHubTarget(eventHubService);
             eventHubTarget.ConnectionString = "${var:ConnectionString}";
             eventHubTarget.EventHubName = "${shortdate}";
@@ -34,7 +34,7 @@ namespace NLog.Extensions.AzureEventHub.Test
         {
             var logFactory = new LogFactory();
             var logConfig = new Config.LoggingConfiguration(logFactory);
-            var eventHubService = new EventHubService();
+            var eventHubService = new EventHubServiceMock();
             var eventHubTarget = new EventHubTarget(eventHubService);
             eventHubTarget.ConnectionString = "LocalEventHub";
             eventHubTarget.PartitionKey = "${logger}";
@@ -57,7 +57,7 @@ namespace NLog.Extensions.AzureEventHub.Test
         {
             var logFactory = new LogFactory();
             var logConfig = new Config.LoggingConfiguration(logFactory);
-            var eventHubService = new EventHubService();
+            var eventHubService = new EventHubServiceMock();
             var eventHubTarget = new EventHubTarget(eventHubService);
             eventHubTarget.ConnectionString = "LocalEventHub";
             eventHubTarget.PartitionKey = "${logger}";

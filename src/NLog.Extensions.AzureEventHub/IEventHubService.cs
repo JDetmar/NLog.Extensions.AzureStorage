@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 
-namespace NLog.Extensions.AzureEventHub
+namespace NLog.Extensions.AzureStorage
 {
     internal interface IEventHubService
     {

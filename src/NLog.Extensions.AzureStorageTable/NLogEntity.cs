@@ -1,5 +1,10 @@
 ﻿using System;
+#if NETSTANDARD2_0
+using Microsoft.Azure.Cosmos.Table;
+#else
+using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
+#endif
 using NLog.Layouts;
 
 namespace NLog.Extensions.AzureStorage

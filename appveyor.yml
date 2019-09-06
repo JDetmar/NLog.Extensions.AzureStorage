@@ -4,10 +4,14 @@ configuration: Release
 
 before_build:
 - cmd: msbuild /t:Restore src\NLog.Extensions.AzureStorage.sln /p:Configuration=Release /verbosity:minimal
-- cmd: msbuild /t:Pack src\NLog.Extensions.AzureStorage /p:Configuration=Release /verbosity:minimal
+- cmd: msbuild /t:Pack src\NLog.Extensions.AzureStorageBlob /p:Configuration=Release /verbosity:minimal
+- cmd: msbuild /t:Pack src\NLog.Extensions.AzureStorageTable /p:Configuration=Release /verbosity:minimal
+- cmd: msbuild /t:Pack src\NLog.Extensions.AzureStorageQueue /p:Configuration=Release /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureEventHub /p:Configuration=Release /verbosity:minimal
+- cmd: dotnet test src\NLog.Extensions.AzureStorageBlob.Tests /p:Configuration=Release --verbosity minimal
+- cmd: dotnet test src\NLog.Extensions.AzureStorageTable.Tests /p:Configuration=Release --verbosity minimal
+- cmd: dotnet test src\NLog.Extensions.AzureStorageQueue.Tests /p:Configuration=Release --verbosity minimal
 - cmd: dotnet test src\NLog.Extensions.AzureEventHub.Tests /p:Configuration=Release --verbosity minimal
 
 artifacts:
-- path: '**\NLog.Extensions.AzureStorage*.nupkg'
-- path: '**\NLog.Extensions.AzureEventHub*.nupkg'
+- path: '**\NLog.Extensions.Azure*.nupkg'

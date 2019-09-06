@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using NLog.Common;
 using NLog.Config;
-using NLog.Extensions.AzureEventHub;
 using NLog.Extensions.AzureStorage;
 using NLog.Layouts;
 
@@ -105,7 +104,7 @@ namespace NLog.Targets
                         foreach (var batchItem in GenerateBatches(eventDataList, batchSize))
                         {
                             string partitionKey = partitionBucket.Key;
-                            sendTask = sendTask.ContinueWith(async p => await WriteSingleBatchAsync(batchItem, partitionKey).ConfigureAwait(false));
+                            sendTask = sendTask.ContinueWith(async p => await WriteSingleBatchAsync(batchItem, partitionKey).ConfigureAwait(false), cancellationToken);
                         }
                     }
 
@@ -268,7 +267,7 @@ namespace NLog.Targets
 
         private class EventHubService : IEventHubService
         {
-            private EventHubClient _eventHubClient;
+            private EventHubClient _client;
 
             public void Connect(string connectionString, string entityPath)
             {
@@ -277,17 +276,20 @@ namespace NLog.Targets
                 {
                     connectionstringBuilder.EntityPath = entityPath;
                 }
-                _eventHubClient = EventHubClient.CreateFromConnectionString(connectionstringBuilder.ToString());
+                _client = EventHubClient.CreateFromConnectionString(connectionstringBuilder.ToString());
             }
 
             public void Close()
             {
-                _eventHubClient?.Close();
+                _client?.Close();
             }
 
             public Task SendAsync(IList<EventData> eventDataList, string partitionKey)
             {
-                return _eventHubClient?.SendAsync(eventDataList, partitionKey);
+                if (_client == null)
+                    throw new InvalidOperationException("EventHubClient has not been initialized");
+
+                return _client.SendAsync(eventDataList, partitionKey);
             }
         }
     }

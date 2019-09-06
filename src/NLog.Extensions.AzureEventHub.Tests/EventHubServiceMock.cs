@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
+using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureEventHub.Test
 {
-    class EventHubService : IEventHubService
+    class EventHubServiceMock : IEventHubService
     {
         public Dictionary<string, IList<EventData>> EventDataSent { get; } = new Dictionary<string, IList<EventData>>();
         public string ConnectionString { get; private set; }
@@ -26,6 +27,9 @@ namespace NLog.Extensions.AzureEventHub.Test
 
         public Task SendAsync(IList<EventData> eventDataList, string partitionKey)
         {
+            if (string.IsNullOrEmpty(ConnectionString))
+                throw new InvalidOperationException("EventHubService not connected");
+
             lock (EventDataSent)
                 EventDataSent[partitionKey] = eventDataList;
             return Task.Delay(10);

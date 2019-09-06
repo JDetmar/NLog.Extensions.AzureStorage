@@ -1,36 +1,44 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net461;netstandard1.4;netstandard2.0</TargetFrameworks>
-    <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net461' ">true</DisableImplicitFrameworkReferences>
+    <TargetFrameworks>net452;netstandard1.3;netstandard2.0</TargetFrameworks>
+    <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net452' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DefineConstants>$(DefineConstants);NETCORE</DefineConstants>
 
-    <Version>1.0.0</Version>
+    <Version>0.9.0</Version>
 
-    <Description>NLog EventHubTarget for writing to Azure Event Hubs</Description>
+    <Description>NLog BlobStorageTarget for writing to Azure Cloud Blob Storage</Description>
     <Authors>jdetmar</Authors>
     <CurrentYear>$([System.DateTime]::Now.ToString(yyyy))</CurrentYear>
     <Copyright>Copyright (c) $(CurrentYear) - jdetmar</Copyright>
 
-    <PackageTags>NLog;azure;eventhubs;AMQP;log;logging</PackageTags>
+    <PackageTags>NLog;azure;CloudBlob;blob;storage;log;logging</PackageTags>
     <PackageIconUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/raw/master/logo64.png?raw=true</PackageIconUrl>
     <PackageProjectUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageReleaseNotes>
-      First official release
+      Initial release
     </PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\NLog.Extensions.AzureStorage\AzureStorageNameCache.cs" Link="AzureStorageNameCache.cs" />
+    <Compile Include="..\NLog.Extensions.AzureStorage\ConnectionStringHelper.cs" Link="ConnectionStringHelper.cs" />
     <Compile Include="..\NLog.Extensions.AzureStorage\SortHelpers.cs" Link="SortHelpers.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.EventHubs" Version="1.0.3" />
+    <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="10.0.3" />
     <PackageReference Include="NLog" Version="4.6.5" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Configuration" />
+    <PackageReference Include="Microsoft.WindowsAzure.ConfigurationManager" Version="3.0.0" />
   </ItemGroup>
 
 </Project>
