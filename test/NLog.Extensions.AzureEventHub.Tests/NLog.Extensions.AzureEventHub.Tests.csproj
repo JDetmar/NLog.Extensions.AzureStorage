@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NLog.Extensions.AzureEventHub\NLog.Extensions.AzureEventHub.csproj" />
+    <ProjectReference Include="..\..\src\NLog.Extensions.AzureEventHub\NLog.Extensions.AzureEventHub.csproj" />
   </ItemGroup>
 
 </Project>

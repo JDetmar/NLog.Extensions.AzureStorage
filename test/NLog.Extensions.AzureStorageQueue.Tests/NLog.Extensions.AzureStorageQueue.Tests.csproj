@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NLog.Extensions.AzureStorageBlob\NLog.Extensions.AzureStorageBlob.csproj" />
+    <ProjectReference Include="..\..\src\NLog.Extensions.AzureStorageQueue\NLog.Extensions.AzureStorageQueue.csproj" />
   </ItemGroup>
 
 </Project>
