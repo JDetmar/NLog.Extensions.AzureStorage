@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NLog.Extensions.AzureStorage;
 
-namespace NLog.Extensions.AzureStorageBlob.Tests
+namespace NLog.Extensions.AzureBlobStorage.Tests
 {
     class CloudBlobServiceMock : ICloudBlobService
     {

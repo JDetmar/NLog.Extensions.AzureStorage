@@ -3,7 +3,7 @@ using System.Linq;
 using NLog.Targets;
 using Xunit;
 
-namespace NLog.Extensions.AzureStorageBlob.Tests
+namespace NLog.Extensions.AzureBlobStorage.Tests
 {
     public class BlobStorageTargetTest
     {

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos.Table;
 using NLog.Extensions.AzureStorage;
 
-namespace NLog.Extensions.AzureStorageTable.Tests
+namespace NLog.Extensions.AzureTableStorage.Tests
 {
     class CloudTableServiceMock : ICloudTableService
     {

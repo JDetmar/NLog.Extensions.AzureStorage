@@ -4,4 +4,4 @@ using System.Runtime.InteropServices;
 
 [assembly: ComVisible(false)]
 
-[assembly: InternalsVisibleTo("NLog.Extensions.AzureStorageBlob.Tests")]
+[assembly: InternalsVisibleTo("NLog.Extensions.AzureBlobStorage.Tests")]
