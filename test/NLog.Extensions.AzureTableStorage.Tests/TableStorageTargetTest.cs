@@ -4,7 +4,7 @@ using Microsoft.Azure.Cosmos.Table;
 using NLog.Targets;
 using Xunit;
 
-namespace NLog.Extensions.AzureStorageTable.Tests
+namespace NLog.Extensions.AzureTableStorage.Tests
 {
     public class TableStorageTargetTest
     {

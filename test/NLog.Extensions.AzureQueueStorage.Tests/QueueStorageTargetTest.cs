@@ -2,7 +2,7 @@ using System;
 using NLog.Targets;
 using Xunit;
 
-namespace NLog.Extensions.AzureStorageQueue.Tests
+namespace NLog.Extensions.AzureQueueStorage.Tests
 {
     public class QueueStorageTargetTest
     {

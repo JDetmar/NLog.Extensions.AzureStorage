@@ -4,13 +4,13 @@ configuration: Release
 
 before_build:
 - cmd: msbuild /t:Restore src\NLog.Extensions.AzureStorage.sln /p:Configuration=Release /verbosity:minimal
-- cmd: msbuild /t:Pack src\NLog.Extensions.AzureStorageBlob /p:Configuration=Release /verbosity:minimal
-- cmd: msbuild /t:Pack src\NLog.Extensions.AzureStorageTable /p:Configuration=Release /verbosity:minimal
-- cmd: msbuild /t:Pack src\NLog.Extensions.AzureStorageQueue /p:Configuration=Release /verbosity:minimal
+- cmd: msbuild /t:Pack src\NLog.Extensions.AzureBlobStorage /p:Configuration=Release /verbosity:minimal
+- cmd: msbuild /t:Pack src\NLog.Extensions.AzureTableStorage /p:Configuration=Release /verbosity:minimal
+- cmd: msbuild /t:Pack src\NLog.Extensions.AzureQueueStorage /p:Configuration=Release /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureEventHub /p:Configuration=Release /verbosity:minimal
-- cmd: dotnet test test\NLog.Extensions.AzureStorageBlob.Tests /p:Configuration=Release --verbosity minimal
-- cmd: dotnet test test\NLog.Extensions.AzureStorageTable.Tests /p:Configuration=Release --verbosity minimal
-- cmd: dotnet test test\NLog.Extensions.AzureStorageQueue.Tests /p:Configuration=Release --verbosity minimal
+- cmd: dotnet test test\NLog.Extensions.AzureBlobStorage.Tests /p:Configuration=Release --verbosity minimal
+- cmd: dotnet test test\NLog.Extensions.AzureTableStorage.Tests /p:Configuration=Release --verbosity minimal
+- cmd: dotnet test test\NLog.Extensions.AzureQueueStorage.Tests /p:Configuration=Release --verbosity minimal
 - cmd: dotnet test test\NLog.Extensions.AzureEventHub.Tests /p:Configuration=Release --verbosity minimal
 
 artifacts:

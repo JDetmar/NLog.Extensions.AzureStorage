@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Storage.Queue;
 using NLog.Extensions.AzureStorage;
 
-namespace NLog.Extensions.AzureStorageQueue.Tests
+namespace NLog.Extensions.AzureQueueStorage.Tests
 {
     class CloudQueueServiceMock : ICloudQueueService
     {
