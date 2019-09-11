@@ -1,16 +1,23 @@
-# NLog.Extensions.AzureStorage [![AppVeyor](https://img.shields.io/appveyor/ci/JDetmar/nlog-extensions-azurestorage.svg)](https://ci.appveyor.com/project/JDetmar/nlog-extensions-azurestorage) [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureStorage.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureStorage/) 
+# NLog Targets for Azure Storage [![AppVeyor](https://img.shields.io/appveyor/ci/JDetmar/nlog-extensions-azurestorage.svg)](https://ci.appveyor.com/project/JDetmar/nlog-extensions-azurestorage)
 
 ![logo](logo64.png?raw=true)
 
-NLog Targets for Azure Blob, Table and Queue Storage 
+| Package Names                         | NuGet                 | Description |
+| ------------------------------------- | :-------------------: | ----------- |
+| **NLog.Extensions.AzureBlobStorage**  | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureBlobStorage.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureBlobStorage/) | Azure Blob Storage |
+| **NLog.Extensions.AzureCosmosTable**  | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureCosmosTable.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureCosmosTable/) | Azure Table Storage or Azure CosmosDb Tables |
+| **NLog.Extensions.AzureEventHub**     | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureEventHub.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureEventHub/) | Azure EventHubs |
+| **NLog.Extensions.AzureQueueStorage** | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureQueueStorage.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureQueueStorage/) | Azure Queue Storage |
 
+Before all NLog targets was bundled into a single nuget-package called [NLog.Extensions.AzureStorage](https://www.nuget.org/packages/NLog.Extensions.AzureStorage/).
+But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.org/packages/WindowsAzure.Storage/) and split into multiple parts.
 
 ## Blob Configuration
 
 ### Syntax
 ```xml
 <extensions>
-  <add assembly="NLog.Extensions.AzureStorage" /> 
+  <add assembly="NLog.Extensions.AzureBlobStorage" /> 
 </extensions>
 
 <targets>
@@ -23,7 +30,6 @@ NLog Targets for Azure Blob, Table and Queue Storage
           container="Layout" />
 </targets>
 ```
-
 
 ### Parameters
 
@@ -43,15 +49,16 @@ _contentType_ - Azure blob ContentType (Default = text/plain)
 
 
 ## Table Configuration
+Supports both Azure Storage Tables and CosmosDB Tables.
 
 ### Syntax
 ```xml
 <extensions>
-  <add assembly="NLog.Extensions.AzureStorage" /> 
+  <add assembly="NLog.Extensions.AzureCosmosTable" /> 
 </extensions>
 
 <targets>
-  <target xsi:type="AzureTableStorage"
+  <target xsi:type="AzureCosmosTable"
           name="String"
           layout="Layout"
           connectionString="String"
@@ -79,11 +86,11 @@ Instead of using the predefined NLogEntity-properties, then one can specify want
 
 ```xml
 <extensions>
-  <add assembly="NLog.Extensions.AzureStorage" /> 
+  <add assembly="NLog.Extensions.AzureCosmosTable" /> 
 </extensions>
 
 <targets>
-  <target xsi:type="AzureTableStorage"
+  <target xsi:type="AzureCosmosTable"
           name="String"
           connectionString="String"
           connectionStringKey="String"
@@ -105,7 +112,7 @@ It will by default always include the hardcoded property `LogTimeStamp` of type 
 ### Syntax
 ```xml
 <extensions>
-  <add assembly="NLog.Extensions.AzureStorage" /> 
+  <add assembly="NLog.Extensions.AzureQueueStorage" /> 
 </extensions>
 
 <targets>
@@ -132,8 +139,6 @@ _connectionStringKey_ - App key name of Azure storage connection string. Must pr
 
 ## EventHub Configuration
 AzureEventHub-target has its own dedicated nuget-package, because of special Microsoft.Azure.EventHubs dependency:
-
-[![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureEventHub.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureEventHub/) 
 
 ### Syntax
 ```xml
@@ -184,8 +189,10 @@ _overflowAction_ - Action to take when reaching limit of in memory queue (Defaul
 
 ```xml
 <extensions>
-  <add assembly="NLog.Extensions.AzureStorage" /> 
+  <add assembly="NLog.Extensions.AzureBlobStorage" /> 
+  <add assembly="NLog.Extensions.AzureCosmosTable" /> 
   <add assembly="NLog.Extensions.AzureEventHub" /> 
+  <add assembly="NLog.Extensions.AzureQueueStorage" /> 
 </extensions>
 
 <targets async="true">
@@ -201,12 +208,12 @@ _overflowAction_ - Action to take when reaching limit of in memory queue (Defaul
             connectionStringKey="storageConnectionString"
             container="${machinename}"
             blobName="${logger}/${date:universalTime=true:format=yy-MM-dd}/${date:universalTime=true:format=mm}.log" />
-    <target type="AzureTableStorage"
+    <target type="AzureCosmosTable"
             name="AzureTable"
             connectionStringKey="storageConnectionString"
             layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
             tableName="NlogTable" />
-	<target type="AzureQueueStorage"
+    <target type="AzureQueueStorage"
             name="AzureQueue"
             connectionStringKey="storageConnectionString"
             layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
