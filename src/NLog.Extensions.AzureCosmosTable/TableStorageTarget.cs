@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-#if NETSTANDARD2_0
+#if NETSTANDARD2_0 || NET472
 using Microsoft.Azure.Cosmos.Table;
 #else
 using Microsoft.WindowsAzure.Storage;
@@ -19,7 +19,7 @@ namespace NLog.Targets
     /// <summary>
     /// Azure Table Storage NLog Target
     /// </summary>
-    [Target("AzureTableStorage")]
+    [Target("AzureCosmosTable")]
     public sealed class TableStorageTarget : AsyncTaskTarget
     {
         private readonly ICloudTableService _cloudTableService;
