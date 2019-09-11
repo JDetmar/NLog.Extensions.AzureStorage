@@ -65,6 +65,10 @@
       <Project>{21b2270d-1f45-4be0-8cce-dec8ff293704}</Project>
       <Name>NLog.Extensions.AzureBlobStorage</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\src\NLog.Extensions.AzureCosmosTable\NLog.Extensions.AzureCosmosTable.csproj">
+      <Project>{89add958-81c2-4042-81ba-88e613f7b550}</Project>
+      <Name>NLog.Extensions.AzureCosmosTable</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\src\NLog.Extensions.AzureEventHub\NLog.Extensions.AzureEventHub.csproj">
       <Project>{cf5e1262-d006-4c3a-9a62-98c31a3ad5f0}</Project>
       <Name>NLog.Extensions.AzureEventHub</Name>
@@ -72,10 +76,6 @@
     <ProjectReference Include="..\..\src\NLog.Extensions.AzureQueueStorage\NLog.Extensions.AzureQueueStorage.csproj">
       <Project>{3e2ef52d-c7a3-48d4-9ab0-8d3e9efd3518}</Project>
       <Name>NLog.Extensions.AzureQueueStorage</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\src\NLog.Extensions.AzureTableStorage\NLog.Extensions.AzureTableStorage.csproj">
-      <Project>{5cb251d6-a2d5-41fd-b99a-c73dfc3f5fcf}</Project>
-      <Name>NLog.Extensions.AzureTableStorage</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

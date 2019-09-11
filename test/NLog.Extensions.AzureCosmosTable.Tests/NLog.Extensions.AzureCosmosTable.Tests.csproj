@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NLog.Extensions.AzureTableStorage\NLog.Extensions.AzureTableStorage.csproj" />
+    <ProjectReference Include="..\..\src\NLog.Extensions.AzureCosmosTable\NLog.Extensions.AzureCosmosTable.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-#if NETSTANDARD2_0
+#if NETSTANDARD2_0 || NET472
 using Microsoft.Azure.Cosmos.Table;
 #else
 using Microsoft.WindowsAzure.Storage;
