@@ -339,9 +339,9 @@ namespace NLog.Targets
                 var container = _client.GetContainerReference(containerName);
 
 #if NETSTANDARD1_3
-                var containerExists = await _container.ExistsAsync().ConfigureAwait(false);
+                var containerExists = await container.ExistsAsync().ConfigureAwait(false);
 #else
-                var containerExists = await _container.ExistsAsync(cancellationToken).ConfigureAwait(false);
+                var containerExists = await container.ExistsAsync(cancellationToken).ConfigureAwait(false);
 #endif
                 if (containerExists)
                     return container;
