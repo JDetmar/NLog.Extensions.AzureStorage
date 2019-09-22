@@ -5,7 +5,7 @@
     <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net452' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.0.0-preview</Version>
+    <Version>2.0.1-preview</Version>
 
     <Description>NLog BlobStorageTarget for writing to Azure Cloud Blob Storage</Description>
     <Authors>jdetmar</Authors>
@@ -15,12 +15,14 @@
     <PackageTags>NLog;azure;CloudBlob;blob;storage;log;logging</PackageTags>
     <PackageIconUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/raw/master/logo64.png?raw=true</PackageIconUrl>
     <PackageProjectUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageLicenseUrl></PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
-    <PackageReleaseNotes>
-      Initial release
-    </PackageReleaseNotes>
+    <PackageReleaseNotes>## Fix
+- [#50](https://github.com/JDetmar/NLog.Extensions.AzureStorage/pull/50) Fixed NullReferenceException in CloudBlobService (@snakefoot )</PackageReleaseNotes>
+    <AssemblyVersion>2.0.1.0</AssemblyVersion>
+    <FileVersion>2.0.1.0</FileVersion>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
