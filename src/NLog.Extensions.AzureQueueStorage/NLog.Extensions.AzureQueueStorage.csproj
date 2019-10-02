@@ -5,7 +5,7 @@
     <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net452' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.0.0-preview</Version>
+    <Version>2.1.0</Version>
 
     <Description>NLog QueueStorageTarget for writing to Azure Cloud Queue Storage</Description>
     <Authors>jdetmar</Authors>
@@ -15,11 +15,11 @@
     <PackageTags>NLog;azure;cloudqueue;queue;storage;log;logging</PackageTags>
     <PackageIconUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/raw/master/logo64.png?raw=true</PackageIconUrl>
     <PackageProjectUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      Initial release
+      Official release
     </PackageReleaseNotes>
   </PropertyGroup>
 

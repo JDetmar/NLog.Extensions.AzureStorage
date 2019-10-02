@@ -6,7 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DefineConstants>$(DefineConstants);NETCORE</DefineConstants>
 
-    <Version>2.0.0-preview</Version>
+    <Version>2.1.0</Version>
 
     <Description>NLog EventHubTarget for writing to Azure Event Hubs</Description>
     <Authors>jdetmar</Authors>
@@ -16,11 +16,11 @@
     <PackageTags>NLog;azure;eventhubs;AMQP;log;logging</PackageTags>
     <PackageIconUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/raw/master/logo64.png?raw=true</PackageIconUrl>
     <PackageProjectUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      First official release
+      Official release
     </PackageReleaseNotes>
   </PropertyGroup>
 

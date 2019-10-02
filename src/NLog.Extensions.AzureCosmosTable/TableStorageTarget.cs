@@ -303,31 +303,26 @@ namespace NLog.Targets
             {
                 try
                 {
-                    var table = _table;
-                    if (tableName == null || table?.Name != tableName)
+                    if (_client == null)
+                        throw new InvalidOperationException("CloudTableClient has not been initialized");
+
+                    var table = _client.GetTableReference(tableName);
+
+#if NETSTANDARD1_3
+                    var tableExists = await table.ExistsAsync().ConfigureAwait(false);
+#else
+                    var tableExists = await table.ExistsAsync(cancellationToken).ConfigureAwait(false);
+#endif
+                    if (!tableExists)
                     {
-                        if (_client == null)
-                            throw new InvalidOperationException("CloudTableClient has not been initialized");
-
-                        table = _client.GetTableReference(tableName);
-
 #if NETSTANDARD1_3
-                        var tableExists = await table.ExistsAsync().ConfigureAwait(false);
+                        await table.CreateIfNotExistsAsync().ConfigureAwait(false);
 #else
-                        var tableExists = await table.ExistsAsync(cancellationToken).ConfigureAwait(false);
+                        await table.CreateIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
 #endif
-                        if (!tableExists)
-                        {
-#if NETSTANDARD1_3
-                            await table.CreateIfNotExistsAsync().ConfigureAwait(false);
-#else
-                            await table.CreateIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
-#endif
-                        }
-
-                        _table = table;
                     }
 
+                    _table = table;
                     return table;
                 }
                 catch (Exception exception)
