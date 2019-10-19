@@ -318,11 +318,17 @@ namespace NLog.Targets
                 if (blobExits)
                     return appendBlob;
 
-                appendBlob.Properties.ContentType = contentType;
 #if NETSTANDARD1_3
                 await appendBlob.CreateOrReplaceAsync().ConfigureAwait(false);
 #else
                 await appendBlob.CreateOrReplaceAsync(cancellationToken).ConfigureAwait(false);
+#endif
+                
+                appendBlob.Properties.ContentType = contentType;
+#if NETSTANDARD1_3
+                await appendBlob.SetPropertiesAsync().ConfigureAwait(false);
+#else
+                await appendBlob.SetPropertiesAsync(cancellationToken).ConfigureAwait(false);
 #endif
                 return appendBlob;
             }
