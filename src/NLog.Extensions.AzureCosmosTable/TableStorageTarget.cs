@@ -225,8 +225,9 @@ namespace NLog.Targets
                     }
                     if (nameof(entity.Timestamp) == contextproperty.Name)
                     {
-                        DateTimeOffset.TryParse(propertyValue, out DateTimeOffset timestamp);
-                        entity.Timestamp = timestamp;
+                        var validTimestamp = DateTimeOffset.TryParse(propertyValue, out DateTimeOffset timestamp);
+                        if(validTimestamp)
+                            entity.Timestamp = timestamp;
                         continue;
                     }
                     entity.Properties.Add(contextproperty.Name, new EntityProperty(propertyValue));
@@ -286,27 +287,6 @@ namespace NLog.Targets
                 InternalLogger.Warn(ex, "AzureTableStorageTarget: Failed to lookup {0}", lookupType);
                 return null;
             }
-        }
-        
-        static EntityProperty GetProperty(object v)
-        {
-            if (v is long?)
-                return new EntityProperty((long?)v);
-            if (v is int?)
-                return new EntityProperty((int?)v);
-            if (v is Guid?)
-                return new EntityProperty((Guid?)v);
-            if (v is double?)
-                return new EntityProperty((double?)v);
-            if (v is DateTime?)
-                return new EntityProperty((DateTime?)v);
-            if (v is DateTimeOffset?)
-                return new EntityProperty((DateTimeOffset?)v);
-            if (v is bool?)
-                return new EntityProperty((bool?)v);
-            if (v is byte[])
-                return new EntityProperty((byte[])v);
-            return new EntityProperty(v.ToString());
         }
 
         class CloudTableService : ICloudTableService
