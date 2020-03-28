@@ -56,12 +56,12 @@ namespace NLog.Extensions.AzureAccessToken
         protected override void CloseLayoutRenderer()
         {
             ResetTokenRefresher();
+            base.CloseLayoutRenderer();
         }
 
         internal void ResetTokenRefresher()
         {
-            var tokenRefresher = _tokenRefresher;
-            _tokenRefresher = null;
+            var tokenRefresher = Interlocked.Exchange(ref _tokenRefresher, null);
             if (tokenRefresher != null)
                 tokenRefresher.AccessTokenRefreshed -= AccessTokenRefreshed;
         }
@@ -94,20 +94,28 @@ namespace NLog.Extensions.AzureAccessToken
             var azureAdInstance = AzureAdInstance?.Render(LogEventInfo.CreateNullEvent());
 
             var tokenProviderKey = new TokenProviderKey(resourceName, tenantId, connectionString, azureAdInstance);
-            if (!AccessTokenProviders.TryGetValue(tokenProviderKey, out var tokenProvider) || !tokenProvider.TryGetTarget(out _tokenRefresher))
+            AccessTokenRefresher tokenRefresher = null;
+            if (!AccessTokenProviders.TryGetValue(tokenProviderKey, out var tokenProvider) || !tokenProvider.TryGetTarget(out tokenRefresher))
             {
                 var serviceProvider = _tokenProviderFactory(connectionString, azureAdInstance);
                 lock (AccessTokenProviders)
                 {
-                    if (!AccessTokenProviders.TryGetValue(tokenProviderKey, out tokenProvider) || !tokenProvider.TryGetTarget(out _tokenRefresher))
+                    if (_tokenRefresher == null)
                     {
-                        _tokenRefresher = new AccessTokenRefresher(serviceProvider, resourceName, tenantId);
-                        AccessTokenProviders[tokenProviderKey] = new WeakReference<AccessTokenRefresher>(_tokenRefresher);
+                        if (!AccessTokenProviders.TryGetValue(tokenProviderKey, out tokenProvider) || !tokenProvider.TryGetTarget(out tokenRefresher))
+                        {
+                            tokenRefresher = new AccessTokenRefresher(serviceProvider, resourceName, tenantId);
+                            AccessTokenProviders[tokenProviderKey] = new WeakReference<AccessTokenRefresher>(tokenRefresher);
+                        }
                     }
                 }
             }
 
-            _tokenRefresher.AccessTokenRefreshed += AccessTokenRefreshed;
+            if (Interlocked.CompareExchange(ref _tokenRefresher, tokenRefresher, null) == null)
+            {
+                _tokenRefresher.AccessTokenRefreshed += AccessTokenRefreshed;
+            }
+
             return _tokenRefresher;
         }
 
@@ -294,7 +302,7 @@ namespace NLog.Extensions.AzureAccessToken
 
             public async Task<KeyValuePair<string, DateTimeOffset>> GetAuthenticationResultAsync(string resource, string tenantId, CancellationToken cancellationToken)
             {
-                var result = await _tokenProvider.GetAuthenticationResultAsync(resource, tenantId, cancellationToken);
+                var result = await _tokenProvider.GetAuthenticationResultAsync(resource, tenantId, cancellationToken).ConfigureAwait(false);
                 return new KeyValuePair<string, DateTimeOffset>(result?.AccessToken, result?.ExpiresOn ?? default(DateTimeOffset));
             }
         }
