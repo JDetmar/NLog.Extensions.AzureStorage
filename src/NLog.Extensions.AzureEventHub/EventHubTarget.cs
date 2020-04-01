@@ -46,9 +46,10 @@ namespace NLog.Targets
 
         internal EventHubTarget(IEventHubService eventHubService)
         {
-            _eventHubService = eventHubService;
             TaskDelayMilliseconds = 200;
             BatchSize = 100;
+
+            _eventHubService = eventHubService;
         }
 
         protected override void InitializeTarget()
@@ -94,7 +95,7 @@ namespace NLog.Targets
 
                     Task sendTask = Task.CompletedTask;
                     int batchSize = CalculateBatchSize(eventDataList, eventDataSize);
-                    if (batchSize == eventDataList.Count)
+                    if (eventDataList.Count <= batchSize)
                     {
                         sendTask = WriteSingleBatchAsync(eventDataList, partitionBucket.Key);
                     }

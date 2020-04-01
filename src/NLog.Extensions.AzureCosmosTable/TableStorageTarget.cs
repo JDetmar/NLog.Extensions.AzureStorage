@@ -76,6 +76,7 @@ namespace NLog.Targets
         {
             TaskDelayMilliseconds = 200;
             BatchSize = 100;
+
             _cloudTableService = cloudTableService;
             _checkAndRepairTableNameDelegate = CheckAndRepairTableNamingRules;
         }
