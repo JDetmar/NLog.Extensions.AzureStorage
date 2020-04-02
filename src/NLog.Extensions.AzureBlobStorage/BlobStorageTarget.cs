@@ -45,6 +45,9 @@ namespace NLog.Targets
 
         internal BlobStorageTarget(ICloudBlobService cloudBlobService)
         {
+            TaskDelayMilliseconds = 200;
+            BatchSize = 100;
+
             _checkAndRepairContainerNameDelegate = CheckAndRepairContainerNamingRules;
             _cloudBlobService = cloudBlobService;
         }
