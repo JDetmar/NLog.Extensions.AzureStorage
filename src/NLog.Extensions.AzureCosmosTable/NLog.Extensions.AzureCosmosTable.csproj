@@ -5,7 +5,7 @@
     <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net452' Or '$(TargetFramework)' == 'net472' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.1.0</Version>
+    <Version>2.3.0</Version>
 
     <Description>NLog TableStorageTarget for writing to Azure Table Storage OR Azure CosmosDB Tables</Description>
     <Authors>jdetmar</Authors>

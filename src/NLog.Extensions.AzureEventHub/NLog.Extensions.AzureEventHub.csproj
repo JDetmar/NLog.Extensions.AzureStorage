@@ -6,7 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DefineConstants>$(DefineConstants);NETCORE</DefineConstants>
 
-    <Version>2.1.0</Version>
+    <Version>2.3.0</Version>
 
     <Description>NLog EventHubTarget for writing to Azure Event Hubs</Description>
     <Authors>jdetmar</Authors>
