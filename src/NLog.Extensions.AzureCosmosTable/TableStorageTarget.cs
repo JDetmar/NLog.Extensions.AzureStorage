@@ -207,11 +207,13 @@ namespace NLog.Targets
 
         private ITableEntity CreateTableEntity(LogEventInfo logEvent, string partitionKey)
         {
+            var rowKey = RenderLogEvent(RowKey, logEvent);
+
             if (ContextProperties.Count > 0)
             {
                 DynamicTableEntity entity = new DynamicTableEntity();
                 entity.PartitionKey = partitionKey;
-                entity.RowKey = RenderLogEvent(RowKey, logEvent);
+                entity.RowKey = rowKey;
                 entity.Properties.Add("LogTimeStamp", new EntityProperty(logEvent.TimeStamp.ToUniversalTime()));
                 for (int i = 0; i < ContextProperties.Count; ++i)
                 {
@@ -227,7 +229,7 @@ namespace NLog.Targets
             else
             {
                 var layoutMessage = RenderLogEvent(Layout, logEvent);
-                var entity = new NLogEntity(logEvent, layoutMessage, _machineName, partitionKey, LogTimeStampFormat);
+                var entity = new NLogEntity(logEvent, layoutMessage, _machineName, partitionKey, rowKey, LogTimeStampFormat);
                 return entity;
             }
         }
