@@ -22,6 +22,7 @@
     <PackageReleaseNotes>
       Updated dependency to NLog 4.6.8
       Updated dependency to Microsoft.Azure.EventHubs 4.1.0
+      Added support for SourceLink
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -32,6 +33,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.EventHubs" Version="4.1.0" />
     <PackageReference Include="NLog" Version="4.6.8" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 
 </Project>

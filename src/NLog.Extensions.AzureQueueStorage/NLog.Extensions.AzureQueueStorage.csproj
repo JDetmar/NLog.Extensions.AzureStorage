@@ -20,6 +20,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
       Updated dependency to NLog 4.6.8
+      Added support for SourceLink
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -32,6 +33,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Storage.Queue" Version="10.0.3" />
     <PackageReference Include="NLog" Version="4.6.8" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
