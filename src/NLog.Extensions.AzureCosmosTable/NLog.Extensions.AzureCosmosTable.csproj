@@ -19,7 +19,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      Updated dependency to NLog 4.6.8
+      Added support for override of RowKey
+      Updated dependency to NLog 4.7.0
       Added support for SourceLink
     </PackageReleaseNotes>
   </PropertyGroup>
@@ -31,7 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NLog" Version="4.6.8" />
+    <PackageReference Include="NLog" Version="4.7.0" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 

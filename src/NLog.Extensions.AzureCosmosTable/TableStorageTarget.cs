@@ -63,7 +63,11 @@ namespace NLog.Targets
         [RequiredParameter]
         public Layout TableName { get; set; }
 
+        [RequiredParameter]
         public Layout PartitionKey { get; set; } = "${logger}";
+
+        [RequiredParameter]
+        public Layout RowKey { get; set; }
 
         public string LogTimeStampFormat { get; set; } = "O";
 
@@ -76,6 +80,8 @@ namespace NLog.Targets
         {
             TaskDelayMilliseconds = 200;
             BatchSize = 100;
+
+            RowKey = Layout.FromMethod(l => string.Concat((DateTime.MaxValue.Ticks - l.TimeStamp.Ticks).ToString("d19"), "__", Guid.NewGuid().ToString()), LayoutRenderOptions.ThreadAgnostic);
 
             _cloudTableService = cloudTableService;
             _checkAndRepairTableNameDelegate = CheckAndRepairTableNamingRules;
@@ -205,7 +211,7 @@ namespace NLog.Targets
             {
                 DynamicTableEntity entity = new DynamicTableEntity();
                 entity.PartitionKey = partitionKey;
-                entity.RowKey = string.Concat((DateTime.MaxValue.Ticks - logEvent.TimeStamp.Ticks).ToString("d19"), "__", Guid.NewGuid().ToString());
+                entity.RowKey = RenderLogEvent(RowKey, logEvent);
                 entity.Properties.Add("LogTimeStamp", new EntityProperty(logEvent.TimeStamp.ToUniversalTime()));
                 for (int i = 0; i < ContextProperties.Count; ++i)
                 {

@@ -35,6 +35,10 @@ _connectionStringKey_ - App key name of Azure storage connection string. Must pr
 
 _tableName_ - Azure table name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
+_rowKey_ - Azure Table RowKey. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Default = "InverseTicks_${guid}"
+
+_partitionKey_ - Azure PartitionKey. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Default = `${logger}`
+
 _logTimeStampFormat_ - Default Log TimeStamp is set to 'O' for [Round-trip](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings#the-round-trip-o-o-format-specifier) format if not specified.
 
 ### DynamicTableEntity
