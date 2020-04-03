@@ -19,7 +19,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      First release
+      Updated dependency to NLog 4.6.8
     </PackageReleaseNotes>
   </PropertyGroup>
 

@@ -19,7 +19,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      Changed from AppendFromByteArrayAsync to AppendBlockAsync to resolve 412 response status errors.
+      Changed default BatchSize to 100 for bette performance
+      Updated dependency to NLog 4.6.8
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -31,7 +32,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="10.0.3" />
-    <PackageReference Include="NLog" Version="4.6.5" />
+    <PackageReference Include="NLog" Version="4.6.8" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
