@@ -5,7 +5,7 @@
     <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net452' Or '$(TargetFramework)' == 'net472' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.1.0</Version>
+    <Version>2.3.0</Version>
 
     <Description>NLog TableStorageTarget for writing to Azure Table Storage OR Azure CosmosDB Tables</Description>
     <Authors>jdetmar</Authors>
@@ -19,7 +19,9 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      Official release
+      Added support for override of RowKey
+      Updated dependency to NLog 4.7.0
+      Added support for SourceLink
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -30,7 +32,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NLog" Version="4.6.5" />
+    <PackageReference Include="NLog" Version="4.7.0" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net472' Or '$(TargetFramework)' == 'netstandard2.0' ">

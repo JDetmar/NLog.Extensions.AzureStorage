@@ -5,7 +5,7 @@
     <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net452' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.1.0</Version>
+    <Version>2.3.0</Version>
 
     <Description>NLog QueueStorageTarget for writing to Azure Cloud Queue Storage</Description>
     <Authors>jdetmar</Authors>
@@ -19,7 +19,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      Official release
+      Updated dependency to NLog 4.6.8
+      Added support for SourceLink
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -31,7 +32,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Storage.Queue" Version="10.0.3" />
-    <PackageReference Include="NLog" Version="4.6.5" />
+    <PackageReference Include="NLog" Version="4.6.8" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
