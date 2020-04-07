@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net452;net472;netstandard1.3;netstandard2.0</TargetFrameworks>
-    <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net452' Or '$(TargetFramework)' == 'net472' ">true</DisableImplicitFrameworkReferences>
+    <TargetFrameworks>net45;net461;netstandard1.3;netstandard2.0</TargetFrameworks>
+    <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net45' Or '$(TargetFramework)' == 'net461' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.3.0</Version>
+    <Version>2.4.0</Version>
 
     <Description>NLog TableStorageTarget for writing to Azure Table Storage OR Azure CosmosDB Tables</Description>
     <Authors>jdetmar</Authors>
@@ -19,9 +19,10 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      Added support for override of RowKey
-      Updated dependency to NLog 4.7.0
-      Added support for SourceLink
+Changed TargetFramework from net472 to net461
+Added support for override of RowKey using Layout
+Updated dependency to NLog 4.7.0
+Added support for SourceLink
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -36,19 +37,19 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net472' Or '$(TargetFramework)' == 'netstandard2.0' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net461' Or '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.4" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' Or '$(TargetFramework)' == 'netstandard1.3' ">
-    <PackageReference Include="WindowsAzure.Storage" Version="9.0.0" />
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' Or '$(TargetFramework)' == 'netstandard1.3' ">
+    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Configuration" />
-    <PackageReference Include="Microsoft.WindowsAzure.ConfigurationManager" Version="3.0.0" />
+    <PackageReference Include="Microsoft.WindowsAzure.ConfigurationManager" Version="3.2.3" />
   </ItemGroup>
 
 </Project>

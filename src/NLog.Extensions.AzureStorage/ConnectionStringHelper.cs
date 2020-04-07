@@ -13,7 +13,7 @@ namespace NLog.Extensions.AzureStorage
         {
             var connectionString = connectionStringLayout != null ? connectionStringLayout.Render(LogEventInfo.CreateNullEvent()) : string.Empty;
 
-#if NET452
+#if NET452 || NET45
             if (!string.IsNullOrWhiteSpace(connectionStringKey))
             {
                 connectionString = CloudConfigurationManager.GetSetting(connectionStringKey);
