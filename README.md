@@ -27,30 +27,30 @@ But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.or
 <targets async="true">
     <target type="AzureBlobStorage"
             name="AzureEmulator"
-            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
+            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
             connectionString="UseDevelopmentStorage=true;"
             container="${level}"
             blobName="${date:universalTime=true:format=yyyy-MM-dd}/${date:universalTime=true:format=HH}.log" />
     <target type="AzureBlobStorage"
             name="Azure"
-            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
+            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
             connectionStringKey="storageConnectionString"
             container="${machinename}"
             blobName="${logger}/${date:universalTime=true:format=yy-MM-dd}/${date:universalTime=true:format=mm}.log" />
     <target type="AzureCosmosTable"
             name="AzureTable"
             connectionStringKey="storageConnectionString"
-            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
+            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
             tableName="NlogTable" />
     <target type="AzureQueueStorage"
             name="AzureQueue"
             connectionStringKey="storageConnectionString"
-            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
+            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
             queueName="NlogQueue" />
     <target type="AzureEventHub"
             name="AzureEventHub"
             connectionString="Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=NLog;SharedAccessKey=EventHub"
-            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring:innerFormat=tostring:maxInnerExceptionLevel=1000}"
+            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
             eventHubName="NlogHub"
             PartitionKey="0"/>
 </targets>
