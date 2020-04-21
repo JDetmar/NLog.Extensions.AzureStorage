@@ -6,7 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DefineConstants>$(DefineConstants);NETCORE</DefineConstants>
 
-    <Version>2.3.0</Version>
+    <Version>2.4.0</Version>
 
     <Description>NLog EventHubTarget for writing to Azure Event Hubs</Description>
     <Authors>jdetmar</Authors>
@@ -20,9 +20,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      Updated dependency to NLog 4.6.8
-      Updated dependency to Microsoft.Azure.EventHubs 4.1.0
-      Added support for SourceLink
+Updated dependency Microsoft.Azure.EventHubs ver. 4.2.0 (Bug fixes)
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -31,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.EventHubs" Version="4.1.0" />
+    <PackageReference Include="Microsoft.Azure.EventHubs" Version="4.2.0" />
     <PackageReference Include="NLog" Version="4.6.8" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
