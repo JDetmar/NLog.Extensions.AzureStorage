@@ -21,7 +21,15 @@
     <PackageReleaseNotes>
 Updated Microsoft.Azure.Cosmos.Table to version 1.0.7 (Better performance)
     </PackageReleaseNotes>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <Compile Include="..\NLog.Extensions.AzureStorage\AzureStorageNameCache.cs" Link="AzureStorageNameCache.cs" />
