@@ -23,7 +23,15 @@
       Updated dependency to NLog 4.6.8
       Added support for SourceLink
     </PackageReleaseNotes>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <Compile Include="..\NLog.Extensions.AzureStorage\AzureStorageNameCache.cs" Link="AzureStorageNameCache.cs" />
