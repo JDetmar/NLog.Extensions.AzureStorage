@@ -22,7 +22,15 @@
     <PackageReleaseNotes>
 Updated dependency Microsoft.Azure.EventHubs ver. 4.2.0 (Bug fixes)
     </PackageReleaseNotes>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <Compile Include="..\NLog.Extensions.AzureStorage\SortHelpers.cs" Link="SortHelpers.cs" />
