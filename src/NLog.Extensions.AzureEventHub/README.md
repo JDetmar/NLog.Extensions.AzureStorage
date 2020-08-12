@@ -18,6 +18,7 @@
           layout="Layout"
           eventHubName="Layout"
           partitionKey="Layout"
+          contentType="Layout"
           connectionString="String">
 	<contextProperty name="level" layout="${level}" />
 	<contextProperty name="exception" layout="${exception:format=shorttype}" includeEmptyValue="false" />
@@ -43,13 +44,7 @@ _partitionKey_ - Partition-Key which EventHub uses to generate PartitionId-hash.
 
 _layout_ - EventData Body Text to be rendered and encoded as UTF8. [Layout](https://github.com/NLog/NLog/wiki/Layouts). 
 
-_batchSize_ - Number of EventData items to send in a single batch (Default=100)
-
-_taskDelayMilliseconds_ - Artificial delay before sending to optimize for batching (Default=200 ms)
-
-_queueLimit_ - Number of pending LogEvents to have in memory queue, that are waiting to be sent (Default=10000)
-
-_overflowAction_ - Action to take when reaching limit of in memory queue (Default=Discard)
+_contentType_ - EventData ContentType to be assigned. [Layout](https://github.com/NLog/NLog/wiki/Layouts). 
 
 ### Batching Policy
 
