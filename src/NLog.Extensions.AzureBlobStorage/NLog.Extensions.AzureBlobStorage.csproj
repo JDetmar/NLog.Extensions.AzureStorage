@@ -5,7 +5,7 @@
     <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net452' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.3.0</Version>
+    <Version>2.4.0</Version>
 
     <Description>NLog BlobStorageTarget for writing to Azure Cloud Blob Storage</Description>
     <Authors>jdetmar</Authors>
@@ -19,9 +19,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      Changed default BatchSize to 100 for bette performance
-      Updated dependency to NLog 4.6.8
-      Added support for SourceLink
+Updated Microsoft.Azure.Storage.Blob to version 11.2.2 (Bug fixes and performance)
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -32,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.2.2" />
     <PackageReference Include="NLog" Version="4.6.8" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>

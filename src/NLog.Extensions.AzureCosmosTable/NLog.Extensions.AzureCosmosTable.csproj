@@ -5,7 +5,7 @@
     <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net45' Or '$(TargetFramework)' == 'net461' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.5.0</Version>
+    <Version>2.6.0</Version>
 
     <Description>NLog TableStorageTarget for writing to Azure Table Storage OR Azure CosmosDB Tables</Description>
     <Authors>jdetmar</Authors>
@@ -19,7 +19,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Updated Microsoft.Azure.Cosmos.Table to version 1.0.7 (Better performance)
+Updated Microsoft.Azure.Cosmos.Table to version 1.0.8 (Bug fixes)
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -35,7 +35,7 @@ Updated Microsoft.Azure.Cosmos.Table to version 1.0.7 (Better performance)
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net461' Or '$(TargetFramework)' == 'netstandard2.0' ">
-    <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.7" />
+    <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45' Or '$(TargetFramework)' == 'netstandard1.3' ">

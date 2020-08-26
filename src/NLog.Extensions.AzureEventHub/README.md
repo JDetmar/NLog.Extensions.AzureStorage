@@ -48,9 +48,9 @@ _contentType_ - EventData ContentType to be assigned. [Layout](https://github.co
 
 ### Batching Policy
 
-_batchSize_ - Number of EventData items to send in a single batch (Default=1)
+_batchSize_ - Number of EventData items to send in a single batch (Default=100)
 
-_taskDelayMilliseconds_ - Artificial delay before sending to optimize for batching (Default=1 ms)
+_taskDelayMilliseconds_ - Artificial delay before sending to optimize for batching (Default=200 ms)
 
 _queueLimit_ - Number of pending LogEvents to have in memory queue, that are waiting to be sent (Default=10000)
 
