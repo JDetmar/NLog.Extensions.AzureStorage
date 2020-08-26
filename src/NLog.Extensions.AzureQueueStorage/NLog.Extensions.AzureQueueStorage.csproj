@@ -5,7 +5,7 @@
     <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net452' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.3.0</Version>
+    <Version>2.4.0</Version>
 
     <Description>NLog QueueStorageTarget for writing to Azure Cloud Queue Storage</Description>
     <Authors>jdetmar</Authors>
