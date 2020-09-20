@@ -11,7 +11,7 @@ namespace NLog.Extensions.AzureStorage
 {
     interface ICloudTableService
     {
-        void Connect(string connectionString);
+        void Connect(string connectionString, int? defaultTimeToLiveSeconds);
         Task ExecuteBatchAsync(string tableName, TableBatchOperation tableOperation, CancellationToken cancellationToken);
     }
 }
