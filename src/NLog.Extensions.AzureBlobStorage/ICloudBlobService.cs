@@ -9,7 +9,7 @@ namespace NLog.Extensions.AzureStorage
 {
     interface ICloudBlobService
     {
-        void Connect(string connectionString);
+        void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags);
         Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, CancellationToken cancellationToken);
     }
 }

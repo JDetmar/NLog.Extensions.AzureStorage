@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Specialized;
 using NLog.Common;
 using NLog.Config;
 using NLog.Extensions.AzureStorage;
@@ -28,7 +28,10 @@ namespace NLog.Targets
         private SortHelpers.KeySelector<LogEventInfo, ContainerBlobKey> _getContainerBlobNameDelegate;
 
         public Layout ConnectionString { get; set; }
-        public string ConnectionStringKey { get; set; }
+
+        public Layout ServiceUri { get; set; }
+        public Layout TenantIdentity { get; set; }
+        public Layout ResourceIdentity { get; set; }
 
         [RequiredParameter]
         public Layout Container { get; set; }
@@ -37,6 +40,14 @@ namespace NLog.Targets
         public Layout BlobName { get; set; }
 
         public string ContentType { get; set; } = "text/plain";
+
+        [ArrayParameter(typeof(TargetPropertyWithContext), "metadata")]
+        public IList<TargetPropertyWithContext> BlobMetadata { get; private set; }
+
+        [ArrayParameter(typeof(TargetPropertyWithContext), "tag")]
+        public IList<TargetPropertyWithContext> BlobTags { get; private set; }
+
+        private readonly LogEventInfo _defaultLogEvent = LogEventInfo.CreateNullEvent();
 
         public BlobStorageTarget()
             :this(new CloudBlobService())
@@ -47,6 +58,9 @@ namespace NLog.Targets
         {
             TaskDelayMilliseconds = 200;
             BatchSize = 100;
+
+            BlobMetadata = new List<TargetPropertyWithContext>();
+            BlobTags = new List<TargetPropertyWithContext>();
 
             _checkAndRepairContainerNameDelegate = CheckAndRepairContainerNamingRules;
             _cloudBlobService = cloudBlobService;
@@ -61,15 +75,63 @@ namespace NLog.Targets
             base.InitializeTarget();
 
             string connectionString = string.Empty;
+            string serviceUri = string.Empty;
+            string tenantIdentity = string.Empty;
+            string resourceIdentity = string.Empty;
+
+            Dictionary<string, string> blobMetadata = null;
+            Dictionary<string, string> blobTags = null;
+
+            var defaultLogEvent = LogEventInfo.CreateNullEvent();
+
             try
             {
-                connectionString = ConnectionStringHelper.LookupConnectionString(ConnectionString, ConnectionStringKey);
-                _cloudBlobService.Connect(connectionString);
+                connectionString = ConnectionString?.Render(defaultLogEvent);
+                if (string.IsNullOrEmpty(connectionString))
+                {
+                    serviceUri = ServiceUri?.Render(defaultLogEvent);
+                    tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
+                    resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
+                }
+
+                if (BlobMetadata?.Count > 0)
+                {
+                    blobMetadata = new Dictionary<string, string>();
+                    foreach (var metadata in BlobMetadata)
+                    {
+                        if (string.IsNullOrWhiteSpace(metadata.Name))
+                            continue;
+
+                        var metadataValue = metadata.Layout?.Render(defaultLogEvent);
+                        if (string.IsNullOrEmpty(metadataValue))
+                            continue;
+
+                        blobMetadata[metadata.Name.Trim()] = metadataValue;
+                    }
+                }
+
+                if (BlobTags?.Count > 0)
+                {
+                    blobTags = new Dictionary<string, string>();
+                    foreach (var tag in BlobTags)
+                    {
+                        if (string.IsNullOrWhiteSpace(tag.Name))
+                            continue;
+
+                        var metadataValue = tag.Layout?.Render(defaultLogEvent);
+                        blobTags[tag.Name.Trim()] = metadataValue ?? string.Empty;
+                    }
+                }
+
+                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, blobMetadata, blobTags);
                 InternalLogger.Trace("AzureBlobStorageTarget - Initialized");
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureBlobStorageTarget(Name={0}): Failed to create BlobClient with connectionString={1}.", Name, connectionString);
+                if (string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(serviceUri))
+                    InternalLogger.Error(ex, "AzureBlobStorageTarget(Name={0}): Failed to create BlobClient with ServiceUri={1}.", Name, serviceUri);
+                else
+                    InternalLogger.Error(ex, "AzureBlobStorageTarget(Name={0}): Failed to create BlobClient with connectionString={1}.", Name, connectionString);
                 throw;
             }
         }
@@ -245,13 +307,63 @@ namespace NLog.Targets
 
         class CloudBlobService : ICloudBlobService
         {
-            private CloudBlobClient _client;
-            private CloudAppendBlob _appendBlob;
-            private CloudBlobContainer _container;
+            private IDictionary<string, string> _blobMetadata;
+            private IDictionary<string, string> _blobTags;
 
-            public void Connect(string connectionString)
+            private BlobServiceClient _client;
+            private AppendBlobClient _appendBlob;
+            private BlobContainerClient _container;
+
+            private class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
             {
-                _client = CloudStorageAccount.Parse(connectionString).CreateCloudBlobClient();
+                private readonly string _resourceIdentity;
+                private readonly string _tenantIdentity;
+                private readonly Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider _tokenProvider;
+
+                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity)
+                {
+                    if (string.IsNullOrWhiteSpace(_resourceIdentity))
+                        _resourceIdentity = "https://storage.azure.com/";
+                    else
+                        _resourceIdentity = resourceIdentity;
+                    _tenantIdentity = tenantIdentity;
+                    _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
+                }
+
+                public override async ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
+                {
+                    try
+                    {
+                        var result = await _tokenProvider.GetAuthenticationResultAsync(_resourceIdentity, _tenantIdentity, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        return new Azure.Core.AccessToken(result.AccessToken, result.ExpiresOn);
+                    }
+                    catch (Exception ex)
+                    {
+                        InternalLogger.Error(ex, "AzureBlobStorageTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
+                        throw;
+                    }
+                }
+
+                public override Azure.Core.AccessToken GetToken(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
+                {
+                    return GetTokenAsync(requestContext, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+                }
+            }
+
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
+            {
+                _blobMetadata = blobMetadata?.Count > 0 ? blobMetadata : null;
+                _blobTags = blobTags?.Count > 0 ? blobTags : null;
+
+                if (string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(serviceUri))
+                {
+                    var tokenCredential = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity);
+                    _client = new BlobServiceClient(new Uri(serviceUri), tokenCredential);
+                }
+                else
+                {
+                    _client = new BlobServiceClient(connectionString);
+                }
             }
 
             public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, CancellationToken cancellationToken)
@@ -266,15 +378,11 @@ namespace NLog.Targets
                 }
                 else
                 {
-#if NETSTANDARD1_3
-                    return blob.AppendBlockAsync(stream, null);
-#else
-                    return blob.AppendBlockAsync(stream, null, cancellationToken);
-#endif
+                    return blob.AppendBlockAsync(stream, cancellationToken: cancellationToken);
                 }
             }
 
-            async Task<CloudAppendBlob> InitializeAndCacheBlobAsync(string containerName, string blobName, string contentType, CancellationToken cancellationToken)
+            async Task<AppendBlobClient> InitializeAndCacheBlobAsync(string containerName, string blobName, string contentType, CancellationToken cancellationToken)
             {
                 try
                 {
@@ -311,24 +419,25 @@ namespace NLog.Targets
             /// Initializes the BLOB.
             /// </summary>
             /// <param name="blobName">Name of the BLOB.</param>
-            private async Task<CloudAppendBlob> InitializeBlob(string blobName, CloudBlobContainer blobContainer, string contentType, CancellationToken cancellationToken)
+            private async Task<AppendBlobClient> InitializeBlob(string blobName, BlobContainerClient blobContainer, string contentType, CancellationToken cancellationToken)
             {
-                var appendBlob = blobContainer.GetAppendBlobReference(blobName);
+                var appendBlob = blobContainer.GetAppendBlobClient(blobName);
 
-#if NETSTANDARD1_3
-                var blobExits = await appendBlob.ExistsAsync().ConfigureAwait(false);
-#else
                 var blobExits = await appendBlob.ExistsAsync(cancellationToken).ConfigureAwait(false);
-#endif
                 if (blobExits)
                     return appendBlob;
 
-                appendBlob.Properties.ContentType = contentType;
-#if NETSTANDARD1_3
-                await appendBlob.CreateOrReplaceAsync().ConfigureAwait(false);
-#else
-                await appendBlob.CreateOrReplaceAsync(cancellationToken).ConfigureAwait(false);
-#endif
+                var blobCreateOptions = new Azure.Storage.Blobs.Models.AppendBlobCreateOptions();
+                var httpHeaders = new Azure.Storage.Blobs.Models.BlobHttpHeaders()
+                {
+                    ContentType = contentType,
+                    ContentEncoding = Encoding.UTF8.WebName,
+                };
+                blobCreateOptions.HttpHeaders = httpHeaders;
+                blobCreateOptions.Metadata = _blobMetadata;     // Optional custom metadata to set for this append blob.
+                blobCreateOptions.Tags = _blobTags;             // Options tags to set for this append blob.
+
+                await appendBlob.CreateIfNotExistsAsync(blobCreateOptions, cancellationToken).ConfigureAwait(false);
                 return appendBlob;
             }
 
@@ -336,26 +445,18 @@ namespace NLog.Targets
             /// Initializes the Azure storage container and creates it if it doesn't exist.
             /// </summary>
             /// <param name="containerName">Name of the container.</param>
-            private async Task<CloudBlobContainer> InitializeContainer(string containerName, CancellationToken cancellationToken)
+            private async Task<BlobContainerClient> InitializeContainer(string containerName, CancellationToken cancellationToken)
             {
                 if (_client == null)
                     throw new InvalidOperationException("CloudBlobClient has not been initialized");
 
-                var container = _client.GetContainerReference(containerName);
+                var container = _client.GetBlobContainerClient(containerName);
 
-#if NETSTANDARD1_3
-                var containerExists = await container.ExistsAsync().ConfigureAwait(false);
-#else
                 var containerExists = await container.ExistsAsync(cancellationToken).ConfigureAwait(false);
-#endif
                 if (containerExists)
                     return container;
 
-#if NETSTANDARD1_3
-                await container.CreateIfNotExistsAsync().ConfigureAwait(false);
-#else
-                await container.CreateIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
-#endif
+                await container.CreateIfNotExistsAsync(Azure.Storage.Blobs.Models.PublicAccessType.None, null, cancellationToken).ConfigureAwait(false);
                 return container;
             }
         }

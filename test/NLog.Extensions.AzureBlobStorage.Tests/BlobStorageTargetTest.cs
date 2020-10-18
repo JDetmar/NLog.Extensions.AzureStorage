@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using NLog.Targets;
 using Xunit;
@@ -19,11 +20,17 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             blobStorageTarget.Container = "${level}";
             blobStorageTarget.BlobName = "${logger}";
             blobStorageTarget.Layout = "${message}";
+            blobStorageTarget.BlobTags.Add(new TargetPropertyWithContext() { Name = "MyTag", Layout = "MyTagValue" });
+            blobStorageTarget.BlobMetadata.Add(new TargetPropertyWithContext() { Name = "MyMetadata", Layout = "MyMetadataValue" });
             logConfig.AddRuleForAllLevels(blobStorageTarget);
             logFactory.Configuration = logConfig;
             logFactory.GetLogger("Test").Info("Hello World");
             logFactory.Flush();
             Assert.Equal(nameof(BlobStorageTargetTest), cloudBlobService.ConnectionString);
+            Assert.Single(cloudBlobService.BlobMetadata);
+            Assert.Contains(new KeyValuePair<string, string>("MyMetadata", "MyMetadataValue"), cloudBlobService.BlobMetadata);
+            Assert.Single(cloudBlobService.BlobTags);
+            Assert.Contains(new KeyValuePair<string, string>("MyTag", "MyTagValue"), cloudBlobService.BlobTags);
             Assert.Single(cloudBlobService.AppendBlob);   // One partition
             Assert.Equal("Hello World" + System.Environment.NewLine, cloudBlobService.PeekLastAppendBlob("info", "Test"));
         }
