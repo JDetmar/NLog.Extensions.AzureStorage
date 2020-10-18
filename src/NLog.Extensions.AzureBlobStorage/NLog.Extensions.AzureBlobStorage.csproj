@@ -19,6 +19,8 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
 Changed to Azure.Storage.Blobs ver. 12.6.0, because Microsoft.Azure.Storage.Blob has been deprecated.
+
+ConnectionStringKey option has been removed.
     </PackageReleaseNotes>
   </PropertyGroup>
 

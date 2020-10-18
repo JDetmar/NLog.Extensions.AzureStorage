@@ -29,8 +29,19 @@ namespace NLog.Targets
 
         public Layout ConnectionString { get; set; }
 
+        /// <summary>
+        /// Alternative to ConnectionString
+        /// </summary>
         public Layout ServiceUri { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString
+        /// </summary>
         public Layout TenantIdentity { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString (Defaults to https://storage.azure.com when not set)
+        /// </summary>
         public Layout ResourceIdentity { get; set; }
 
         [RequiredParameter]

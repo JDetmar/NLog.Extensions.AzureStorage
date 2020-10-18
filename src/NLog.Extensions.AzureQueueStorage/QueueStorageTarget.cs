@@ -1,12 +1,12 @@
 ﻿using System;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Queue;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Azure.Storage.Queues;
 using NLog.Common;
 using NLog.Config;
 using NLog.Layouts;
 using NLog.Extensions.AzureStorage;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace NLog.Targets
 {
@@ -21,10 +21,27 @@ namespace NLog.Targets
         private readonly Func<string, string> _checkAndRepairQueueNameDelegate;
 
         public Layout ConnectionString { get; set; }
-        public string ConnectionStringKey { get; set; }
 
         [RequiredParameter]
         public Layout QueueName { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString
+        /// </summary>
+        public Layout ServiceUri { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString
+        /// </summary>
+        public Layout TenantIdentity { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString (Defaults to https://storage.azure.com when not set)
+        /// </summary>
+        public Layout ResourceIdentity { get; set; }
+
+        [ArrayParameter(typeof(TargetPropertyWithContext), "metadata")]
+        public IList<TargetPropertyWithContext> QueueMetadata { get; private set; }
 
         public QueueStorageTarget()
             :this(new CloudQueueService())
@@ -33,6 +50,7 @@ namespace NLog.Targets
 
         internal QueueStorageTarget(ICloudQueueService cloudQueueService)
         {
+            QueueMetadata = new List<TargetPropertyWithContext>();
             _cloudQueueService = cloudQueueService;
             _checkAndRepairQueueNameDelegate = CheckAndRepairQueueNamingRules;
         }
@@ -46,15 +64,49 @@ namespace NLog.Targets
             base.InitializeTarget();
 
             string connectionString = string.Empty;
+            string serviceUri = string.Empty;
+            string tenantIdentity = string.Empty;
+            string resourceIdentity = string.Empty;
+
+            Dictionary<string, string> queueMetadata = null;
+
+            var defaultLogEvent = LogEventInfo.CreateNullEvent();
+
             try
             {
-                connectionString = ConnectionStringHelper.LookupConnectionString(ConnectionString, ConnectionStringKey);
-                _cloudQueueService.Connect(connectionString);
+                connectionString = ConnectionString?.Render(defaultLogEvent);
+                if (string.IsNullOrEmpty(connectionString))
+                {
+                    serviceUri = ServiceUri?.Render(defaultLogEvent);
+                    tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
+                    resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
+                }
+
+                if (QueueMetadata?.Count > 0)
+                {
+                    queueMetadata = new Dictionary<string, string>();
+                    foreach (var metadata in QueueMetadata)
+                    {
+                        if (string.IsNullOrWhiteSpace(metadata.Name))
+                            continue;
+
+                        var metadataValue = metadata.Layout?.Render(defaultLogEvent);
+                        if (string.IsNullOrEmpty(metadataValue))
+                            continue;
+
+                        queueMetadata[metadata.Name.Trim()] = metadataValue;
+                    }
+                }
+
+                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, queueMetadata);
                 InternalLogger.Trace("AzureQueueStorageTarget - Initialized");
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureQueueStorageTarget(Name={0}): Failed to create QueueClient with connectionString={1}.", Name, connectionString);
+                if (string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(serviceUri))
+                    InternalLogger.Error(ex, "AzureQueueStorageTarget(Name={0}): Failed to create QueueClient with ServiceUri={1}.", Name, serviceUri);
+                else
+                    InternalLogger.Error(ex, "AzureQueueStorageTarget(Name={0}): Failed to create QueueClient with connectionString={1}.", Name, connectionString);
                 throw;
             }
         }
@@ -69,9 +121,8 @@ namespace NLog.Targets
                 queueName = _containerNameCache.LookupStorageName(queueName, _checkAndRepairQueueNameDelegate);
 
                 var layoutMessage = RenderLogEvent(Layout, logEvent);
-                var queueMessage = new CloudQueueMessage(layoutMessage);
 
-                return _cloudQueueService.AddMessageAsync(queueName, queueMessage, cancellationToken);
+                return _cloudQueueService.AddMessageAsync(queueName, layoutMessage, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -97,51 +148,86 @@ namespace NLog.Targets
 
         private class CloudQueueService : ICloudQueueService
         {
-            private CloudQueueClient _client;
-            private CloudQueue _queue;
+            private QueueServiceClient _client;
+            private QueueClient _queue;
+            private IDictionary<string, string> _queueMetadata;
 
-            public void Connect(string connectionString)
+            private class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
             {
-                _client = CloudStorageAccount.Parse(connectionString).CreateCloudQueueClient();
+                private readonly string _resourceIdentity;
+                private readonly string _tenantIdentity;
+                private readonly Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider _tokenProvider;
+
+                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity)
+                {
+                    if (string.IsNullOrWhiteSpace(_resourceIdentity))
+                        _resourceIdentity = "https://storage.azure.com/";
+                    else
+                        _resourceIdentity = resourceIdentity;
+                    _tenantIdentity = tenantIdentity;
+                    _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
+                }
+
+                public override async ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
+                {
+                    try
+                    {
+                        var result = await _tokenProvider.GetAuthenticationResultAsync(_resourceIdentity, _tenantIdentity, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        return new Azure.Core.AccessToken(result.AccessToken, result.ExpiresOn);
+                    }
+                    catch (Exception ex)
+                    {
+                        InternalLogger.Error(ex, "AzureBlobStorageTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
+                        throw;
+                    }
+                }
+
+                public override Azure.Core.AccessToken GetToken(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
+                {
+                    return GetTokenAsync(requestContext, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+                }
             }
 
-            public Task AddMessageAsync(string queueName, CloudQueueMessage queueMessage, CancellationToken cancellationToken)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, IDictionary<string, string> queueMetadata)
+            {
+                _queueMetadata = queueMetadata;
+
+                if (string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(serviceUri))
+                {
+                    var tokenCredential = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity);
+                    _client = new QueueServiceClient(new Uri(serviceUri), tokenCredential);
+                }
+                else
+                {
+                    _client = new QueueServiceClient(connectionString);
+                }
+            }
+
+            public Task AddMessageAsync(string queueName, string queueMessage, CancellationToken cancellationToken)
             {
                 var queue = _queue;
                 if (queueName == null || queue?.Name != queueName)
                 {
-                    return InitializeAndCacheQueueAsync(queueName, cancellationToken).ContinueWith(async (t, m) => await t.Result.AddMessageAsync((CloudQueueMessage)m).ConfigureAwait(false), queueMessage, cancellationToken);
+                    return InitializeAndCacheQueueAsync(queueName, cancellationToken).ContinueWith(async (t, m) => await t.Result.SendMessageAsync((string)m, cancellationToken).ConfigureAwait(false), queueMessage, cancellationToken);
                 }
                 else
                 {
-#if NETSTANDARD1_3
-                    return queue.AddMessageAsync(queueMessage);
-#else
-                    return queue.AddMessageAsync(queueMessage, cancellationToken);
-#endif
+                    return queue.SendMessageAsync(queueMessage, cancellationToken);
                 }
             }
 
-            private async Task<CloudQueue> InitializeAndCacheQueueAsync(string queueName, CancellationToken cancellationToken)
+            private async Task<QueueClient> InitializeAndCacheQueueAsync(string queueName, CancellationToken cancellationToken)
             {
                 try
                 {
                     if (_client == null)
                         throw new InvalidOperationException("CloudQueueClient has not been initialized");
 
-                    var queue = _client.GetQueueReference(queueName);
-#if NETSTANDARD1_3
-                    bool queueExists = await queue.ExistsAsync().ConfigureAwait(false);
-#else
+                    var queue = _client.GetQueueClient(queueName);
                     bool queueExists = await queue.ExistsAsync(cancellationToken).ConfigureAwait(false);
-#endif
                     if (!queueExists)
                     {
-#if NETSTANDARD1_3
-                        await queue.CreateIfNotExistsAsync().ConfigureAwait(false);
-#else
-                        await queue.CreateIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
-#endif
+                        await queue.CreateIfNotExistsAsync(_queueMetadata, cancellationToken).ConfigureAwait(false);
                     }
                     _queue = queue;
                     return queue;
