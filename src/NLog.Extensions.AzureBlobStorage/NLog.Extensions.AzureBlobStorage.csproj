@@ -1,11 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net452;netstandard1.3;netstandard2.0</TargetFrameworks>
-    <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net452' ">true</DisableImplicitFrameworkReferences>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.3.0</Version>
+    <Version>3.0.0</Version>
 
     <Description>NLog BlobStorageTarget for writing to Azure Cloud Blob Storage</Description>
     <Authors>jdetmar</Authors>
@@ -19,29 +18,20 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      Changed default BatchSize to 100 for bette performance
-      Updated dependency to NLog 4.6.8
-      Added support for SourceLink
+Changed to Azure.Storage.Blobs ver. 12.6.0, because Microsoft.Azure.Storage.Blob has been deprecated.
     </PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="..\NLog.Extensions.AzureStorage\AzureStorageNameCache.cs" Link="AzureStorageNameCache.cs" />
-    <Compile Include="..\NLog.Extensions.AzureStorage\ConnectionStringHelper.cs" Link="ConnectionStringHelper.cs" />
     <Compile Include="..\NLog.Extensions.AzureStorage\SortHelpers.cs" Link="SortHelpers.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="10.0.3" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.6.0" />
+    <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" Version="1.6.0" />
     <PackageReference Include="NLog" Version="4.6.8" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Configuration" />
-    <PackageReference Include="Microsoft.WindowsAzure.ConfigurationManager" Version="3.2.3" />
   </ItemGroup>
 
 </Project>

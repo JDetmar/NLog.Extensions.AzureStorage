@@ -13,7 +13,7 @@ namespace NLog.Extensions.AzureTableStorage.Tests
         public Dictionary<string, TableBatchOperation> BatchExecuted { get; } = new Dictionary<string, TableBatchOperation>();
         public string ConnectionString { get; private set; }
 
-        public void Connect(string connectionString)
+        public void Connect(string connectionString, int? defaultTimeToLiveSeconds)
         {
             ConnectionString = connectionString;
         }

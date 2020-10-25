@@ -39,6 +39,11 @@ namespace NLog.Targets
         /// </summary>
         public Layout PartitionKey { get; set; } = "0";
 
+        /// <summary>
+        /// Gets and sets type of the content for <see cref="EventData.ContentType"/>
+        /// </summary>
+        public Layout ContentType { get; set; }
+
         public EventHubTarget()
             :this(new EventHubService())
         {
@@ -139,10 +144,14 @@ namespace NLog.Targets
         private int CalculateBatchSize(IList<EventData> eventDataList, int eventDataSize)
         {
             if (eventDataSize < 1024 * 1024)
-                return eventDataList.Count;
+                return Math.Min(eventDataList.Count, 100);
 
             if (eventDataList.Count > 10)
-                return Math.Min(eventDataList.Count / 10, 100);
+            {
+                int megaBytes = Math.Max(eventDataSize / (1024 * 1024), 10);
+                int batchSize = Math.Max(eventDataList.Count / megaBytes - 1, 1);
+                return Math.Min(batchSize, 100);
+            }
 
             return 1;
         }
@@ -174,11 +183,13 @@ namespace NLog.Targets
                 var eventData = CreateEventData(logEventList[i], eventDatas.Count == 0 && i == logEventList.Count - 1);
                 if (eventData != null)
                 {
-                    eventDataSize += eventData.Body.Count + DefaultEventDataBonusPadding;
+                    if (eventData.Body.Count > eventDataSize)
+                        eventDataSize = eventData.Body.Count + DefaultEventDataBonusPadding;
                     eventDatas.Add(eventData);
                 }
             }
 
+            eventDataSize = eventDataSize * logEventList.Count;
             return eventDatas;
         }
 
@@ -186,8 +197,13 @@ namespace NLog.Targets
         {
             try
             {
-                var eventDataBody = RenderLogEvent(Layout, logEvent);
+                var eventDataBody = RenderLogEvent(Layout, logEvent) ?? string.Empty;
                 var eventData = new EventData(EncodeToUTF8(eventDataBody));
+
+                var eventDataContentType = RenderLogEvent(ContentType, logEvent);
+                if (!string.IsNullOrEmpty(eventDataContentType))
+                    eventData.ContentType = eventDataContentType;
+
                 if (ShouldIncludeProperties(logEvent))
                 {
                     var properties = GetAllProperties(logEvent);

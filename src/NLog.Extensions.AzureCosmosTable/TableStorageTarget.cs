@@ -29,6 +29,7 @@ namespace NLog.Targets
 
         //Delegates for bucket sorting
         private SortHelpers.KeySelector<LogEventInfo, TablePartitionKey> _getTablePartitionNameDelegate;
+
         struct TablePartitionKey : IEquatable<TablePartitionKey>
         {
             public readonly string TableName;
@@ -71,6 +72,10 @@ namespace NLog.Targets
 
         public string LogTimeStampFormat { get; set; } = "O";
 
+        public Layout TimeToLiveSeconds { get; set; }
+
+        public Layout TimeToLiveDays { get; set; }
+
         public TableStorageTarget()
             :this(new CloudTableService())
         {
@@ -101,7 +106,8 @@ namespace NLog.Targets
             try
             {
                 connectionString = ConnectionStringHelper.LookupConnectionString(ConnectionString, ConnectionStringKey);
-                _cloudTableService.Connect(connectionString);
+                TimeSpan defaultTimeToLive = RenderDefaultTimeToLive();
+                _cloudTableService.Connect(connectionString, (int)defaultTimeToLive.TotalSeconds);
                 InternalLogger.Trace("AzureTableStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -109,6 +115,49 @@ namespace NLog.Targets
                 InternalLogger.Error(ex, "AzureTableStorageTarget(Name={0}): Failed to create TableClient with connectionString={1}.", Name, connectionString);
                 throw;
             }
+        }
+
+        private TimeSpan RenderDefaultTimeToLive()
+        {
+            string timeToLiveSeconds = null;
+            string timeToLiveDays = null;
+
+            try
+            {
+                timeToLiveSeconds = TimeToLiveSeconds?.Render(LogEventInfo.CreateNullEvent());
+                if (!string.IsNullOrEmpty(timeToLiveSeconds))
+                {
+                    if (int.TryParse(timeToLiveSeconds, out var resultSeconds))
+                    {
+                        return TimeSpan.FromSeconds(resultSeconds);
+                    }
+                    else
+                    {
+                        InternalLogger.Error("AzureTableStorageTarget(Name={0}): Failed to parse TimeToLiveSeconds={1}", Name, timeToLiveSeconds);
+                    }
+                }
+                else
+                {
+                    timeToLiveDays = TimeToLiveDays?.Render(LogEventInfo.CreateNullEvent());
+                    if (!string.IsNullOrEmpty(timeToLiveDays))
+                    {
+                        if (int.TryParse(timeToLiveDays, out var resultDays))
+                        {
+                            return TimeSpan.FromDays(resultDays);
+                        }
+                        else
+                        {
+                            InternalLogger.Error("AzureTableStorageTarget(Name={0}): Failed to parse TimeToLiveDays={1}", Name, timeToLiveDays);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                InternalLogger.Error(ex, "AzureTableStorageTarget(Name={0}): Failed to parse TimeToLive value. Seconds={1}, Days={2}", Name, timeToLiveSeconds, timeToLiveDays);
+            }
+
+            return TimeSpan.Zero;
         }
 
         protected override Task WriteAsyncTask(LogEventInfo logEvent, CancellationToken cancellationToken)
@@ -285,10 +334,12 @@ namespace NLog.Targets
         {
             private CloudTableClient _client;
             private CloudTable _table;
+            private int? _defaultTimeToLiveSeconds;
 
-            public void Connect(string connectionString)
+            public void Connect(string connectionString, int? defaultTimeToLiveSeconds)
             {
                 _client = CloudStorageAccount.Parse(connectionString).CreateCloudTableClient();
+                _defaultTimeToLiveSeconds = defaultTimeToLiveSeconds == 0 ? null : defaultTimeToLiveSeconds;
             }
 
             public Task ExecuteBatchAsync(string tableName, TableBatchOperation tableOperation, CancellationToken cancellationToken)
@@ -326,8 +377,13 @@ namespace NLog.Targets
                     {
 #if NETSTANDARD1_3
                         await table.CreateIfNotExistsAsync().ConfigureAwait(false);
-#else
+#elif NET45
                         await table.CreateIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
+#else
+                        if (_defaultTimeToLiveSeconds.HasValue)
+                            await table.CreateIfNotExistsAsync(Microsoft.Azure.Cosmos.IndexingMode.Consistent, null, _defaultTimeToLiveSeconds, cancellationToken).ConfigureAwait(false);
+                        else
+                            await table.CreateIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
 #endif
                     }
 

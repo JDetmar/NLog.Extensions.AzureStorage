@@ -19,8 +19,9 @@ Supports both Azure Storage Tables and CosmosDB Tables.
           layout="Layout"
           connectionString="String"
           connectionStringKey="String"
-          tableName="Layout" 
-          logTimeStampFormat="O"/>
+          tableName="Layout"
+          logTimeStampFormat="O"
+          timeToLiveDays="0" />
 </targets>
 ```
 ### Parameters
@@ -40,6 +41,10 @@ _rowKey_ - Azure Table RowKey. [Layout](https://github.com/NLog/NLog/wiki/Layout
 _partitionKey_ - Azure PartitionKey. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Default = `${logger}`
 
 _logTimeStampFormat_ - Default Log TimeStamp is set to 'O' for [Round-trip](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings#the-round-trip-o-o-format-specifier) format if not specified.
+
+_timeToLiveSeconds_ - Default [Time-to-live](https://docs.microsoft.com/en-us/azure/cosmos-db/time-to-live) (TTL) for CosmosDb rows in seconds. Default = 0 (Off - Forever)
+
+_timeToLiveDays_ - Default [Time-to-live](https://docs.microsoft.com/en-us/azure/cosmos-db/time-to-live) (TTL) for CosmosDb rows in days. Default = 0 (Off - Forever)
 
 ### DynamicTableEntity
 Instead of using the predefined NLogEntity-properties, then one can specify wanted properties:
