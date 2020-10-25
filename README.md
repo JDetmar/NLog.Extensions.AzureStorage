@@ -34,9 +34,12 @@ But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.or
     <target type="AzureBlobStorage"
             name="Azure"
             layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
-            connectionStringKey="storageConnectionString"
+            connectionString="DefaultEndpointsProtocol=https;AccountName=##accountName##;AccountKey=##accountKey##;EndpointSuffix=core.windows.net"
             container="${machinename}"
-            blobName="${logger}/${date:universalTime=true:format=yy-MM-dd}/${date:universalTime=true:format=mm}.log" />
+            blobName="${logger}/${date:universalTime=true:format=yy-MM-dd}/${date:universalTime=true:format=HH}.log">
+                <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
+                <tag name="mytag" layout="mytagvalue" /> <!-- Multiple allowed -->
+    </target>
     <target type="AzureCosmosTable"
             name="AzureTable"
             connectionStringKey="storageConnectionString"

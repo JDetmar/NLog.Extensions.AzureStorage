@@ -18,8 +18,9 @@
           layout="Layout"
           blobName="Layout"
           connectionString="String"
-          connectionStringKey="String"
           container="Layout" />
+            <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
+            <tag name="mytag" layout="mytagvalue" /> <!-- Multiple allowed -->
 </targets>
 ```
 
@@ -31,9 +32,7 @@ _layout_ - Text to be rendered. [Layout](https://github.com/NLog/NLog/wiki/Layou
 
 _blobName_ - BlobName. [Layout](https://github.com/NLog/NLog/wiki/Layouts)  
 
-_connectionString_ - Azure storage connection string. Must provide either _connectionString_ or _connectionStringKey_.
-
-_connectionStringKey_ - App key name of Azure storage connection string. Must provide either _connectionString_ or _connectionStringKey_.
+_connectionString_ - Azure storage connection string. Must provide either _connectionString_ or provide information for AzureServiceTokenProvider.
 
 _container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
