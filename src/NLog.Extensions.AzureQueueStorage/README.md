@@ -17,8 +17,9 @@
           name="String"
           layout="Layout"
           queueName="Layout"
-          connectionString="String"
-          connectionStringKey="String" />
+          connectionString="String">
+            <tag name="mytag" layout="mytagvalue" /> <!-- Multiple allowed -->
+  </target>
 </targets>
 ```
 
@@ -30,9 +31,13 @@ _layout_ - Queue Message Text to be rendered. [Layout](https://github.com/NLog/N
 
 _queueName_ - QueueName. [Layout](https://github.com/NLog/NLog/wiki/Layouts)  
 
-_connectionString_ - Azure storage connection string. Must provide either _connectionString_ or _connectionStringKey_.
+_connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage=true;`
 
-_connectionStringKey_ - App key name of Azure storage connection string. Must provide either _connectionString_ or _connectionStringKey_.
+_serviceUri_ - Alternative to ConnectionString.
+
+_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
+
+_resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
 
 ### Batching Policy
 

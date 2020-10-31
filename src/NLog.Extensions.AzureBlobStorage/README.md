@@ -18,9 +18,10 @@
           layout="Layout"
           blobName="Layout"
           connectionString="String"
-          container="Layout" />
+          container="Layout">
             <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
             <tag name="mytag" layout="mytagvalue" /> <!-- Multiple allowed -->
+  </target>
 </targets>
 ```
 
@@ -32,11 +33,17 @@ _layout_ - Text to be rendered. [Layout](https://github.com/NLog/NLog/wiki/Layou
 
 _blobName_ - BlobName. [Layout](https://github.com/NLog/NLog/wiki/Layouts)  
 
-_connectionString_ - Azure storage connection string. Must provide either _connectionString_ or provide information for AzureServiceTokenProvider.
-
 _container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _contentType_ - Azure blob ContentType (Default = text/plain)
+
+_connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage=true;`
+
+_serviceUri_ - Alternative to ConnectionString.
+
+_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
+
+_resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
 
 ### Batching Policy
 
