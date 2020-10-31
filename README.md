@@ -47,9 +47,11 @@ But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.or
             tableName="NlogTable" />
     <target type="AzureQueueStorage"
             name="AzureQueue"
-            connectionStringKey="storageConnectionString"
+            connectionString="UseDevelopmentStorage=true;"
             layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
-            queueName="NlogQueue" />
+            queueName="NlogQueue">
+                <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
+    </target>
     <target type="AzureEventHub"
             name="AzureEventHub"
             connectionString="Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=NLog;SharedAccessKey=EventHub"
