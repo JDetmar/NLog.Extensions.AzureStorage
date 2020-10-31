@@ -2,17 +2,18 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage.Queue;
 using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureQueueStorage.Tests
 {
     class CloudQueueServiceMock : ICloudQueueService
     {
-        public Dictionary<string, CloudQueueMessage> MessagesAdded { get; } = new Dictionary<string, CloudQueueMessage>();
+        public Dictionary<string, string> MessagesAdded { get; } = new Dictionary<string, string>();
         public string ConnectionString { get; private set; }
 
-        public Task AddMessageAsync(string queueName, CloudQueueMessage queueMessage, CancellationToken cancellationToken)
+        public IDictionary<string, string> QueueMetadata { get; private set; }
+
+        public Task AddMessageAsync(string queueName, string queueMessage, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("CloudQueueService not connected");
@@ -22,9 +23,10 @@ namespace NLog.Extensions.AzureQueueStorage.Tests
             return Task.Delay(10, cancellationToken);
         }
 
-        public void Connect(string connectionString)
+        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, IDictionary<string, string> queueMetadata)
         {
             ConnectionString = connectionString;
+            QueueMetadata = queueMetadata;
         }
 
         public string PeekLastAdded(string queueName)
@@ -33,7 +35,7 @@ namespace NLog.Extensions.AzureQueueStorage.Tests
             {
                 if (MessagesAdded.TryGetValue(queueName, out var queueMessage))
                 {
-                    return queueMessage.AsString;
+                    return queueMessage;
                 }
             }
 
