@@ -18,7 +18,7 @@
           layout="Layout"
           queueName="Layout"
           connectionString="String">
-            <tag name="mytag" layout="mytagvalue" /> <!-- Multiple allowed -->
+            <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
   </target>
 </targets>
 ```
