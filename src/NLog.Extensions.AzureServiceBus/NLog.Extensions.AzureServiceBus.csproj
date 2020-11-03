@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <Version>3.0.0</Version>
+
+    <Description>NLog ServiceBusTarget for writing to Azure Service Bus Topic or Queue</Description>
+    <Authors>jdetmar</Authors>
+    <CurrentYear>$([System.DateTime]::Now.ToString(yyyy))</CurrentYear>
+    <Copyright>Copyright (c) $(CurrentYear) - jdetmar</Copyright>
+
+    <PackageTags>NLog;azure;servicebus;AMQP;bus;queue;topic;log;logging</PackageTags>
+    <PackageIconUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/raw/master/logo64.png?raw=true</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReleaseNotes>
+Changed to Azure.Storage.Queues ver. 12.4.2, since Microsoft.Azure.Storage.Queue is deprecated.
+
+ConnectionStringKey option has been removed.
+    </PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\NLog.Extensions.AzureStorage\AzureStorageNameCache.cs" Link="AzureStorageNameCache.cs" />
+    <Compile Include="..\NLog.Extensions.AzureStorage\SortHelpers.cs" Link="SortHelpers.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NLog" Version="4.6.8" />
+    <PackageReference Include="Microsoft.Azure.ServiceBus" Version="4.1.3" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+</Project>

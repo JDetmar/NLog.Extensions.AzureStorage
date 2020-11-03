@@ -31,7 +31,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureCosmos
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureAccessToken", "NLog.Extensions.AzureAccessToken\NLog.Extensions.AzureAccessToken.csproj", "{507FCA08-9341-4764-9D3C-FA4F70C21D2C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NLog.Extensions.AzureAccessToken.Tests", "..\test\NLog.Extensions.AzureAccessToken.Tests\NLog.Extensions.AzureAccessToken.Tests.csproj", "{8609512C-29FD-4984-A318-BFA5A681F0A1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureAccessToken.Tests", "..\test\NLog.Extensions.AzureAccessToken.Tests\NLog.Extensions.AzureAccessToken.Tests.csproj", "{8609512C-29FD-4984-A318-BFA5A681F0A1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureServiceBus", "NLog.Extensions.AzureServiceBus\NLog.Extensions.AzureServiceBus.csproj", "{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureServiceBus.Tests", "..\test\NLog.Extensions.AzureServiceBus.Tests\NLog.Extensions.AzureServiceBus.Tests.csproj", "{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -175,6 +179,30 @@ Global
 		{8609512C-29FD-4984-A318-BFA5A681F0A1}.Release|x64.Build.0 = Release|Any CPU
 		{8609512C-29FD-4984-A318-BFA5A681F0A1}.Release|x86.ActiveCfg = Release|Any CPU
 		{8609512C-29FD-4984-A318-BFA5A681F0A1}.Release|x86.Build.0 = Release|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Debug|x64.Build.0 = Debug|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Debug|x86.Build.0 = Debug|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Release|x64.ActiveCfg = Release|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Release|x64.Build.0 = Release|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Release|x86.ActiveCfg = Release|Any CPU
+		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Release|x86.Build.0 = Release|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Debug|x64.Build.0 = Debug|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Debug|x86.Build.0 = Debug|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Release|x64.ActiveCfg = Release|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Release|x64.Build.0 = Release|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Release|x86.ActiveCfg = Release|Any CPU
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -186,6 +214,7 @@ Global
 		{A56BD3E3-C388-41B9-A021-8B67C43CF225} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
 		{09A625B1-C5E3-411D-98D3-30D3EE23F6F1} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
 		{8609512C-29FD-4984-A318-BFA5A681F0A1} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
+		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {57F963D5-962F-4205-B49E-B4CCE3888D73}
