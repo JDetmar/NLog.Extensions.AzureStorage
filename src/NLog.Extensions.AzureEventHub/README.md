@@ -44,9 +44,11 @@ _partitionKey_ - Partition-Key which EventHub uses to generate PartitionId-hash.
 
 _layout_ - EventData Body Text to be rendered and encoded as UTF8. [Layout](https://github.com/NLog/NLog/wiki/Layouts). 
 
-_contentType_ - EventData ContentType to be assigned. [Layout](https://github.com/NLog/NLog/wiki/Layouts). 
+_contentType_ - EventData ContentType to be assigned. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Ex. application/json
 
 ### Batching Policy
+
+_maxBatchSizeBytes_ - Max size of a single batch in bytes [Integer](https://github.com/NLog/NLog/wiki/Data-types) (Default=1024*1024)
 
 _batchSize_ - Number of EventData items to send in a single batch (Default=100)
 

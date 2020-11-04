@@ -44,6 +44,11 @@ namespace NLog.Targets
         /// </summary>
         public Layout ContentType { get; set; }
 
+        /// <summary>
+        /// Basic Tier = 256 KByte, Standard Tier = 1 MByte
+        /// </summary>
+        public int MaxBatchSizeBytes { get; set; } = 1024 * 1024;
+
         public EventHubTarget()
             :this(new EventHubService())
         {
@@ -53,7 +58,6 @@ namespace NLog.Targets
         {
             TaskDelayMilliseconds = 200;
             BatchSize = 100;
-
             _eventHubService = eventHubService;
         }
 
@@ -61,7 +65,7 @@ namespace NLog.Targets
         {
             base.InitializeTarget();
 
-            var entityPath = EventHubName?.Render(LogEventInfo.CreateNullEvent()) ?? string.Empty;
+            var entityPath = EventHubName?.Render(LogEventInfo.CreateNullEvent())?.Trim() ?? string.Empty;
             var connectionString = ConnectionString?.Render(LogEventInfo.CreateNullEvent()) ?? string.Empty;
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ArgumentException("ConnectionString is required");
@@ -143,13 +147,13 @@ namespace NLog.Targets
 
         private int CalculateBatchSize(IList<EventData> eventDataList, int eventDataSize)
         {
-            if (eventDataSize < 1024 * 1024)
+            if (eventDataSize < MaxBatchSizeBytes)
                 return Math.Min(eventDataList.Count, 100);
 
             if (eventDataList.Count > 10)
             {
-                int megaBytes = Math.Max(eventDataSize / (1024 * 1024), 10);
-                int batchSize = Math.Max(eventDataList.Count / megaBytes - 1, 1);
+                int numberOfBatches = Math.Max(eventDataSize / MaxBatchSizeBytes, 10);
+                int batchSize = Math.Max(eventDataList.Count / numberOfBatches - 1, 1);
                 return Math.Min(batchSize, 100);
             }
 
