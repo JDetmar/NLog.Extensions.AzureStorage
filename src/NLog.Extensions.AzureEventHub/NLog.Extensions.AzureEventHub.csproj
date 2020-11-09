@@ -20,7 +20,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Introduced new option MaxBatchSizeBytes with default value 256 KByte (Basic Tier = 256 KByte, Standard Tier = 1 MByte)
+Introduced new option MaxBatchSizeBytes with default value 1 MByte (Basic Tier = 256 KByte, Standard Tier = 1 MByte)
     </PackageReleaseNotes>
   </PropertyGroup>
 

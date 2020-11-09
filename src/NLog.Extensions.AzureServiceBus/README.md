@@ -58,7 +58,7 @@ _correlationId_ - Service Bus Message Correlationid. [Layout](https://github.com
 
 _maxBatchSizeBytes_ - Max size of a single batch in bytes [Integer](https://github.com/NLog/NLog/wiki/Data-types) (Default=256*1024)
 
-_batchSize_ - Number of EventData items to send in a single batch (Default=100)
+_batchSize_ - Number of LogEvents to send in a single batch (Default=100)
 
 _taskDelayMilliseconds_ - Artificial delay before sending to optimize for batching (Default=200 ms)
 
