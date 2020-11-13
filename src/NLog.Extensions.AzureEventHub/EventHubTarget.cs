@@ -102,26 +102,11 @@ namespace NLog.Targets
                 {
                     var eventDataList = CreateEventDataList(partitionBucket.Value, out var eventDataSize);
 
-                    Task sendTask = Task.CompletedTask;
-                    int batchSize = CalculateBatchSize(eventDataList, eventDataSize);
-                    if (eventDataList.Count <= batchSize)
-                    {
-                        sendTask = WriteSingleBatchAsync(eventDataList, partitionBucket.Key);
-                    }
-                    else
-                    {
-                        // Must chain the tasks together so they don't run concurrently
-                        foreach (var batchItem in GenerateBatches(eventDataList, batchSize))
-                        {
-                            string partitionKey = partitionBucket.Key;
-                            sendTask = sendTask.ContinueWith(async p => await WriteSingleBatchAsync(batchItem, partitionKey).ConfigureAwait(false), cancellationToken);
-                        }
-                    }
-
+                    Task sendTask = WritePartitionBucketAsync(eventDataList, partitionBucket.Key, eventDataSize);
                     if (multipleTasks == null)
                         return sendTask;
-                    else
-                        multipleTasks.Add(sendTask);
+
+                    multipleTasks.Add(sendTask);
                 }
                 catch (Exception ex)
                 {
@@ -132,6 +117,28 @@ namespace NLog.Targets
             }
 
             return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
+        }
+
+        private Task WritePartitionBucketAsync(IList<EventData> eventDataList, string partitionKey, int eventDataSize)
+        {
+            int batchSize = CalculateBatchSize(eventDataList, eventDataSize);
+            if (eventDataList.Count <= batchSize)
+            {
+                return WriteSingleBatchAsync(eventDataList, partitionKey);
+            }
+            else
+            {
+                return WriteMultipleBatchesAsync(GenerateBatches(eventDataList, batchSize), partitionKey);
+            }
+        }
+
+        private async Task WriteMultipleBatchesAsync(IEnumerable<List<EventData>> batches, string partitionKey)
+        {
+            // Must chain the tasks together so they don't run concurrently
+            foreach (var batchItem in batches)
+            {
+                await WriteSingleBatchAsync(batchItem, partitionKey).ConfigureAwait(false);
+            }
         }
 
         IEnumerable<List<EventData>> GenerateBatches(IList<EventData> source, int batchSize)

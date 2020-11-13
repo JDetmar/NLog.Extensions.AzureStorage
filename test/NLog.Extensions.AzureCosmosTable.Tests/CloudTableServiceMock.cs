@@ -23,9 +23,11 @@ namespace NLog.Extensions.AzureTableStorage.Tests
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("CloudTableService not connected");
 
-            lock (BatchExecuted)
-                BatchExecuted[tableName] = tableOperation;
-            return Task.Delay(10, cancellationToken);
+            return Task.Delay(10).ContinueWith(t =>
+            {
+                lock (BatchExecuted)
+                    BatchExecuted[tableName] = tableOperation;
+            });
         }
 
         public IEnumerable<ITableEntity> PeekLastAdded(string tableName)

@@ -5,7 +5,7 @@
     <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net45' Or '$(TargetFramework)' == 'net461' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.7.0</Version>
+    <Version>2.7.1</Version>
 
     <Description>NLog TableStorageTarget for writing to Azure Table Storage OR Azure CosmosDB Tables</Description>
     <Authors>jdetmar</Authors>
@@ -19,7 +19,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Added support for CosmosDb Time-to-Live for rows using TimeToLiveSeconds or TimeToLiveDays
+Fixed bug where LogManager.Flush() or LogManager.Shutdown() completed prematurely when using BatchSize &gt; 100
     </PackageReleaseNotes>
   </PropertyGroup>
 

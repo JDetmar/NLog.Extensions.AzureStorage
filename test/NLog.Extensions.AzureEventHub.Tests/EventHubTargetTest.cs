@@ -72,5 +72,43 @@ namespace NLog.Extensions.AzureEventHub.Test
             Assert.Single(eventHubService.EventDataSent.First().Value.First().Properties);
             Assert.Equal(LogLevel.Info.ToString(), eventHubService.EventDataSent.First().Value.First().Properties["Level"]);
         }
+
+        [Fact]
+        public void EventDataBulkBigBatchSize()
+        {
+            var logFactory = new LogFactory();
+            var logConfig = new Config.LoggingConfiguration(logFactory);
+            var eventHubService = new EventHubServiceMock();
+            var eventHubTarget = new EventHubTarget(eventHubService);
+            eventHubTarget.OverflowAction = Targets.Wrappers.AsyncTargetWrapperOverflowAction.Grow;
+            eventHubTarget.ConnectionString = "LocalEventHub";
+            eventHubTarget.PartitionKey = "${logger}";
+            eventHubTarget.Layout = "${message}";
+            eventHubTarget.TaskDelayMilliseconds = 200;
+            eventHubTarget.BatchSize = 200;
+            eventHubTarget.IncludeEventProperties = true;
+            eventHubTarget.RetryCount = 1;
+            logConfig.AddRuleForAllLevels(eventHubTarget);
+            logFactory.Configuration = logConfig;
+            var logger = logFactory.GetLogger(nameof(EventDataBulkBigBatchSize));
+            for (int i = 0; i < 11000; ++i)
+            {
+                if (i % 1000 == 0)
+                {
+                    System.Threading.Thread.Sleep(1);
+                }
+                logger.Info("Hello {Counter}", i);
+            }
+            logFactory.Flush();
+
+            Assert.Single(eventHubService.EventDataSent);
+            Assert.Equal(11000, eventHubService.EventDataSent.First().Value.Count);
+            var previous = -1;
+            foreach (var item in eventHubService.EventDataSent.First().Value)
+            {
+                Assert.True((int)item.Properties["Counter"] > previous, $"{(int)item.Properties["Counter"]} > {previous}");
+                previous = (int)item.Properties["Counter"];
+            }
+        }
     }
 }

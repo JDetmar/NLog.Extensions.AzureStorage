@@ -169,25 +169,11 @@ namespace NLog.Targets
                 {
                     var messageBatch = CreateMessageBatch(partitionBucket.Value, partitionBucket.Key, out var messageBatchSize);
 
-                    Task sendTask = Task.CompletedTask;
-                    int batchSize = CalculateBatchSize(messageBatch, messageBatchSize);
-                    if (messageBatch.Count <= batchSize)
-                    {
-                        sendTask = WriteSingleBatchAsync(messageBatch);
-                    }
-                    else
-                    {
-                        // Must chain the tasks together so they don't run concurrently
-                        foreach (var batchItem in GenerateBatches(messageBatch, batchSize))
-                        {
-                            sendTask = sendTask.ContinueWith(async p => await WriteSingleBatchAsync(batchItem).ConfigureAwait(false), cancellationToken);
-                        }
-                    }
-
+                    Task sendTask = WritePartitionBucketAsync(messageBatch, messageBatchSize);
                     if (multipleTasks == null)
                         return sendTask;
-                    else
-                        multipleTasks.Add(sendTask);
+
+                    multipleTasks.Add(sendTask);
                 }
                 catch (Exception ex)
                 {
@@ -198,6 +184,28 @@ namespace NLog.Targets
             }
 
             return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
+        }
+
+        private Task WritePartitionBucketAsync(IList<Message> messageList, int eventDataSize)
+        {
+            int batchSize = CalculateBatchSize(messageList, eventDataSize);
+            if (messageList.Count <= batchSize)
+            {
+                return WriteSingleBatchAsync(messageList);
+            }
+            else
+            {
+                return WriteMultipleBatchesAsync(GenerateBatches(messageList, batchSize));
+            }
+        }
+
+        private async Task WriteMultipleBatchesAsync(IEnumerable<List<Message>> batches)
+        {
+            // Must chain the tasks together so they don't run concurrently
+            foreach (var batchItem in batches)
+            {
+                await WriteSingleBatchAsync(batchItem).ConfigureAwait(false);
+            }
         }
 
         IEnumerable<List<Message>> GenerateBatches(IList<Message> source, int batchSize)

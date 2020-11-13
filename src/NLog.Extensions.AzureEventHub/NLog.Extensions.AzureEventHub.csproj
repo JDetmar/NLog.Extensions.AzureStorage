@@ -20,6 +20,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
+Fixed bug where LogManager.Flush() or LogManager.Shutdown() completed prematurely when using BatchSize &gt; 100
+      
 Introduced new option MaxBatchSizeBytes with default value 1 MByte (Basic Tier = 256 KByte, Standard Tier = 1 MByte)
     </PackageReleaseNotes>
   </PropertyGroup>

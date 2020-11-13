@@ -18,9 +18,11 @@ namespace NLog.Extensions.AzureQueueStorage.Tests
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("CloudQueueService not connected");
 
-            lock (MessagesAdded)
-                MessagesAdded[queueName] = queueMessage;
-            return Task.Delay(10, cancellationToken);
+            return Task.Delay(10, cancellationToken).ContinueWith(t =>
+            {
+                lock (MessagesAdded)
+                    MessagesAdded[queueName] = queueMessage;
+            });
         }
 
         public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, IDictionary<string, string> queueMetadata)

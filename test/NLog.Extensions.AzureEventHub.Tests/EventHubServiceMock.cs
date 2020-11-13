@@ -9,7 +9,9 @@ namespace NLog.Extensions.AzureEventHub.Test
 {
     class EventHubServiceMock : IEventHubService
     {
-        public Dictionary<string, IList<EventData>> EventDataSent { get; } = new Dictionary<string, IList<EventData>>();
+        private readonly Random _random = new Random();
+
+        public Dictionary<string, List<EventData>> EventDataSent { get; } = new Dictionary<string, List<EventData>>();
         public string ConnectionString { get; private set; }
         public string EntityPath { get; private set; }
 
@@ -30,9 +32,16 @@ namespace NLog.Extensions.AzureEventHub.Test
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("EventHubService not connected");
 
-            lock (EventDataSent)
-                EventDataSent[partitionKey] = eventDataList;
-            return Task.Delay(10);
+            return Task.Delay(_random.Next(5, 10)).ContinueWith(t =>
+            {
+                lock (EventDataSent)
+                {
+                    if (EventDataSent.TryGetValue(partitionKey, out var existingBatch))
+                        existingBatch.AddRange(eventDataList);
+                    else
+                        EventDataSent[partitionKey] = new List<EventData>(eventDataList);
+                }
+            });
         }
 
         public string PeekLastSent(string partitionKey)

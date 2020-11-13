@@ -43,9 +43,11 @@ namespace NLog.Extensions.AzureServiceBus.Test
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("EventHubService not connected");
 
-            lock (MessageDataSent)
-                MessageDataSent.Add(messages);
-            return Task.Delay(10);
+            return Task.Delay(10).ContinueWith(t =>
+            {
+                lock (MessageDataSent)
+                    MessageDataSent.Add(messages);
+            });
         }
 
         public Task CloseAsync()

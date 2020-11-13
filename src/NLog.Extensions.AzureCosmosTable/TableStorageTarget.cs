@@ -199,16 +199,10 @@ namespace NLog.Targets
                     else
                     {
                         // Must chain the tasks together so they don't run concurrently
-                        Task writeTask = null;
-                        foreach (var batchItem in GenerateBatches(partitionBucket.Value, partitionBucket.Key.PartitionId, BatchMaxSize))
-                        {
-                            if (writeTask == null)
-                                writeTask = WriteToTableAsync(tableName, batchItem, cancellationToken);
-                            else
-                                writeTask = writeTask.ContinueWith(async (t,b) => await WriteToTableAsync(tableName, (TableBatchOperation)b, cancellationToken).ConfigureAwait(false), batchItem, cancellationToken);
-                        }
+                        Task writeTask = WriteMultipleBatches(GenerateBatches(partitionBucket.Value, partitionBucket.Key.PartitionId, BatchMaxSize), tableName, cancellationToken);
                         if (multipleTasks == null)
                             return writeTask;
+
                         multipleTasks.Add(writeTask);
                     }
                 }
@@ -221,6 +215,14 @@ namespace NLog.Targets
             }
 
             return Task.WhenAll(multipleTasks ?? new Task[0]);
+        }
+
+        private async Task WriteMultipleBatches(IEnumerable<TableBatchOperation> batches, string tableName, CancellationToken cancellationToken)
+        {
+            foreach (var batchItem in batches)
+            {
+                await WriteToTableAsync(tableName, batchItem, cancellationToken);
+            }
         }
 
         IEnumerable<TableBatchOperation> GenerateBatches(IList<LogEventInfo> source, string partitionId, int batchSize)
