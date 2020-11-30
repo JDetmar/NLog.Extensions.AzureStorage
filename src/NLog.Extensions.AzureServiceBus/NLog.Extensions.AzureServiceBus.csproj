@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
 
     <Description>NLog ServiceBusTarget for writing to Azure Service Bus Topic or Queue</Description>
     <Authors>jdetmar</Authors>
@@ -18,7 +18,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Initial commit using Microsoft.Azure.ServiceBus
+Assignment of SessionId should also assign PartitionId with same value.
     </PackageReleaseNotes>
   </PropertyGroup>
 

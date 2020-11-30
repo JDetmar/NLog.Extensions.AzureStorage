@@ -283,8 +283,7 @@ namespace NLog.Targets
                 {
                     if (SessionId != null)
                         messageData.SessionId = partitionKey;
-                    else
-                        messageData.PartitionKey = partitionKey;
+                    messageData.PartitionKey = partitionKey;
                 }
 
                 var messageContentType = RenderLogEvent(ContentType, logEvent);
