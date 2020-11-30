@@ -90,8 +90,8 @@ namespace NLog.Targets
 
             if (logEvents.Count == 1)
             {
-                var eventDataList = CreateEventDataList(logEvents, out var eventDataSize);
-                return WriteSingleBatchAsync(eventDataList, _getEventHubPartitionKeyDelegate(logEvents[0]));
+                var eventDataBatch = CreateEventDataBatch(logEvents, out var eventDataSize);
+                return WriteSingleBatchAsync(eventDataBatch, _getEventHubPartitionKeyDelegate(logEvents[0]));
             }
 
             var partitionBuckets = SortHelpers.BucketSort(logEvents, _getEventHubPartitionKeyDelegate);
@@ -100,9 +100,9 @@ namespace NLog.Targets
             {
                 try
                 {
-                    var eventDataList = CreateEventDataList(partitionBucket.Value, out var eventDataSize);
+                    var eventDataBatch = CreateEventDataBatch(partitionBucket.Value, out var eventDataSize);
 
-                    Task sendTask = WritePartitionBucketAsync(eventDataList, partitionBucket.Key, eventDataSize);
+                    Task sendTask = WritePartitionBucketAsync(eventDataBatch, partitionBucket.Key, eventDataSize);
                     if (multipleTasks == null)
                         return sendTask;
 
@@ -128,14 +128,15 @@ namespace NLog.Targets
             }
             else
             {
-                return WriteMultipleBatchesAsync(GenerateBatches(eventDataList, batchSize), partitionKey);
+                var batchCollection = GenerateBatches(eventDataList, batchSize);
+                return WriteMultipleBatchesAsync(batchCollection, partitionKey);
             }
         }
 
-        private async Task WriteMultipleBatchesAsync(IEnumerable<List<EventData>> batches, string partitionKey)
+        private async Task WriteMultipleBatchesAsync(IEnumerable<List<EventData>> batchCollection, string partitionKey)
         {
             // Must chain the tasks together so they don't run concurrently
-            foreach (var batchItem in batches)
+            foreach (var batchItem in batchCollection)
             {
                 await WriteSingleBatchAsync(batchItem, partitionKey).ConfigureAwait(false);
             }
@@ -147,27 +148,27 @@ namespace NLog.Targets
                 yield return new List<EventData>(source.Skip(i).Take(batchSize));
         }
 
-        private Task WriteSingleBatchAsync(IList<EventData> eventDataList, string partitionKey)
+        private Task WriteSingleBatchAsync(IList<EventData> eventDataBatch, string partitionKey)
         {
-            return _eventHubService.SendAsync(eventDataList, partitionKey);
+            return _eventHubService.SendAsync(eventDataBatch, partitionKey);
         }
 
-        private int CalculateBatchSize(IList<EventData> eventDataList, int eventDataSize)
+        private int CalculateBatchSize(IList<EventData> eventDataBatch, int eventDataSize)
         {
             if (eventDataSize < MaxBatchSizeBytes)
-                return Math.Min(eventDataList.Count, 100);
+                return Math.Min(eventDataBatch.Count, 100);
 
-            if (eventDataList.Count > 10)
+            if (eventDataBatch.Count > 10)
             {
                 int numberOfBatches = Math.Max(eventDataSize / MaxBatchSizeBytes, 10);
-                int batchSize = Math.Max(eventDataList.Count / numberOfBatches - 1, 1);
+                int batchSize = Math.Max(eventDataBatch.Count / numberOfBatches - 1, 1);
                 return Math.Min(batchSize, 100);
             }
 
             return 1;
         }
 
-        private IList<EventData> CreateEventDataList(IList<LogEventInfo> logEventList, out int eventDataSize)
+        private IList<EventData> CreateEventDataBatch(IList<LogEventInfo> logEventList, out int eventDataSize)
         {
             if (logEventList.Count == 0)
             {
@@ -188,20 +189,20 @@ namespace NLog.Targets
             }
 
             eventDataSize = 0;
-            List<EventData> eventDatas = new List<EventData>(logEventList.Count);
+            List<EventData> eventDataBatch = new List<EventData>(logEventList.Count);
             for (int i = 0; i < logEventList.Count; ++i)
             {
-                var eventData = CreateEventData(logEventList[i], eventDatas.Count == 0 && i == logEventList.Count - 1);
+                var eventData = CreateEventData(logEventList[i], eventDataBatch.Count == 0 && i == logEventList.Count - 1);
                 if (eventData != null)
                 {
                     if (eventData.Body.Count > eventDataSize)
                         eventDataSize = eventData.Body.Count + DefaultEventDataBonusPadding;
-                    eventDatas.Add(eventData);
+                    eventDataBatch.Add(eventData);
                 }
             }
 
             eventDataSize = eventDataSize * logEventList.Count;
-            return eventDatas;
+            return eventDataBatch;
         }
 
         private EventData CreateEventData(LogEventInfo logEvent, bool allowThrow)
