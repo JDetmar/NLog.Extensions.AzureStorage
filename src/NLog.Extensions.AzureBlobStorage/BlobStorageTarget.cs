@@ -166,7 +166,8 @@ namespace NLog.Targets
 
             if (logEvents.Count == 1)
             {
-                return WriteToBlobAsync(logEvents, RenderLogEvent(Container, logEvents[0]), RenderLogEvent(BlobName, logEvents[0]), cancellationToken);
+                var blobPayload = CreateBlobPayload(logEvents);
+                return WriteToBlobAsync(blobPayload, RenderLogEvent(Container, logEvents[0]), RenderLogEvent(BlobName, logEvents[0]), cancellationToken);
             }
 
             var partitionBuckets = SortHelpers.BucketSort(logEvents, _getContainerBlobNameDelegate);
@@ -175,11 +176,12 @@ namespace NLog.Targets
             {
                 try
                 {
-                    var sendTask = WriteToBlobAsync(partitionBucket.Value, partitionBucket.Key.ContainerName, partitionBucket.Key.BlobName, cancellationToken);
+                    var blobPayload = CreateBlobPayload(partitionBucket.Value);
+                    var sendTask = WriteToBlobAsync(blobPayload, partitionBucket.Key.ContainerName, partitionBucket.Key.BlobName, cancellationToken);
                     if (multipleTasks == null)
                         return sendTask;
-                    else
-                        multipleTasks.Add(sendTask);
+
+                    multipleTasks.Add(sendTask);
                 }
                 catch (Exception ex)
                 {
@@ -230,12 +232,11 @@ namespace NLog.Targets
             }
         }
 
-        private Task WriteToBlobAsync(IList<LogEventInfo> logEvents, string containerName, string blobName, CancellationToken cancellationToken)
+        private Task WriteToBlobAsync(byte[] buffer, string containerName, string blobName, CancellationToken cancellationToken)
         {
             containerName = CheckAndRepairContainerName(containerName);
             blobName = CheckAndRepairBlobNamingRules(blobName);
 
-            var buffer = CreateBlobPayload(logEvents);
             return _cloudBlobService.AppendFromByteArrayAsync(containerName, blobName, ContentType, buffer, cancellationToken);
         }
 

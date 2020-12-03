@@ -186,23 +186,24 @@ namespace NLog.Targets
             return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
         }
 
-        private Task WritePartitionBucketAsync(IList<Message> messageList, int eventDataSize)
+        private Task WritePartitionBucketAsync(IList<Message> messageList, int messageBatchSize)
         {
-            int batchSize = CalculateBatchSize(messageList, eventDataSize);
+            int batchSize = CalculateBatchSize(messageList, messageBatchSize);
             if (messageList.Count <= batchSize)
             {
                 return WriteSingleBatchAsync(messageList);
             }
             else
             {
-                return WriteMultipleBatchesAsync(GenerateBatches(messageList, batchSize));
+                var batchCollection = GenerateBatches(messageList, batchSize);
+                return WriteMultipleBatchesAsync(batchCollection);
             }
         }
 
-        private async Task WriteMultipleBatchesAsync(IEnumerable<List<Message>> batches)
+        private async Task WriteMultipleBatchesAsync(IEnumerable<List<Message>> batchCollection)
         {
             // Must chain the tasks together so they don't run concurrently
-            foreach (var batchItem in batches)
+            foreach (var batchItem in batchCollection)
             {
                 await WriteSingleBatchAsync(batchItem).ConfigureAwait(false);
             }
@@ -282,8 +283,7 @@ namespace NLog.Targets
                 {
                     if (SessionId != null)
                         messageData.SessionId = partitionKey;
-                    else
-                        messageData.PartitionKey = partitionKey;
+                    messageData.PartitionKey = partitionKey;
                 }
 
                 var messageContentType = RenderLogEvent(ContentType, logEvent);
