@@ -20,7 +20,7 @@
           connectionString="String"
           container="Layout">
             <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
-            <tag name="mytag" layout="mytagvalue" /> <!-- Multiple allowed -->
+            <tag name="mytag" layout="mytagvalue" /> <!-- Multiple allowed (Requires v2 storage accounts) -->
   </target>
 </targets>
 ```

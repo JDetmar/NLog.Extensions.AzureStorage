@@ -40,7 +40,6 @@ But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.or
             container="${machinename}"
             blobName="${logger}/${date:universalTime=true:format=yy-MM-dd}/${date:universalTime=true:format=HH}.log">
                 <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
-                <tag name="mytag" layout="mytagvalue" /> <!-- Multiple allowed -->
     </target>
     <target type="AzureCosmosTable"
             name="AzureTable"
