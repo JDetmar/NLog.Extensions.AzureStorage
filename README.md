@@ -28,12 +28,6 @@ But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.or
 
 <targets async="true">
     <target type="AzureBlobStorage"
-            name="AzureEmulator"
-            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
-            connectionString="UseDevelopmentStorage=true;"
-            container="${level}"
-            blobName="${date:universalTime=true:format=yyyy-MM-dd}/${date:universalTime=true:format=HH}.log" />
-    <target type="AzureBlobStorage"
             name="Azure"
             layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
             connectionString="DefaultEndpointsProtocol=https;AccountName=##accountName##;AccountKey=##accountKey##;EndpointSuffix=core.windows.net"

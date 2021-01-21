@@ -62,3 +62,13 @@ _taskTimeoutSeconds_ - How many seconds a Task is allowed to run before it is ca
 _retryDelayMilliseconds_ - How many milliseconds to wait before next retry (Default 500ms, and will be doubled on each retry).
 
 _retryCount_ - How many attempts to retry the same Task, before it is aborted (Default 0)
+
+## Azure Blob Storage Emulator
+The AzureBlobStorage-target uses Append blob operations, which is [not support by Azure Storage Emulator](https://docs.microsoft.com/en-us/azure/storage/common/storage-use-emulator#differences-for-blob-storage) from Microsoft.
+
+It will fail with the following error:
+```
+Azure.RequestFailedException: This feature is not currently supported by the Storage Emulator
+```
+
+Instead one can try an alternative Azure Storage Emulator like [Azurite](https://github.com/azure/azurite)
