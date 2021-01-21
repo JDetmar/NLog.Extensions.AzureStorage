@@ -52,7 +52,9 @@ But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.or
             connectionString="Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=NLog;SharedAccessKey=EventHub"
             layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
             eventHubName="NlogHub"
-            PartitionKey="0"/>
+            PartitionKey="0">
+                <userproperty name="exceptiontype" layout="${exception:format=type}" />   <!-- Multiple allowed -->
+    </target>
     <target type="AzureServiceBus"
             name="AzureServiceBus"
             connectionString="Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=NLog;SharedAccessKey=ServiceBus"
