@@ -39,7 +39,7 @@ _contentType_ - Azure blob ContentType (Default = text/plain)
 
 _connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage=true;`
 
-_serviceUri_ - Alternative to ConnectionString.
+_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from AzureServiceTokenProvider.
 
 _tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
 
