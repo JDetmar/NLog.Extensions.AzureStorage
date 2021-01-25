@@ -9,7 +9,7 @@
 | **NLog.Extensions.AzureEventHub**     | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureEventHub.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureEventHub/) | Azure EventHubs | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureEventHub/README.md) | 
 | **NLog.Extensions.AzureQueueStorage** | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureQueueStorage.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureQueueStorage/) | Azure Queue Storage | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureQueueStorage/README.md) | 
 | **NLog.Extensions.AzureServiceBus** | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureServiceBus.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureServiceBus/) | Azure Service Bus | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureServiceBus/README.md) | 
-| **NLog.Extensions.AzureAccessToken**  | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureAccessToken.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureAccessToken/) | Azure App Authentication Access Token | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureAccessToken/README.md) | 
+| **NLog.Extensions.AzureAccessToken**  | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureAccessToken.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureAccessToken/) | Azure App Authentication Access Token for Managed Identity | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureAccessToken/README.md) | 
 
 Before all NLog targets was bundled into a single nuget-package called [NLog.Extensions.AzureStorage](https://www.nuget.org/packages/NLog.Extensions.AzureStorage/).
 But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.org/packages/WindowsAzure.Storage/) and split into multiple parts.
@@ -28,19 +28,12 @@ But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.or
 
 <targets async="true">
     <target type="AzureBlobStorage"
-            name="AzureEmulator"
-            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
-            connectionString="UseDevelopmentStorage=true;"
-            container="${level}"
-            blobName="${date:universalTime=true:format=yyyy-MM-dd}/${date:universalTime=true:format=HH}.log" />
-    <target type="AzureBlobStorage"
             name="Azure"
             layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
             connectionString="DefaultEndpointsProtocol=https;AccountName=##accountName##;AccountKey=##accountKey##;EndpointSuffix=core.windows.net"
             container="${machinename}"
             blobName="${logger}/${date:universalTime=true:format=yy-MM-dd}/${date:universalTime=true:format=HH}.log">
                 <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
-                <tag name="mytag" layout="mytagvalue" /> <!-- Multiple allowed -->
     </target>
     <target type="AzureCosmosTable"
             name="AzureTable"
@@ -59,7 +52,9 @@ But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.or
             connectionString="Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=NLog;SharedAccessKey=EventHub"
             layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
             eventHubName="NlogHub"
-            PartitionKey="0"/>
+            PartitionKey="0">
+                <userproperty name="exceptiontype" layout="${exception:format=type}" />   <!-- Multiple allowed -->
+    </target>
     <target type="AzureServiceBus"
             name="AzureServiceBus"
             connectionString="Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=NLog;SharedAccessKey=ServiceBus"

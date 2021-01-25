@@ -4,7 +4,7 @@
 | ------------------------------------- | :-------------------: | ----------- |
 | **NLog.Extensions.AzureAccessToken** | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureAccessToken.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureAccessToken/) | Azure App Authentication Access Token |
 
-## AccessToken Configuration with DatabaseTarget
+## Managed Identity Configuration with DatabaseTarget
 
 Remember to setup the DbProvider for the DatabaseTarget to use Microsoft SqlConnection, and also remember to add the matching nuget-package.
 
