@@ -164,7 +164,8 @@ namespace NLog.Targets
                         _resourceIdentity = "https://storage.azure.com/";
                     else
                         _resourceIdentity = resourceIdentity;
-                    _tenantIdentity = tenantIdentity;
+                    if (!string.IsNullOrWhiteSpace(tenantIdentity))
+                        _tenantIdentity = tenantIdentity;
                     _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
                 }
 

@@ -90,6 +90,8 @@ namespace NLog.Extensions.AzureAccessToken
             }
 
             var tenantId = TenantId?.Render(LogEventInfo.CreateNullEvent());
+            if (string.IsNullOrWhiteSpace(tenantId))
+                tenantId = null;
             var connectionString = ConnectionString?.Render(LogEventInfo.CreateNullEvent());
             var azureAdInstance = AzureAdInstance?.Render(LogEventInfo.CreateNullEvent());
 
