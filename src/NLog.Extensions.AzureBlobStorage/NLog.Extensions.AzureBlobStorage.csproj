@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>3.0.0</Version>
+    <Version>3.1.0</Version>
 
     <Description>NLog BlobStorageTarget for writing to Azure Cloud Blob Storage</Description>
     <Authors>jdetmar</Authors>
@@ -20,7 +20,9 @@
     <PackageReleaseNotes>
 Changed to Azure.Storage.Blobs ver. 12.6.0, because Microsoft.Azure.Storage.Blob has been deprecated.
 
-ConnectionStringKey option has been removed.
+ConnectionStringKey option has been removed. Instead use &amp;{configsetting} or &amp;{appsetting}
+
+Added experimental support for rolling BlobName by using cached=true.
     </PackageReleaseNotes>
   </PropertyGroup>
 
