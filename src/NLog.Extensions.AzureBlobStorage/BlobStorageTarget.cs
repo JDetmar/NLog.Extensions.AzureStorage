@@ -167,7 +167,7 @@ namespace NLog.Targets
             if (logEvents.Count == 1)
             {
                 var blobPayload = CreateBlobPayload(logEvents);
-                return WriteToBlobAsync(blobPayload, RenderLogEvent(Container, logEvents[0]), RenderLogEvent(BlobName, logEvents[0]), cancellationToken);
+                return WriteToBlobAsync(blobPayload, RenderLogEvent(Container, logEvents[0]), RenderLogEvent(BlobName, logEvents[0]), logEvents[0], cancellationToken);
             }
 
             var partitionBuckets = SortHelpers.BucketSort(logEvents, _getContainerBlobNameDelegate);
@@ -177,7 +177,7 @@ namespace NLog.Targets
                 try
                 {
                     var blobPayload = CreateBlobPayload(partitionBucket.Value);
-                    var sendTask = WriteToBlobAsync(blobPayload, partitionBucket.Key.ContainerName, partitionBucket.Key.BlobName, cancellationToken);
+                    var sendTask = WriteToBlobAsync(blobPayload, partitionBucket.Key.ContainerName, partitionBucket.Key.BlobName, partitionBucket.Value[0], cancellationToken);
                     if (multipleTasks == null)
                         return sendTask;
 
@@ -232,13 +232,57 @@ namespace NLog.Targets
             }
         }
 
-        private Task WriteToBlobAsync(byte[] buffer, string containerName, string blobName, CancellationToken cancellationToken)
+        private async Task WriteToBlobAsync(byte[] buffer, string containerName, string blobName, LogEventInfo firstLogEvent, CancellationToken cancellationToken)
         {
-            containerName = CheckAndRepairContainerName(containerName);
-            blobName = CheckAndRepairBlobNamingRules(blobName);
+            try
+            {
+                containerName = CheckAndRepairContainerName(containerName);
+                blobName = CheckAndRepairBlobNamingRules(blobName);
+                if (TryRollToNewBlobName(firstLogEvent, blobName, false, out var newBlobName))
+                    blobName = newBlobName;
+                await _cloudBlobService.AppendFromByteArrayAsync(containerName, blobName, ContentType, buffer, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Azure.RequestFailedException ex)
+            {
+                if (ex.ErrorCode?.Contains("BlockCountExceedsLimit")==true)
+                {
+                    if (TryRollToNewBlobName(firstLogEvent, blobName, true, out var newBlobName))
+                    {
+                        InternalLogger.Debug(ex, "AzureBlobStorage(Name={0}): Rolling from BlobName {1} to {2} within container {3}", Name, blobName, newBlobName, containerName);
+                        await _cloudBlobService.AppendFromByteArrayAsync(containerName, newBlobName, ContentType, buffer, cancellationToken);
+                        return;
+                    }
+                }
 
-            return _cloudBlobService.AppendFromByteArrayAsync(containerName, blobName, ContentType, buffer, cancellationToken);
+                throw;
+            }
         }
+
+        private bool TryRollToNewBlobName(LogEventInfo firstLogEvent, string oldBlobName, bool forceRoll, out string newBlobName)
+        {
+            if (oldBlobName != _previousBlobName || forceRoll)
+            {
+                _previousBlobName = oldBlobName;
+
+                if (BlobName is SimpleLayout simpleLayout && simpleLayout.OriginalText.IndexOf("cached", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    var blobNameLayout = new SimpleLayout(simpleLayout.OriginalText);
+                    newBlobName = RenderLogEvent(blobNameLayout, firstLogEvent);
+                    newBlobName = CheckAndRepairBlobNamingRules(newBlobName);
+                    if (!string.Equals(newBlobName, oldBlobName))
+                    {
+                        _previousBlobName = newBlobName;
+                        BlobName = blobNameLayout;
+                        return true;
+                    }
+                }
+            }
+
+            newBlobName = null;
+            return false;
+        }
+
+        private string _previousBlobName;
 
         private string CheckAndRepairContainerName(string containerName)
         {
