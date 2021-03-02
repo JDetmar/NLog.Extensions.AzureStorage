@@ -19,7 +19,7 @@
           eventHubName="Layout"
           partitionKey="Layout"
           contentType="Layout"
-          connectionString="String">
+          connectionString="Layout">
 	<contextProperty name="level" layout="${level}" />
 	<contextProperty name="exception" layout="${exception:format=shorttype}" includeEmptyValue="false" />
 	<layout type="JsonLayout" includeAllProperties="true">
@@ -65,3 +65,49 @@ _taskTimeoutSeconds_ - How many seconds a Task is allowed to run before it is ca
 _retryDelayMilliseconds_ - How many milliseconds to wait before next retry (Default 500ms, and will be doubled on each retry).
 
 _retryCount_ - How many attempts to retry the same Task, before it is aborted (Default 0)
+
+## Azure ConnectionString
+
+NLog Layout makes it possible to retrieve settings from [many locations](https://nlog-project.org/config/?tab=layout-renderers).
+
+#### Lookup ConnectionString from appsettings.json
+
+  > `connectionString="${configsetting:ConnectionStrings.AzureEventHub}"`
+
+* Example appsettings.json on .NetCore:
+
+```json
+  {
+    "ConnectionStrings": {
+      "AzureEventHub": "UseDevelopmentStorage=true;"
+    }
+  }
+```
+
+#### Lookup ConnectionString from app.config
+
+  > `connectionString="${appsetting:ConnectionStrings.AzureEventHub}"`
+
+* Example app.config on .NetFramework:
+
+```xml
+  <configuration>
+    <connectionStrings>
+      <add name="AzureEventHub" connectionString="UseDevelopmentStorage=true;"/>
+    </connectionStrings>
+  </configuration>
+```
+
+#### Lookup ConnectionString from environment-variable
+
+  > `connectionString="${environment:AZURE_STORAGE_CONNECTION_STRING}"`
+
+#### Lookup ConnectionString from NLog GlobalDiagnosticsContext (GDC)
+
+  > `connectionString="${gdc:AzureEventHubConnectionString}"`
+
+  * Example code for setting GDC-value:
+
+```c#
+  NLog.GlobalDiagnosticsContext.Set("AzureEventHubConnectionString", "UseDevelopmentStorage=true;");
+```

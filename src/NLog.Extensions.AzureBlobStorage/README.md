@@ -17,7 +17,7 @@
           name="String"
           layout="Layout"
           blobName="Layout"
-          connectionString="String"
+          connectionString="Layout"
           container="Layout">
             <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
             <tag name="mytag" layout="mytagvalue" /> <!-- Multiple allowed (Requires v2 storage accounts) -->
@@ -72,3 +72,48 @@ Azure.RequestFailedException: This feature is not currently supported by the Sto
 ```
 
 Instead one can try an alternative Azure Storage Emulator like [Azurite](https://github.com/azure/azurite)
+
+## Azure ConnectionString
+
+NLog Layout makes it possible to retrieve settings from [many locations](https://nlog-project.org/config/?tab=layout-renderers).
+
+#### Lookup ConnectionString from appsettings.json
+  > `connectionString="${configsetting:ConnectionStrings.AzureBlob}"`
+
+* Example appsettings.json on .NetCore:
+
+```json
+  {
+    "ConnectionStrings": {
+      "AzureBlob": "UseDevelopmentStorage=true;"
+    }
+  }
+```
+
+#### Lookup ConnectionString from app.config
+
+  > `connectionString="${appsetting:ConnectionStrings.AzureBlob}"`
+
+* Example app.config on .NetFramework:
+
+```xml
+  <configuration>
+    <connectionStrings>
+      <add name="AzureBlob" connectionString="UseDevelopmentStorage=true;"/>
+    </connectionStrings>
+  </configuration>
+```
+
+#### Lookup ConnectionString from environment-variable
+
+  > `connectionString="${environment:AZURE_STORAGE_CONNECTION_STRING}"`
+
+#### Lookup ConnectionString from NLog GlobalDiagnosticsContext (GDC)
+
+  > `connectionString="${gdc:AzureBlobConnectionString}"`
+
+* Example code for setting GDC-value:
+
+```c#
+  NLog.GlobalDiagnosticsContext.Set("AzureBlobConnectionString", "UseDevelopmentStorage=true;");
+```
