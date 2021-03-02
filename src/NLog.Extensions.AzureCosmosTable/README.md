@@ -57,7 +57,7 @@ Instead of using the predefined NLogEntity-properties, then one can specify want
 <targets>
   <target xsi:type="AzureCosmosTable"
           name="String"
-          connectionString="String"
+          connectionString="Layout"
           connectionStringKey="String"
           tableName="Layout">
     <contextproperty name="Level" layout="${level}" />
@@ -89,3 +89,49 @@ _taskTimeoutSeconds_ - How many seconds a Task is allowed to run before it is ca
 _retryDelayMilliseconds_ - How many milliseconds to wait before next retry (Default 500ms, and will be doubled on each retry).
 
 _retryCount_ - How many attempts to retry the same Task, before it is aborted (Default 0)
+
+## Azure ConnectionString
+
+NLog Layout makes it possible to retrieve settings from [many locations](https://nlog-project.org/config/?tab=layout-renderers).
+
+#### Lookup ConnectionString from appsettings.json
+
+  > `connectionString="${configsetting:ConnectionStrings.AzureTable}"`
+
+* Example appsettings.json on .NetCore:
+
+```json
+  {
+    "ConnectionStrings": {
+      "AzureTable": "Server=tcp:server.database.windows.net;"
+    }
+  }
+```
+
+#### Lookup ConnectionString from app.config
+
+  > `connectionString="${appsetting:ConnectionStrings.AzureTable}"`
+
+* Example app.config on .NetFramework:
+
+```xml
+  <configuration>
+    <connectionStrings>
+      <add name="AzureTable" connectionString="Server=tcp:server.database.windows.net;"/>
+    </connectionStrings>
+  </configuration>
+```
+
+#### Lookup ConnectionString from environment-variable
+
+  > `connectionString="${environment:AZURESQLCONNSTR_CONNECTION_STRING}"`
+
+#### Lookup ConnectionString from NLog GlobalDiagnosticsContext (GDC)
+
+  > `connectionString="${gdc:AzureTableConnectionString}"`
+
+* Example code for setting GDC-value:
+
+```c#
+  NLog.GlobalDiagnosticsContext.Set("AzureTableConnectionString", "Server=tcp:server.database.windows.net;");
+```

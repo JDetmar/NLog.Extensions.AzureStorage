@@ -16,7 +16,7 @@
   <target xsi:type="AzureServiceBus"
           name="String"
           layout="Layout"
-          connectionString="String"
+          connectionString="Layout"
           queueName="Layout"
           topicName="Layout"
           sessionId="Layout"
@@ -73,3 +73,46 @@ _taskTimeoutSeconds_ - How many seconds a Task is allowed to run before it is ca
 _retryDelayMilliseconds_ - How many milliseconds to wait before next retry (Default 500ms, and will be doubled on each retry).
 
 _retryCount_ - How many attempts to retry the same Task, before it is aborted (Default 0)
+
+## Azure ConnectionString
+
+NLog Layout makes it possible to retrieve settings from [many locations](https://nlog-project.org/config/?tab=layout-renderers).
+
+#### Lookup ConnectionString from appsettings.json
+
+  > `connectionString="${configsetting:ConnectionStrings.AzureBus}"`
+
+* Example appsettings.json on .NetCore:
+```json
+  {
+    "ConnectionStrings": {
+      "AzureBus": "UseDevelopmentStorage=true;"
+    }
+  }
+```
+
+#### Lookup ConnectionString from app.config
+
+   > `connectionString="${appsetting:ConnectionStrings.AzureBus}"`
+
+* Example app.config on .NetFramework:
+```xml
+   <configuration>
+      <connectionStrings>
+        <add name="AzureBus" connectionString="UseDevelopmentStorage=true;"/>
+      </connectionStrings>
+   </configuration>
+```
+
+#### Lookup ConnectionString from environment-variable
+
+   > `connectionString="${environment:AZURE_STORAGE_CONNECTION_STRING}"`
+
+#### Lookup ConnectionString from NLog GlobalDiagnosticsContext (GDC)
+ 
+  > `connectionString="${gdc:AzureBusConnectionString}"`
+  
+* Example code for setting GDC-value:
+```c#
+  NLog.GlobalDiagnosticsContext.Set("AzureBusConnectionString", "UseDevelopmentStorage=true;");
+```
