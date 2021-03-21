@@ -17,6 +17,8 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
 
         public IDictionary<string, string> BlobTags { get; private set; }
 
+        public bool FirstBlobNameHasBlockCountExceeded { get; set; }
+
         public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
         {
             ConnectionString = connectionString;
@@ -30,7 +32,14 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
                 throw new InvalidOperationException("CloudBlobService not connected");
 
             lock (AppendBlob)
+            {
+                if (FirstBlobNameHasBlockCountExceeded)
+                {
+                    FirstBlobNameHasBlockCountExceeded = false;
+                    throw new Azure.RequestFailedException(409, "BlockCountExceedsLimit", "BlockCountExceedsLimit", null);
+                }
                 AppendBlob[new KeyValuePair<string, string>(containerName, blobName)] = buffer;
+            }
             return Task.Delay(10, cancellationToken);
         }
 

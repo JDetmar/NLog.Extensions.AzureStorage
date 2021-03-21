@@ -21,7 +21,6 @@ namespace NLog.Targets
         private readonly IEventHubService _eventHubService;
         private SortHelpers.KeySelector<LogEventInfo, string> _getEventHubPartitionKeyDelegate;
         private readonly char[] _reusableEncodingBuffer = new char[32 * 1024];  // Avoid large-object-heap
-        private const int DefaultEventDataBonusPadding = 4096;
 
         /// <summary>
         /// Lookup the ConnectionString for the EventHub
@@ -184,7 +183,7 @@ namespace NLog.Targets
                     eventDataSize = 0;
                     return Array.Empty<EventData>();
                 }
-                eventDataSize = eventData.Body.Count + DefaultEventDataBonusPadding;
+                eventDataSize = EstimateEventDataSize(eventData.Body.Count);
                 return new[] { eventData };
             }
 
@@ -196,13 +195,18 @@ namespace NLog.Targets
                 if (eventData != null)
                 {
                     if (eventData.Body.Count > eventDataSize)
-                        eventDataSize = eventData.Body.Count + DefaultEventDataBonusPadding;
+                        eventDataSize = eventData.Body.Count;
                     eventDataBatch.Add(eventData);
                 }
             }
 
-            eventDataSize = eventDataSize * logEventList.Count;
+            eventDataSize = EstimateEventDataSize(eventDataSize) * logEventList.Count;
             return eventDataBatch;
+        }
+
+        private static int EstimateEventDataSize(int eventDataSize)
+        {
+            return (eventDataSize + 128) * 3 + 128;
         }
 
         private EventData CreateEventData(LogEventInfo logEvent, bool allowThrow)

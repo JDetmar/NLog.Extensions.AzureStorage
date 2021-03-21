@@ -22,7 +22,6 @@ namespace NLog.Targets
         private readonly ICloudServiceBus _cloudServiceBus;
         private SortHelpers.KeySelector<LogEventInfo, string> _getMessagePartitionKeyDelegate;
         private readonly char[] _reusableEncodingBuffer = new char[32 * 1024];  // Avoid large-object-heap
-        private const int DefaultMessageBonusPadding = 4096;
 
         /// <summary>
         /// Gets or sets the service bus connection string
@@ -251,7 +250,7 @@ namespace NLog.Targets
                     messageBatchSize = 0;
                     return Array.Empty<Message>();
                 }
-                messageBatchSize = messageData.Body.Length + DefaultMessageBonusPadding;
+                messageBatchSize = EstimateEventDataSize(messageData.Body.Length);
                 return new[] { messageData };
             }
 
@@ -263,13 +262,18 @@ namespace NLog.Targets
                 if (messageData != null)
                 {
                     if (messageData.Body.Length > messageBatchSize)
-                        messageBatchSize = messageData.Body.Length + DefaultMessageBonusPadding;
+                        messageBatchSize = messageData.Body.Length;
                     messageBatch.Add(messageData);
                 }
             }
 
-            messageBatchSize = messageBatchSize * logEventList.Count;
+            messageBatchSize = EstimateEventDataSize(messageBatchSize) * logEventList.Count;
             return messageBatch;
+        }
+
+        private static int EstimateEventDataSize(int eventDataSize)
+        {
+            return (eventDataSize + 128) * 3 + 128;
         }
 
         private Message CreateMessageData(LogEventInfo logEvent, string partitionKey, bool allowThrow)
