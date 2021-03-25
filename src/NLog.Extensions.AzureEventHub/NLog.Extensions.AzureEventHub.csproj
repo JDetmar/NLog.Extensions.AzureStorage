@@ -6,7 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DefineConstants>$(DefineConstants);NETCORE</DefineConstants>
 
-    <Version>2.6.0</Version>
+    <Version>2.6.1</Version>
 
     <Description>NLog EventHubTarget for writing to Azure Event Hubs datastreams</Description>
     <Authors>jdetmar</Authors>
@@ -20,9 +20,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Fixed bug where LogManager.Flush() or LogManager.Shutdown() completed prematurely when using BatchSize &gt; 100
-      
-Introduced new option MaxBatchSizeBytes with default value 1 MByte (Basic Tier = 256 KByte, Standard Tier = 1 MByte)
+Updated to Microsoft.Azure.EventHubs ver. 4.3.1 (Bug fixes)
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -31,7 +29,7 @@ Introduced new option MaxBatchSizeBytes with default value 1 MByte (Basic Tier =
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.EventHubs" Version="4.3.0" />
+    <PackageReference Include="Microsoft.Azure.EventHubs" Version="4.3.1" />
     <PackageReference Include="NLog" Version="4.6.8" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
