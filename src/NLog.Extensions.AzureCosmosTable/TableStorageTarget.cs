@@ -266,7 +266,13 @@ namespace NLog.Targets
                 DynamicTableEntity entity = new DynamicTableEntity();
                 entity.PartitionKey = partitionKey;
                 entity.RowKey = rowKey;
-                entity.Properties.Add("LogTimeStamp", new EntityProperty(logEvent.TimeStamp.ToUniversalTime()));
+
+                bool logTimeStampOverridden = "LogTimeStamp".Equals(ContextProperties[0].Name, StringComparison.OrdinalIgnoreCase);
+                if (!logTimeStampOverridden)
+                {
+                    entity.Properties.Add("LogTimeStamp", new EntityProperty(logEvent.TimeStamp.ToUniversalTime()));
+                }
+
                 for (int i = 0; i < ContextProperties.Count; ++i)
                 {
                     var contextproperty = ContextProperties[i];
@@ -274,8 +280,12 @@ namespace NLog.Targets
                         continue;
 
                     var propertyValue = contextproperty.Layout != null ? RenderLogEvent(contextproperty.Layout, logEvent) : string.Empty;
+                    if (logTimeStampOverridden && i == 0 && string.IsNullOrEmpty(propertyValue))
+                        continue;
+
                     entity.Properties.Add(contextproperty.Name, new EntityProperty(propertyValue));
                 }
+
                 return entity;
             }
             else

@@ -69,7 +69,30 @@ namespace NLog.Extensions.AzureTableStorage.Tests
             logFactory.GetLogger("Test").Info("Hello");
             logFactory.Flush();
             Assert.Single(cloudTableService.BatchExecuted);
-            Assert.Equal(System.Threading.Thread.CurrentThread.ManagedThreadId.ToString(), cloudTableService.PeekLastAdded("Test").Cast<DynamicTableEntity>().First()["ThreadId"].ToString());
+            var firstEntity = cloudTableService.PeekLastAdded("Test").Cast<DynamicTableEntity>().First();
+            Assert.NotEqual(DateTime.MinValue, firstEntity["LogTimeStamp"].DateTime);
+            Assert.Equal(System.Threading.Thread.CurrentThread.ManagedThreadId.ToString(), firstEntity["ThreadId"].ToString());
+        }
+
+        [Fact]
+        public void DynamicTableEntityOverrideTimestampTest()
+        {
+            var logFactory = new LogFactory();
+            var logConfig = new Config.LoggingConfiguration(logFactory);
+            logConfig.Variables["ConnectionString"] = nameof(TableStorageTargetTest);
+            var cloudTableService = new CloudTableServiceMock();
+            var queueStorageTarget = new TableStorageTarget(cloudTableService);
+            queueStorageTarget.ContextProperties.Add(new TargetPropertyWithContext("LogTimeStamp", "${shortdate}"));
+            queueStorageTarget.ConnectionString = "${var:ConnectionString}";
+            queueStorageTarget.TableName = "${logger}";
+            queueStorageTarget.Layout = "${message}";
+            logConfig.AddRuleForAllLevels(queueStorageTarget);
+            logFactory.Configuration = logConfig;
+            logFactory.GetLogger("Test").Info("Hello");
+            logFactory.Flush();
+            Assert.Single(cloudTableService.BatchExecuted);
+            var firstEntity = cloudTableService.PeekLastAdded("Test").Cast<DynamicTableEntity>().First();
+            Assert.Equal(DateTime.Now.Date.ToString("yyyy-MM-dd"), firstEntity["LogTimeStamp"].StringValue);
         }
     }
 }
