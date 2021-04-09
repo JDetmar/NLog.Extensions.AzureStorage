@@ -70,7 +70,8 @@ Instead of using the predefined NLogEntity-properties, then one can specify want
 </targets>
 ```
 
-It will by default always include the hardcoded property `LogTimeStamp` of type DateTime.
+It will by default include the hardcoded property `LogTimeStamp` of type DateTime that contains `LogEventInfo.TimeStamp.ToUniversalTime()`.
+ - This can be overriden by having `<contextproperty name="LogTimeStamp">` as the first property, where empty property-value means leave out.
 
 ### Batching Policy
 
