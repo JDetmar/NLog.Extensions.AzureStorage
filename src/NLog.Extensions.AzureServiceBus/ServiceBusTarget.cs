@@ -81,6 +81,24 @@ namespace NLog.Targets
         public int MaxBatchSizeBytes { get; set; } = 256 * 1024;
 
         /// <summary>
+        /// The default time to live value for the message.
+        /// </summary>
+        /// <remarks>
+        /// Messages older than their TimeToLive value will expire and no longer be retained
+        /// in the message store. Subscribers will be unable to receive expired messages.
+        /// </remarks>
+        public Layout TimeToLiveSeconds { get; set; }
+
+        /// <summary>
+        /// The default time to live value for the message.
+        /// </summary>
+        /// <remarks>
+        /// Messages older than their TimeToLive value will expire and no longer be retained
+        /// in the message store. Subscribers will be unable to receive expired messages.
+        /// </remarks>
+        public Layout TimeToLiveDays { get; set; }
+
+        /// <summary>
         /// Gets a list of user properties (aka custom properties) to add to the message
         /// <para>
         [ArrayParameter(typeof(TargetPropertyWithContext), "userproperty")]
@@ -123,7 +141,13 @@ namespace NLog.Targets
                     throw new ArgumentException("QueuePath or TopicPath must be specified");
                 }
 
-                _cloudServiceBus.Connect(connectionString, queuePath, topicPath);
+                var timeToLive = RenderDefaultTimeToLive();
+                if (timeToLive <= TimeSpan.Zero)
+                {
+                    timeToLive = default(TimeSpan?);
+                }
+
+                _cloudServiceBus.Connect(connectionString, queuePath, topicPath, timeToLive);
                 InternalLogger.Trace("AzureServiceBus - Initialized");
             }
             catch (Exception ex)
@@ -131,6 +155,49 @@ namespace NLog.Targets
                 InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed to create ServiceBusClient with connectionString={1}.", Name, connectionString);
                 throw;
             }
+        }
+
+        private TimeSpan? RenderDefaultTimeToLive()
+        {
+            string timeToLiveSeconds = null;
+            string timeToLiveDays = null;
+
+            try
+            {
+                timeToLiveSeconds = TimeToLiveSeconds?.Render(LogEventInfo.CreateNullEvent());
+                if (!string.IsNullOrEmpty(timeToLiveSeconds))
+                {
+                    if (int.TryParse(timeToLiveSeconds, out var resultSeconds))
+                    {
+                        return TimeSpan.FromSeconds(resultSeconds);
+                    }
+                    else
+                    {
+                        InternalLogger.Error("AzureServiceBus(Name={0}): Failed to parse TimeToLiveSeconds={1}", Name, timeToLiveSeconds);
+                    }
+                }
+                else
+                {
+                    timeToLiveDays = TimeToLiveDays?.Render(LogEventInfo.CreateNullEvent());
+                    if (!string.IsNullOrEmpty(timeToLiveDays))
+                    {
+                        if (int.TryParse(timeToLiveDays, out var resultDays))
+                        {
+                            return TimeSpan.FromDays(resultDays);
+                        }
+                        else
+                        {
+                            InternalLogger.Error("AzureServiceBus(Name={0}): Failed to parse TimeToLiveDays={1}", Name, timeToLiveDays);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed to parse TimeToLive value. Seconds={1}, Days={2}", Name, timeToLiveSeconds, timeToLiveDays);
+            }
+
+            return default(TimeSpan?);
         }
 
         /// <inheritdoc />
@@ -314,6 +381,12 @@ namespace NLog.Targets
                     messageData.CorrelationId = correlationId;
                 }
 
+                var timeToLive = _cloudServiceBus.DefaultTimeToLive;
+                if (timeToLive.HasValue)
+                {
+                    messageData.TimeToLive = timeToLive.Value;
+                }
+
                 if (ShouldIncludeProperties(logEvent))
                 {
                     var properties = GetAllProperties(logEvent);
@@ -397,8 +470,12 @@ namespace NLog.Targets
         {
             private ISenderClient _client;
 
-            public void Connect(string connectionString, string queuePath, string topicPath)
+            public TimeSpan? DefaultTimeToLive { get; private set; }
+
+            public void Connect(string connectionString, string queuePath, string topicPath, TimeSpan? timeToLive)
             {
+                DefaultTimeToLive = timeToLive;
+
                 if (!string.IsNullOrEmpty(queuePath) || topicPath == null)
                     _client = new QueueClient(connectionString, queuePath);
                 else
