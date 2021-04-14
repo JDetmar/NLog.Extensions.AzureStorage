@@ -39,6 +39,10 @@ _tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUr
 
 _resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
 
+_timeToLiveSeconds_ - Default Time-To-Live (TTL) for Queue messages in seconds (Optional)
+
+_timeToLiveDays_ - Default Time-To-Live (TTL) for Queue messages in days (Optional)
+
 ### Batching Policy
 
 _batchSize_ - Number of EventData items to send in a single batch (Default=100)
