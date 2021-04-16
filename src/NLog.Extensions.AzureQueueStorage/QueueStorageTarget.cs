@@ -43,6 +43,24 @@ namespace NLog.Targets
         [ArrayParameter(typeof(TargetPropertyWithContext), "metadata")]
         public IList<TargetPropertyWithContext> QueueMetadata { get; private set; }
 
+        /// <summary>
+        /// The default time to live value for the message.
+        /// </summary>
+        /// <remarks>
+        /// Messages older than their TimeToLive value will expire and no longer be retained
+        /// in the message store. Subscribers will be unable to receive expired messages.
+        /// </remarks>
+        public Layout TimeToLiveSeconds { get; set; }
+
+        /// <summary>
+        /// The default time to live value for the message.
+        /// </summary>
+        /// <remarks>
+        /// Messages older than their TimeToLive value will expire and no longer be retained
+        /// in the message store. Subscribers will be unable to receive expired messages.
+        /// </remarks>
+        public Layout TimeToLiveDays { get; set; }
+
         public QueueStorageTarget()
             :this(new CloudQueueService())
         {
@@ -98,7 +116,13 @@ namespace NLog.Targets
                     }
                 }
 
-                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, queueMetadata);
+                var timeToLive = RenderDefaultTimeToLive();
+                if (timeToLive <= TimeSpan.Zero)
+                {
+                    timeToLive = default(TimeSpan?);
+                }
+
+                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, timeToLive, queueMetadata);
                 InternalLogger.Trace("AzureQueueStorageTarget - Initialized");
             }
             catch (Exception ex)
@@ -110,7 +134,50 @@ namespace NLog.Targets
                 throw;
             }
         }
-        
+
+        private TimeSpan? RenderDefaultTimeToLive()
+        {
+            string timeToLiveSeconds = null;
+            string timeToLiveDays = null;
+
+            try
+            {
+                timeToLiveSeconds = TimeToLiveSeconds?.Render(LogEventInfo.CreateNullEvent());
+                if (!string.IsNullOrEmpty(timeToLiveSeconds))
+                {
+                    if (int.TryParse(timeToLiveSeconds, out var resultSeconds))
+                    {
+                        return TimeSpan.FromSeconds(resultSeconds);
+                    }
+                    else
+                    {
+                        InternalLogger.Error("AzureQueueStorageTarget(Name={0}): Failed to parse TimeToLiveSeconds={1}", Name, timeToLiveSeconds);
+                    }
+                }
+                else
+                {
+                    timeToLiveDays = TimeToLiveDays?.Render(LogEventInfo.CreateNullEvent());
+                    if (!string.IsNullOrEmpty(timeToLiveDays))
+                    {
+                        if (int.TryParse(timeToLiveDays, out var resultDays))
+                        {
+                            return TimeSpan.FromDays(resultDays);
+                        }
+                        else
+                        {
+                            InternalLogger.Error("AzureQueueStorageTarget(Name={0}): Failed to parse TimeToLiveDays={1}", Name, timeToLiveDays);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                InternalLogger.Error(ex, "AzureQueueStorageTarget(Name={0}): Failed to parse TimeToLive value. Seconds={1}, Days={2}", Name, timeToLiveSeconds, timeToLiveDays);
+            }
+
+            return default(TimeSpan?);
+        }
+
         /// <inheritdoc/>
         protected override Task WriteAsyncTask(LogEventInfo logEvent, CancellationToken cancellationToken)
         {
@@ -151,6 +218,7 @@ namespace NLog.Targets
             private QueueServiceClient _client;
             private QueueClient _queue;
             private IDictionary<string, string> _queueMetadata;
+            private TimeSpan? _timeToLive;
 
             private class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
             {
@@ -189,8 +257,9 @@ namespace NLog.Targets
                 }
             }
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, IDictionary<string, string> queueMetadata)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
             {
+                _timeToLive = timeToLive;
                 _queueMetadata = queueMetadata;
 
                 if (string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(serviceUri))
@@ -209,11 +278,11 @@ namespace NLog.Targets
                 var queue = _queue;
                 if (queueName == null || queue?.Name != queueName)
                 {
-                    return InitializeAndCacheQueueAsync(queueName, cancellationToken).ContinueWith(async (t, m) => await t.Result.SendMessageAsync((string)m, cancellationToken).ConfigureAwait(false), queueMessage, cancellationToken);
+                    return InitializeAndCacheQueueAsync(queueName, cancellationToken).ContinueWith(async (t, m) => await t.Result.SendMessageAsync((string)m, null, _timeToLive, cancellationToken).ConfigureAwait(false), queueMessage, cancellationToken);
                 }
                 else
                 {
-                    return queue.SendMessageAsync(queueMessage, cancellationToken);
+                    return queue.SendMessageAsync(queueMessage, null, _timeToLive, cancellationToken);
                 }
             }
 

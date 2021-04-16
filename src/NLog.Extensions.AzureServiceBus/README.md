@@ -54,6 +54,11 @@ _messageId_ - Service Bus Message MessageId. [Layout](https://github.com/NLog/NL
 
 _correlationId_ - Service Bus Message Correlationid. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
+_timeToLiveSeconds_ - Default Time-To-Live (TTL) for ServiceBus messages in seconds (Optional)
+
+_timeToLiveDays_ - Default Time-To-Live (TTL) for ServiceBus messages in days (Optional)
+
+
 ### Batching Policy
 
 _maxBatchSizeBytes_ - Max size of a single batch in bytes [Integer](https://github.com/NLog/NLog/wiki/Data-types) (Default=256*1024)

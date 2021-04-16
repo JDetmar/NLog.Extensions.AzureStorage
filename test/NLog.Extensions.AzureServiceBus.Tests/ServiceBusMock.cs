@@ -14,6 +14,8 @@ namespace NLog.Extensions.AzureServiceBus.Test
         public string QueuePath { get; private set; }
         public string TopicPath { get; private set; }
 
+        public TimeSpan? DefaultTimeToLive { get; private set; }
+
         public string PeekLastMessageBody()
         {
             lock (MessageDataSent)
@@ -31,12 +33,13 @@ namespace NLog.Extensions.AzureServiceBus.Test
             return null;
         }
 
-        public void Connect(string connectionString, string queuePath, string topicPath)
+        public void Connect(string connectionString, string queuePath, string topicPath, TimeSpan? timeToLive)
         {
             ConnectionString = connectionString;
             QueuePath = queuePath;
             TopicPath = topicPath;
-        }
+            DefaultTimeToLive = timeToLive;
+    }
 
         public Task SendAsync(IList<Message> messages)
         {

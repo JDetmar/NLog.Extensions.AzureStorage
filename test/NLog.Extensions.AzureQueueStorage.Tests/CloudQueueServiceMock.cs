@@ -9,7 +9,10 @@ namespace NLog.Extensions.AzureQueueStorage.Tests
     class CloudQueueServiceMock : ICloudQueueService
     {
         public Dictionary<string, string> MessagesAdded { get; } = new Dictionary<string, string>();
+        
         public string ConnectionString { get; private set; }
+
+        public TimeSpan? TimeToLive { get; private set; }
 
         public IDictionary<string, string> QueueMetadata { get; private set; }
 
@@ -25,10 +28,11 @@ namespace NLog.Extensions.AzureQueueStorage.Tests
             });
         }
 
-        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, IDictionary<string, string> queueMetadata)
+        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
         {
             ConnectionString = connectionString;
             QueueMetadata = queueMetadata;
+            TimeToLive = timeToLive;
         }
 
         public string PeekLastAdded(string queueName)
