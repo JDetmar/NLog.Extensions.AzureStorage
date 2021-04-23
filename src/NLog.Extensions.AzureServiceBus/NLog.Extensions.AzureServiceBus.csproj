@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.2.0</Version>
+    <Version>2.3.0</Version>
 
     <Description>NLog ServiceBusTarget for writing to Azure Service Bus Topic or Queue</Description>
     <Authors>jdetmar</Authors>
@@ -18,7 +18,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Added support for TimeToLiveSeconds and TimeToLiveDays for messages
+Updated to Microsoft.Azure.ServiceBus ver. 5.1.2 (Bug fixes)
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -29,7 +29,7 @@ Added support for TimeToLiveSeconds and TimeToLiveDays for messages
 
   <ItemGroup>
     <PackageReference Include="NLog" Version="4.6.8" />
-    <PackageReference Include="Microsoft.Azure.ServiceBus" Version="4.1.3" />
+    <PackageReference Include="Microsoft.Azure.ServiceBus" Version="5.1.2" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 
