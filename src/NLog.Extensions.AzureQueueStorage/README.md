@@ -33,7 +33,7 @@ _queueName_ - QueueName. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage=true;`
 
-_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from AzureServiceTokenProvider.
+_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from AzureServiceTokenProvider for User delegation SAS.
 
 _tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
 
