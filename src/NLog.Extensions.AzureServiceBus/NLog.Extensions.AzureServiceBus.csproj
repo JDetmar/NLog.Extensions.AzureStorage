@@ -12,7 +12,7 @@
     <Copyright>Copyright (c) $(CurrentYear) - jdetmar</Copyright>
 
     <PackageTags>NLog;azure;servicebus;AMQP;bus;queue;topic;log;logging</PackageTags>
-    <PackageIconUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage/raw/master/logo64.png?raw=true</PackageIconUrl>
+    <PackageIcon>logo64.png</PackageIcon>
     <PackageProjectUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
@@ -21,6 +21,10 @@
 Updated to Microsoft.Azure.ServiceBus ver. 5.1.2 (Bug fixes)
     </PackageReleaseNotes>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../logo64.png" Link="logo64.png" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Include="..\NLog.Extensions.AzureStorage\AzureStorageNameCache.cs" Link="AzureStorageNameCache.cs" />

@@ -48,6 +48,12 @@ namespace NLog.Targets
         /// </summary>
         public int MaxBatchSizeBytes { get; set; } = 1024 * 1024;
 
+        /// <summary>
+        /// Gets a list of user properties (aka custom properties) to add to the message
+        /// <para>
+        [ArrayParameter(typeof(TargetPropertyWithContext), "userproperty")]
+        public IList<TargetPropertyWithContext> UserProperties { get => ContextProperties; }
+
         public EventHubTarget()
             :this(new EventHubService())
         {
