@@ -16,18 +16,20 @@
   <target xsi:type="AzureEventHub"
           name="String"
           layout="Layout"
+          connectionString="Layout"
           eventHubName="Layout"
           partitionKey="Layout"
           contentType="Layout"
-          connectionString="Layout">
-	<contextProperty name="level" layout="${level}" />
-	<contextProperty name="exception" layout="${exception:format=shorttype}" includeEmptyValue="false" />
-	<layout type="JsonLayout" includeAllProperties="true">
-		<attribute name="time" layout="${longdate}" />
-		<attribute name="message" layout="${message}" />
-		<attribute name="threadid" layout="${threadid}" />
-		<attribute name="exception" layout="${exception:format=tostring}" />
-	</layout>
+          messageId="Layout"
+          correlationId="Layout">
+	    <userProperty name="level" layout="${level}" />
+	    <userProperty name="exception" layout="${exception:format=shorttype}" includeEmptyValue="false" />
+	    <layout type="JsonLayout" includeAllProperties="true">
+		    <attribute name="time" layout="${longdate}" />
+		    <attribute name="message" layout="${message}" />
+		    <attribute name="threadid" layout="${threadid}" />
+		    <attribute name="exception" layout="${exception:format=tostring}" />
+	    </layout>
   </target>
 </targets>
 ```
@@ -44,7 +46,17 @@ _partitionKey_ - Partition-Key which EventHub uses to generate PartitionId-hash.
 
 _layout_ - EventData Body Text to be rendered and encoded as UTF8. [Layout](https://github.com/NLog/NLog/wiki/Layouts). 
 
-_contentType_ - EventData ContentType to be assigned. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Ex. application/json
+_contentType_ - EventData ContentType. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Ex. application/json
+
+_messageId_ - EventData MessageId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+
+_correlationId_ - EventData Correlationid. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+
+_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from AzureServiceTokenProvider.
+
+_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
+
+_resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
 
 ### Batching Policy
 

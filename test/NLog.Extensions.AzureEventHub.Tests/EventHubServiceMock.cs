@@ -1,9 +1,10 @@
-﻿using System;
+﻿using Azure.Messaging.EventHubs;
+using NLog.Extensions.AzureStorage;
+using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.EventHubs;
-using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureEventHub.Test
 {
@@ -21,13 +22,13 @@ namespace NLog.Extensions.AzureEventHub.Test
                 EventDataSent.Clear();
         }
 
-        public void Connect(string connectionString, string entityPath)
+        public void Connect(string connectionString, string entityPath, string serviceUri, string tenantIdentity, string resourceIdentity)
         {
             ConnectionString = connectionString;
             EntityPath = entityPath;
         }
 
-        public Task SendAsync(IList<EventData> eventDataList, string partitionKey)
+        public Task SendAsync(IList<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("EventHubService not connected");
@@ -51,7 +52,9 @@ namespace NLog.Extensions.AzureEventHub.Test
                 if (EventDataSent.TryGetValue(partitionKey, out var eventData))
                 {
                     if (eventData.Count > 0)
-                        return Encoding.UTF8.GetString(eventData[eventData.Count - 1].Body);
+                    {
+                        return Encoding.UTF8.GetString(eventData[eventData.Count - 1].Body.ToArray());
+                    }
                 }
             }
 

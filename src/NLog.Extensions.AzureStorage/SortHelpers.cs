@@ -21,9 +21,9 @@ namespace NLog.Extensions.AzureStorage
         /// <param name="inputs">The inputs.</param>
         /// <param name="keySelector">The key selector.</param>
         /// <returns></returns>
-        internal static Dictionary<TKey, List<TValue>> BucketSort<TValue, TKey>(IList<TValue> inputs, KeySelector<TValue, TKey> keySelector)
+        internal static Dictionary<TKey, IList<TValue>> BucketSort<TValue, TKey>(IList<TValue> inputs, KeySelector<TValue, TKey> keySelector)
         {
-            var retVal = new Dictionary<TKey, List<TValue>>();
+            var retVal = new Dictionary<TKey, IList<TValue>>();
 
             for (int i = 0; i < inputs.Count; ++i)
             {

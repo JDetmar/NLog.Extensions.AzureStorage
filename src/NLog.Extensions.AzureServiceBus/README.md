@@ -21,11 +21,18 @@
           topicName="Layout"
           sessionId="Layout"
           partitionKey="Layout"
-          contentType="Layout"
           label="Layout"
+          contentType="Layout"
           messageId="Layout"
           correlationId="Layout">
-            <userproperty name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
+	    <userProperty name="level" layout="${level}" />
+	    <userProperty name="exception" layout="${exception:format=shorttype}" includeEmptyValue="false" />
+	    <layout type="JsonLayout" includeAllProperties="true">
+		    <attribute name="time" layout="${longdate}" />
+		    <attribute name="message" layout="${message}" />
+		    <attribute name="threadid" layout="${threadid}" />
+		    <attribute name="exception" layout="${exception:format=tostring}" />
+	    </layout>
   </target>
 </targets>
 ```
@@ -44,11 +51,11 @@ _sessionId_ - SessionId-Key which Service Bus uses to generate PartitionId-hash.
 
 _partitionKey_ - Partition-Key which Service Bus uses to generate PartitionId-hash. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_contentType_ - Service Bus Message Body ContentType to be assigned. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Ex. application/json
+_label_ - Service Bus Message Label to be used as subject for the message. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _layout_ - Service Bus Message Body to be rendered and encoded as UTF8. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required. 
 
-_label_ - Service Bus Message Label to be used as subject for the message. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_contentType_ - Service Bus Message Body ContentType. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Ex. application/json
 
 _messageId_ - Service Bus Message MessageId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
