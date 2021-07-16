@@ -5,13 +5,13 @@ configuration: Release
 before_build:
 - cmd: msbuild /t:Restore src\NLog.Extensions.AzureStorage.sln /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureBlobStorage /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
-- cmd: msbuild /t:Pack src\NLog.Extensions.AzureCosmosTable /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
+- cmd: msbuild /t:Pack src\NLog.Extensions.AzureDataTables /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureQueueStorage /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureEventHub /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureServiceBus /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureAccessToken /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
 - cmd: dotnet test test\NLog.Extensions.AzureBlobStorage.Tests /p:Configuration=Release --verbosity minimal
-- cmd: dotnet test test\NLog.Extensions.AzureCosmosTable.Tests /p:Configuration=Release --verbosity minimal
+- cmd: dotnet test test\NLog.Extensions.AzureDataTables.Tests /p:Configuration=Release --verbosity minimal
 - cmd: dotnet test test\NLog.Extensions.AzureQueueStorage.Tests /p:Configuration=Release --verbosity minimal
 - cmd: dotnet test test\NLog.Extensions.AzureEventHub.Tests /p:Configuration=Release --verbosity minimal
 - cmd: dotnet test test\NLog.Extensions.AzureServiceBus.Tests /p:Configuration=Release --verbosity minimal
