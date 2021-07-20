@@ -296,8 +296,8 @@ namespace NLog.Targets
 
             public ContainerBlobKey(string containerName, string blobName)
             {
-                ContainerName = containerName;
-                BlobName = blobName;
+                ContainerName = containerName ?? string.Empty;
+                BlobName = blobName ?? string.Empty;
             }
 
             public bool Equals(ContainerBlobKey other)

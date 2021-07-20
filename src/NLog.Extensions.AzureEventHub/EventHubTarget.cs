@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.EventHubs;
+using Azure.Messaging.EventHubs;
 using NLog.Common;
 using NLog.Config;
 using NLog.Extensions.AzureStorage;
@@ -36,17 +36,66 @@ namespace NLog.Targets
         /// <summary>
         /// The partitionKey will be hashed to determine the partitionId to send the EventData to
         /// </summary>
-        public Layout PartitionKey { get; set; } = "0";
+        public Layout PartitionKey { get; set; }
 
         /// <summary>
         /// Gets and sets type of the content for <see cref="EventData.ContentType"/>
         /// </summary>
+        /// <remarks>
+        ///  The MIME type of the Azure.Messaging.EventHubs.EventData.EventBody content; when
+        ///  unknown, it is recommended that this value should not be set. When the body is
+        ///  known to be truly opaque binary data, it is recommended that "application/octet-stream"
+        ///  be used.
+        /// </remarks>
         public Layout ContentType { get; set; }
+
+        /// <summary>
+        /// Gets and sets type of the content for <see cref="EventData.CorrelationId"/>
+        /// </summary>
+        /// <remarks>
+        /// An application-defined value that represents the context to use for correlation
+        /// across one or more operations. The identifier is a free-form value and may reflect
+        /// a unique identity or a shared data element with significance to the application.
+        /// 
+        /// The Azure.Messaging.EventHubs.EventData.CorrelationId is intended to enable tracing
+        /// of data within an application, such as an event's path from producer to consumer.
+        /// It has no meaning to the Event Hubs service.
+        /// </remarks>
+        public Layout CorrelationId { get; set; }
+
+        /// <summary>
+        /// Gets and sets type of the content for <see cref="EventData.MessageId"/>
+        /// </summary>
+        /// <remarks>
+        /// An application-defined value that uniquely identifies the event. The identifier
+        /// is a free-form value and can reflect a GUID or an identifier derived from the
+        /// application context.
+        /// 
+        /// The Azure.Messaging.EventHubs.EventData.MessageId is intended to allow coordination
+        /// between event producers and consumers. It has no meaning to the Event Hubs service,
+        /// and does not influence how Event Hubs identifies the event.
+        /// </remarks>
+        public Layout MessageId { get; set; }
 
         /// <summary>
         /// Basic Tier = 256 KByte, Standard Tier = 1 MByte
         /// </summary>
         public int MaxBatchSizeBytes { get; set; } = 1024 * 1024;
+
+        /// <summary>
+        /// Alternative to ConnectionString. Ex. {yournamespace}.servicebus.windows.net
+        /// </summary>
+        public Layout ServiceUri { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString
+        /// </summary>
+        public Layout TenantIdentity { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString (Defaults to https://eventhubs.azure.net when not set)
+        /// </summary>
+        public Layout ResourceIdentity { get; set; }
 
         /// <summary>
         /// Gets a list of user properties (aka custom properties) to add to the message
@@ -70,11 +119,21 @@ namespace NLog.Targets
         {
             base.InitializeTarget();
 
-            var entityPath = EventHubName?.Render(LogEventInfo.CreateNullEvent())?.Trim() ?? string.Empty;
-            var connectionString = ConnectionString?.Render(LogEventInfo.CreateNullEvent()) ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(connectionString))
-                throw new ArgumentException("ConnectionString is required");
-            _eventHubService.Connect(connectionString, entityPath);
+            var defaultLogEvent = LogEventInfo.CreateNullEvent();
+            var entityPath = EventHubName?.Render(defaultLogEvent)?.Trim() ?? string.Empty;
+            var connectionString = ConnectionString?.Render(defaultLogEvent) ?? string.Empty;
+            string serviceUri = string.Empty;
+            string tenantIdentity = string.Empty;
+            string resourceIdentity = string.Empty;
+
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                serviceUri = ServiceUri?.Render(defaultLogEvent);
+                tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
+                resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
+            }
+
+            _eventHubService.Connect(connectionString, entityPath, serviceUri, tenantIdentity, resourceIdentity);
         }
 
         protected override void CloseTarget()
@@ -91,23 +150,24 @@ namespace NLog.Targets
         protected override Task WriteAsyncTask(IList<LogEventInfo> logEvents, CancellationToken cancellationToken)
         {
             if (_getEventHubPartitionKeyDelegate == null)
-                _getEventHubPartitionKeyDelegate = l => RenderLogEvent(PartitionKey, l);
+                _getEventHubPartitionKeyDelegate = l => RenderLogEvent(PartitionKey, l) ?? string.Empty;
 
             if (logEvents.Count == 1)
             {
-                var eventDataBatch = CreateEventDataBatch(logEvents, out var eventDataSize);
-                return WriteSingleBatchAsync(eventDataBatch, _getEventHubPartitionKeyDelegate(logEvents[0]));
+                var partitionKey = _getEventHubPartitionKeyDelegate(logEvents[0]);
+                var eventDataBatch = CreateEventDataBatch(logEvents, partitionKey, out var eventDataSize);
+                return WriteSingleBatchAsync(eventDataBatch, partitionKey, cancellationToken);
             }
 
-            var partitionBuckets = SortHelpers.BucketSort(logEvents, _getEventHubPartitionKeyDelegate);
+            var partitionBuckets = PartitionKey != null ? SortHelpers.BucketSort(logEvents, _getEventHubPartitionKeyDelegate) : new Dictionary<string, IList<LogEventInfo>>() { { string.Empty, logEvents } };
             IList<Task> multipleTasks = partitionBuckets.Count > 1 ? new List<Task>(partitionBuckets.Count) : null;
             foreach (var partitionBucket in partitionBuckets)
             {
                 try
                 {
-                    var eventDataBatch = CreateEventDataBatch(partitionBucket.Value, out var eventDataSize);
+                    var eventDataBatch = CreateEventDataBatch(partitionBucket.Value, partitionBucket.Key, out var eventDataSize);
 
-                    Task sendTask = WritePartitionBucketAsync(eventDataBatch, partitionBucket.Key, eventDataSize);
+                    Task sendTask = WritePartitionBucketAsync(eventDataBatch, eventDataSize, partitionBucket.Key, cancellationToken);
                     if (multipleTasks == null)
                         return sendTask;
 
@@ -124,26 +184,26 @@ namespace NLog.Targets
             return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
         }
 
-        private Task WritePartitionBucketAsync(IList<EventData> eventDataList, string partitionKey, int eventDataSize)
+        private Task WritePartitionBucketAsync(IList<EventData> eventDataList, int eventDataSize, string partitionKey, CancellationToken cancellationToken)
         {
             int batchSize = CalculateBatchSize(eventDataList, eventDataSize);
             if (eventDataList.Count <= batchSize)
             {
-                return WriteSingleBatchAsync(eventDataList, partitionKey);
+                return WriteSingleBatchAsync(eventDataList, partitionKey, cancellationToken);
             }
             else
             {
                 var batchCollection = GenerateBatches(eventDataList, batchSize);
-                return WriteMultipleBatchesAsync(batchCollection, partitionKey);
+                return WriteMultipleBatchesAsync(batchCollection, partitionKey, cancellationToken);
             }
         }
 
-        private async Task WriteMultipleBatchesAsync(IEnumerable<List<EventData>> batchCollection, string partitionKey)
+        private async Task WriteMultipleBatchesAsync(IEnumerable<List<EventData>> batchCollection, string partitionKey, CancellationToken cancellationToken)
         {
             // Must chain the tasks together so they don't run concurrently
             foreach (var batchItem in batchCollection)
             {
-                await WriteSingleBatchAsync(batchItem, partitionKey).ConfigureAwait(false);
+                await WriteSingleBatchAsync(batchItem, partitionKey, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -153,9 +213,9 @@ namespace NLog.Targets
                 yield return new List<EventData>(source.Skip(i).Take(batchSize));
         }
 
-        private Task WriteSingleBatchAsync(IList<EventData> eventDataBatch, string partitionKey)
+        private Task WriteSingleBatchAsync(IList<EventData> eventDataBatch, string partitionKey, CancellationToken cancellationToken)
         {
-            return _eventHubService.SendAsync(eventDataBatch, partitionKey);
+            return _eventHubService.SendAsync(eventDataBatch, partitionKey, cancellationToken);
         }
 
         private int CalculateBatchSize(IList<EventData> eventDataBatch, int eventDataSize)
@@ -173,7 +233,7 @@ namespace NLog.Targets
             return 1;
         }
 
-        private IList<EventData> CreateEventDataBatch(IList<LogEventInfo> logEventList, out int eventDataSize)
+        private IList<EventData> CreateEventDataBatch(IList<LogEventInfo> logEventList, string partitionKey, out int eventDataSize)
         {
             if (logEventList.Count == 0)
             {
@@ -181,15 +241,18 @@ namespace NLog.Targets
                 return Array.Empty<EventData>();
             }
 
+            if (string.IsNullOrEmpty(partitionKey))
+                partitionKey = null;
+
             if (logEventList.Count == 1)
             {
-                var eventData = CreateEventData(logEventList[0], true);
+                var eventData = CreateEventData(partitionKey, logEventList[0], true);
                 if (eventData == null)
                 {
                     eventDataSize = 0;
                     return Array.Empty<EventData>();
                 }
-                eventDataSize = EstimateEventDataSize(eventData.Body.Count);
+                eventDataSize = EstimateEventDataSize(eventData.Body.Length);
                 return new[] { eventData };
             }
 
@@ -197,11 +260,11 @@ namespace NLog.Targets
             List<EventData> eventDataBatch = new List<EventData>(logEventList.Count);
             for (int i = 0; i < logEventList.Count; ++i)
             {
-                var eventData = CreateEventData(logEventList[i], eventDataBatch.Count == 0 && i == logEventList.Count - 1);
+                var eventData = CreateEventData(partitionKey, logEventList[i], eventDataBatch.Count == 0 && i == logEventList.Count - 1);
                 if (eventData != null)
                 {
-                    if (eventData.Body.Count > eventDataSize)
-                        eventDataSize = eventData.Body.Count;
+                    if (eventData.Body.Length > eventDataSize)
+                        eventDataSize = eventData.Body.Length;
                     eventDataBatch.Add(eventData);
                 }
             }
@@ -215,16 +278,30 @@ namespace NLog.Targets
             return (eventDataSize + 128) * 3 + 128;
         }
 
-        private EventData CreateEventData(LogEventInfo logEvent, bool allowThrow)
+        private EventData CreateEventData(string partitionKey, LogEventInfo logEvent, bool allowThrow)
         {
             try
             {
                 var eventDataBody = RenderLogEvent(Layout, logEvent) ?? string.Empty;
-                var eventData = new EventData(EncodeToUTF8(eventDataBody));
+                var eventData = EventHubsModelFactory.EventData(new BinaryData(EncodeToUTF8(eventDataBody)), partitionKey: partitionKey);
 
-                var eventDataContentType = RenderLogEvent(ContentType, logEvent);
-                if (!string.IsNullOrEmpty(eventDataContentType))
-                    eventData.ContentType = eventDataContentType;
+                var contentType = RenderLogEvent(ContentType, logEvent) ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(contentType))
+                {
+                    eventData.ContentType = contentType;
+                }
+
+                var correlationId = RenderLogEvent(CorrelationId, logEvent) ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(correlationId))
+                {
+                    eventData.CorrelationId = correlationId;
+                }
+
+                var messageId = RenderLogEvent(MessageId, logEvent) ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(messageId))
+                {
+                    eventData.MessageId = messageId;
+                }
 
                 if (ShouldIncludeProperties(logEvent))
                 {
@@ -306,29 +383,83 @@ namespace NLog.Targets
 
         private class EventHubService : IEventHubService
         {
-            private EventHubClient _client;
+            private Azure.Messaging.EventHubs.Producer.EventHubProducerClient _client;
+            private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Azure.Messaging.EventHubs.Producer.SendEventOptions> _partitionKeys = new System.Collections.Concurrent.ConcurrentDictionary<string, Azure.Messaging.EventHubs.Producer.SendEventOptions>();
 
-            public void Connect(string connectionString, string entityPath)
+            private class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
             {
-                var connectionstringBuilder = new EventHubsConnectionStringBuilder(connectionString);
-                if (!string.IsNullOrEmpty(entityPath))
+                private readonly string _resourceIdentity;
+                private readonly string _tenantIdentity;
+                private readonly Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider _tokenProvider;
+
+                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity)
                 {
-                    connectionstringBuilder.EntityPath = entityPath;
+                    if (string.IsNullOrWhiteSpace(_resourceIdentity))
+                        _resourceIdentity = "https://eventhubs.azure.net/";
+                    else
+                        _resourceIdentity = resourceIdentity;
+                    if (!string.IsNullOrWhiteSpace(tenantIdentity))
+                        _tenantIdentity = tenantIdentity;
+                    _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
                 }
-                _client = EventHubClient.CreateFromConnectionString(connectionstringBuilder.ToString());
+
+                public override async ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
+                {
+                    try
+                    {
+                        var result = await _tokenProvider.GetAuthenticationResultAsync(_resourceIdentity, _tenantIdentity, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        return new Azure.Core.AccessToken(result.AccessToken, result.ExpiresOn);
+                    }
+                    catch (Exception ex)
+                    {
+                        InternalLogger.Error(ex, "AzureBlobStorageTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
+                        throw;
+                    }
+                }
+
+                public override Azure.Core.AccessToken GetToken(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
+                {
+                    return GetTokenAsync(requestContext, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+                }
+            }
+
+            public void Connect(string connectionString, string entityPath, string serviceUri, string tenantIdentity, string resourceIdentity)
+            {
+                if (!string.IsNullOrEmpty(serviceUri))
+                {
+                    var tokenCredentials = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity);
+                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, entityPath, tokenCredentials);
+                }
+                else if (string.IsNullOrEmpty(entityPath))
+                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString);
+                else
+                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString, entityPath);
             }
 
             public void Close()
             {
-                _client?.Close();
+                _client?.DisposeAsync();
             }
 
-            public Task SendAsync(IList<EventData> eventDataList, string partitionKey)
+            public Task SendAsync(IList<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken)
             {
                 if (_client == null)
                     throw new InvalidOperationException("EventHubClient has not been initialized");
 
-                return _client.SendAsync(eventDataList, partitionKey);
+                Azure.Messaging.EventHubs.Producer.SendEventOptions sendEventOptions = null;
+                if (!string.IsNullOrEmpty(partitionKey))
+                {
+                    if (!_partitionKeys.TryGetValue(partitionKey, out sendEventOptions))
+                    {
+                        sendEventOptions = new Azure.Messaging.EventHubs.Producer.SendEventOptions() { PartitionKey = partitionKey };
+                        _partitionKeys.TryAdd(partitionKey, sendEventOptions);
+                    }
+                }
+
+                if (sendEventOptions != null)
+                    return _client.SendAsync(eventDataList, sendEventOptions, cancellationToken);
+                else
+                    return _client.SendAsync(eventDataList, cancellationToken);
             }
         }
     }
