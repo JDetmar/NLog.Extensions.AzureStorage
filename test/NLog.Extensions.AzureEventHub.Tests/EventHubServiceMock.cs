@@ -28,7 +28,7 @@ namespace NLog.Extensions.AzureEventHub.Test
             EntityPath = entityPath;
         }
 
-        public Task SendAsync(IList<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken)
+        public Task SendAsync(IEnumerable<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("EventHubService not connected");

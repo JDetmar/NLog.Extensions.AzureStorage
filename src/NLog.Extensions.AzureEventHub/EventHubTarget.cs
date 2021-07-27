@@ -198,7 +198,7 @@ namespace NLog.Targets
             }
         }
 
-        private async Task WriteMultipleBatchesAsync(IEnumerable<List<EventData>> batchCollection, string partitionKey, CancellationToken cancellationToken)
+        private async Task WriteMultipleBatchesAsync(IEnumerable<IEnumerable<EventData>> batchCollection, string partitionKey, CancellationToken cancellationToken)
         {
             // Must chain the tasks together so they don't run concurrently
             foreach (var batchItem in batchCollection)
@@ -207,13 +207,13 @@ namespace NLog.Targets
             }
         }
 
-        IEnumerable<List<EventData>> GenerateBatches(IList<EventData> source, int batchSize)
+        IEnumerable<IEnumerable<EventData>> GenerateBatches(IList<EventData> source, int batchSize)
         {
             for (int i = 0; i < source.Count; i += batchSize)
-                yield return new List<EventData>(source.Skip(i).Take(batchSize));
+                yield return source.Skip(i).Take(batchSize);
         }
 
-        private Task WriteSingleBatchAsync(IList<EventData> eventDataBatch, string partitionKey, CancellationToken cancellationToken)
+        private Task WriteSingleBatchAsync(IEnumerable<EventData> eventDataBatch, string partitionKey, CancellationToken cancellationToken)
         {
             return _eventHubService.SendAsync(eventDataBatch, partitionKey, cancellationToken);
         }
@@ -441,7 +441,7 @@ namespace NLog.Targets
                 _client?.DisposeAsync();
             }
 
-            public Task SendAsync(IList<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken)
+            public Task SendAsync(IEnumerable<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken)
             {
                 if (_client == null)
                     throw new InvalidOperationException("EventHubClient has not been initialized");
