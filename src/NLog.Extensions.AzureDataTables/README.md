@@ -18,7 +18,6 @@ Supports both Azure Storage Tables and CosmosDB Tables.
           name="String"
           layout="Layout"
           connectionString="String"
-          connectionStringKey="String"
           tableName="Layout"
           logTimeStampFormat="O" />
 </targets>
@@ -61,7 +60,6 @@ Instead of using the predefined NLogEntity-properties, then one can specify want
   <target xsi:type="AzureDataTables"
           name="String"
           connectionString="Layout"
-          connectionStringKey="String"
           tableName="Layout">
     <contextproperty name="Level" layout="${level}" />
     <contextproperty name="LoggerName" layout="${logger}" />

@@ -20,7 +20,7 @@ But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.or
 ```xml
 <extensions>
   <add assembly="NLog.Extensions.AzureBlobStorage" /> 
-  <add assembly="NLog.Extensions.AzureCosmosTable" /> 
+  <add assembly="NLog.Extensions.AzureDataTables" /> 
   <add assembly="NLog.Extensions.AzureQueueStorage" /> 
   <add assembly="NLog.Extensions.AzureEventHub" /> 
   <add assembly="NLog.Extensions.AzureServiceBus" /> 
@@ -36,10 +36,10 @@ But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.or
             blobName="${logger}/${date:universalTime=true:format=yy-MM-dd}/${date:universalTime=true:format=HH}.log">
                 <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
     </target>
-    <target type="AzureCosmosTable"
+    <target type="AzureDataTables"
             name="AzureTable"
-            connectionStringKey="storageConnectionString"
-            layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
+            connectionString="DefaultEndpointsProtocol=http;AccountName=##accountName##;AccountKey=##accountKey##;"
+            layout="${message} ${exception:format=tostring}"
             tableName="NlogTable" />
     <target type="AzureQueueStorage"
             name="AzureQueue"

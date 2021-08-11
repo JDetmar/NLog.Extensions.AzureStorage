@@ -9,6 +9,6 @@ namespace NLog.Extensions.AzureStorage
     {
         void Connect(string connectionString, string entityPath, string serviceUri, string tenantIdentity, string resourceIdentity);
         void Close();
-        Task SendAsync(IList<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken);
+        Task SendAsync(IEnumerable<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken);
     }
 }
