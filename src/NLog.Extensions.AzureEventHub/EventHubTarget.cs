@@ -98,10 +98,17 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
-        /// Gets a list of user properties (aka custom properties) to add to the message
-        /// <para>
+        /// Gets a list of user properties (aka custom properties) to add to the AMQP message
+        /// </summary>
+        [Obsolete("Replaced by ApplicationProperties")]
         [ArrayParameter(typeof(TargetPropertyWithContext), "userproperty")]
         public IList<TargetPropertyWithContext> UserProperties { get => ContextProperties; }
+
+        /// <summary>
+        /// Gets a list of application properties (aka custom user properties) to add to the AMQP message
+        /// </summary>
+        [ArrayParameter(typeof(TargetPropertyWithContext), "eventproperty")]
+        public IList<TargetPropertyWithContext> ApplicationProperties { get => ContextProperties; }
 
         public EventHubTarget()
             :this(new EventHubService())

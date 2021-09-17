@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.3.0</Version>
+    <Version>3.0.0</Version>
 
     <Description>NLog ServiceBusTarget for writing to Azure Service Bus Topic or Queue</Description>
     <Authors>jdetmar</Authors>
@@ -18,7 +18,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Updated to Microsoft.Azure.ServiceBus ver. 5.1.2 (Bug fixes)
+Updated to Azure.Messaging.ServiceBus ver. 7.3.0 , since Microsoft.Azure.ServiceBus is now obsolete.
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -32,8 +32,9 @@ Updated to Microsoft.Azure.ServiceBus ver. 5.1.2 (Bug fixes)
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.3.0" />
+    <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" Version="1.6.1" />
     <PackageReference Include="NLog" Version="4.6.8" />
-    <PackageReference Include="Microsoft.Azure.ServiceBus" Version="5.1.2" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 

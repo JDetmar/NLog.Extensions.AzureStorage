@@ -4,8 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Azure.ServiceBus;
-using Microsoft.Azure.ServiceBus.Core;
+using Azure.Messaging.ServiceBus;
 using NLog.Common;
 using NLog.Config;
 using NLog.Extensions.AzureStorage;
@@ -30,7 +29,7 @@ namespace NLog.Targets
         public Layout ConnectionString { get; set; }
 
         /// <summary>
-        /// Gets or sets the EntityPath for service bus <see cref="QueueClient"/>
+        /// Gets or sets the EntityPath for service bus
         /// </summary>
         /// <remarks>
         /// Queues offer First In, First Out (FIFO) message delivery to one or more competing consumers
@@ -38,7 +37,7 @@ namespace NLog.Targets
         public Layout QueueName { get; set; }
 
         /// <summary>
-        /// Gets or sets the EntityPath for service bus <see cref="TopicClient"/>
+        /// Gets or sets the EntityPath for service bus
         /// </summary>
         /// <remarks>
         /// In contrast to queues, in which each message is processed by a single consumer, topics provides a one-to-many form of communication
@@ -46,7 +45,7 @@ namespace NLog.Targets
         public Layout TopiceName { get; set; }
 
         /// <summary>
-        /// Gets and sets type of the content for <see cref="Message.ContentType"/>. Ex. application/json
+        /// Gets and sets type of the content for <see cref="ServiceBusMessage.ContentType"/>. Ex. application/json
         /// </summary>
         public Layout ContentType { get; set; }
 
@@ -61,17 +60,23 @@ namespace NLog.Targets
         public Layout SessionId { get; set; }
 
         /// <summary>
-        /// Gets and sets the label for <see cref="Message.Label"/>. Similar to an email subject line.
+        /// Gets and sets the label for <see cref="ServiceBusMessage.Subject"/>. Similar to an email subject line.
         /// </summary>
-        public Layout Label { get; set; }
+        [Obsolete("Replaced by Subject")]
+        public Layout Label { get => Subject; set => Subject = value; }
 
         /// <summary>
-        /// Gets and sets the <see cref="Message.MessageId"/>.
+        /// Gets and sets the label for <see cref="ServiceBusMessage.Subject"/>. Similar to an email subject line.
+        /// </summary>
+        public Layout Subject { get; set; }
+
+        /// <summary>
+        /// Gets and sets the <see cref="ServiceBusMessage.MessageId"/>.
         /// </summary>
         public Layout MessageId { get; set; }
 
         /// <summary>
-        /// Gets and sets the correlationid for <see cref="Message.CorrelationId"/>. For the purposes of correlation.
+        /// Gets and sets the correlationid for <see cref="ServiceBusMessage.CorrelationId"/>. For the purposes of correlation.
         /// </summary>
         public Layout CorrelationId { get; set; }
 
@@ -99,10 +104,32 @@ namespace NLog.Targets
         public Layout TimeToLiveDays { get; set; }
 
         /// <summary>
-        /// Gets a list of user properties (aka custom properties) to add to the message
-        /// <para>
+        /// Alternative to ConnectionString. Ex. {yournamespace}.servicebus.windows.net
+        /// </summary>
+        public Layout ServiceUri { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString
+        /// </summary>
+        public Layout TenantIdentity { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString (Defaults to https://servicebus.azure.net when not set)
+        /// </summary>
+        public Layout ResourceIdentity { get; set; }
+
+        /// <summary>
+        /// Gets a list of user properties (aka custom application properties) to add to the AMQP message
+        /// </summary>
+        [Obsolete("Replaced by ApplicationProperties")]
         [ArrayParameter(typeof(TargetPropertyWithContext), "userproperty")]
         public IList<TargetPropertyWithContext> UserProperties { get => ContextProperties; }
+
+        /// <summary>
+        /// Gets a list of application properties (aka custom user properties) to add to the AMQP message
+        /// </summary>
+        [ArrayParameter(typeof(TargetPropertyWithContext), "messageproperty")]
+        public IList<TargetPropertyWithContext> ApplicationProperties { get => ContextProperties; }
 
         public ServiceBusTarget()
             :this(new CloudServiceBus())
@@ -122,23 +149,29 @@ namespace NLog.Targets
         {
             base.InitializeTarget();
 
-            string connectionString = string.Empty;
-
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
+            string serviceUri = string.Empty;
+            string tenantIdentity = string.Empty;
+            string resourceIdentity = string.Empty;
+            string connectionString = string.Empty;
+            string queueOrTopicName = string.Empty;
 
             try
             {
-                connectionString = ConnectionString?.Render(defaultLogEvent);
-                if (string.IsNullOrWhiteSpace(connectionString))
-                {
-                    throw new ArgumentException("ConnectionString is required");
-                }
-
                 var queuePath = QueueName?.Render(defaultLogEvent)?.Trim();
                 var topicPath = TopiceName?.Render(defaultLogEvent)?.Trim();
-                if (string.IsNullOrWhiteSpace(queuePath) && string.IsNullOrWhiteSpace(topicPath))
+                queueOrTopicName = string.IsNullOrWhiteSpace(queuePath) ? topicPath : queuePath;
+                if (string.IsNullOrWhiteSpace(queueOrTopicName))
                 {
-                    throw new ArgumentException("QueuePath or TopicPath must be specified");
+                    throw new NLogConfigurationException("QueuePath or TopicPath must be specified");
+                }
+
+                connectionString = ConnectionString?.Render(defaultLogEvent) ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(connectionString))
+                {
+                    serviceUri = ServiceUri?.Render(defaultLogEvent);
+                    tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
+                    resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
                 }
 
                 var timeToLive = RenderDefaultTimeToLive();
@@ -147,12 +180,12 @@ namespace NLog.Targets
                     timeToLive = default(TimeSpan?);
                 }
 
-                _cloudServiceBus.Connect(connectionString, queuePath, topicPath, timeToLive);
+                _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, resourceIdentity, timeToLive);
                 InternalLogger.Trace("AzureServiceBus - Initialized");
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed to create ServiceBusClient with connectionString={1}.", Name, connectionString);
+                InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed to create ServiceBusClient with connectionString={1} and entitypath={2}.", Name, connectionString, queueOrTopicName);
                 throw;
             }
         }
@@ -224,7 +257,7 @@ namespace NLog.Targets
             {
                 var partitionKey = _getMessagePartitionKeyDelegate(logEvents[0]);
                 var messageBatch = CreateMessageBatch(logEvents, partitionKey, out var messageBatchSize);
-                return WriteSingleBatchAsync(messageBatch);
+                return WriteSingleBatchAsync(messageBatch, cancellationToken);
             }
 
             var partitionBuckets = (SessionId != null || PartitionKey != null) ? SortHelpers.BucketSort(logEvents, _getMessagePartitionKeyDelegate) : new Dictionary<string, IList<LogEventInfo>>() { { string.Empty, logEvents } };
@@ -235,7 +268,7 @@ namespace NLog.Targets
                 {
                     var messageBatch = CreateMessageBatch(partitionBucket.Value, partitionBucket.Key, out var messageBatchSize);
 
-                    Task sendTask = WritePartitionBucketAsync(messageBatch, messageBatchSize);
+                    Task sendTask = WritePartitionBucketAsync(messageBatch, messageBatchSize, cancellationToken);
                     if (multipleTasks == null)
                         return sendTask;
 
@@ -252,61 +285,61 @@ namespace NLog.Targets
             return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
         }
 
-        private Task WritePartitionBucketAsync(IList<Message> messageList, int messageBatchSize)
+        private Task WritePartitionBucketAsync(IList<ServiceBusMessage> messageBatch, int messageBatchSize, CancellationToken cancellationToken)
         {
-            int batchSize = CalculateBatchSize(messageList, messageBatchSize);
-            if (messageList.Count <= batchSize)
+            int maxBatchSize = CalculateBatchSize(messageBatch, messageBatchSize);
+            if (messageBatch.Count <= maxBatchSize)
             {
-                return WriteSingleBatchAsync(messageList);
+                return WriteSingleBatchAsync(messageBatch, cancellationToken);
             }
             else
             {
-                var batchCollection = GenerateBatches(messageList, batchSize);
-                return WriteMultipleBatchesAsync(batchCollection);
+                var batchCollection = GenerateBatches(messageBatch, maxBatchSize);
+                return WriteMultipleBatchesAsync(batchCollection, cancellationToken);
             }
         }
 
-        private async Task WriteMultipleBatchesAsync(IEnumerable<List<Message>> batchCollection)
+        private async Task WriteMultipleBatchesAsync(IEnumerable<IEnumerable<ServiceBusMessage>> batchCollection, CancellationToken cancellationToken)
         {
             // Must chain the tasks together so they don't run concurrently
             foreach (var batchItem in batchCollection)
             {
-                await WriteSingleBatchAsync(batchItem).ConfigureAwait(false);
+                await WriteSingleBatchAsync(batchItem, cancellationToken).ConfigureAwait(false);
             }
         }
 
-        IEnumerable<List<Message>> GenerateBatches(IList<Message> source, int batchSize)
+        IEnumerable<IEnumerable<ServiceBusMessage>> GenerateBatches(IList<ServiceBusMessage> source, int batchSize)
         {
             for (int i = 0; i < source.Count; i += batchSize)
-                yield return new List<Message>(source.Skip(i).Take(batchSize));
+                yield return source.Skip(i).Take(batchSize);
         }
 
-        private Task WriteSingleBatchAsync(IList<Message> messageDataList)
+        private Task WriteSingleBatchAsync(IEnumerable<ServiceBusMessage> messageBatch, CancellationToken cancellationToken)
         {
-            return _cloudServiceBus.SendAsync(messageDataList);
+            return _cloudServiceBus.SendAsync(messageBatch, cancellationToken);
         }
 
-        private int CalculateBatchSize(IList<Message> messageDataList, int messageBatchSize)
+        private int CalculateBatchSize(IList<ServiceBusMessage> messageBatch, int messageBatchSize)
         {
             if (messageBatchSize < MaxBatchSizeBytes)
-                return Math.Min(messageDataList.Count, 100);
+                return Math.Min(messageBatch.Count, 100);
 
-            if (messageDataList.Count > 10)
+            if (messageBatch.Count > 10)
             {
                 int numberOfBatches = Math.Max(messageBatchSize / MaxBatchSizeBytes, 10);
-                int batchSize = Math.Max(messageDataList.Count / numberOfBatches - 1, 1);
+                int batchSize = Math.Max(messageBatch.Count / numberOfBatches - 1, 1);
                 return Math.Min(batchSize, 100);
             }
 
             return 1;
         }
 
-        private IList<Message> CreateMessageBatch(IList<LogEventInfo> logEventList, string partitionKey, out int messageBatchSize)
+        private IList<ServiceBusMessage> CreateMessageBatch(IList<LogEventInfo> logEventList, string partitionKey, out int messageBatchSize)
         {
             if (logEventList.Count == 0)
             {
                 messageBatchSize = 0;
-                return Array.Empty<Message>();
+                return Array.Empty<ServiceBusMessage>();
             }
 
             if (logEventList.Count == 1)
@@ -315,21 +348,21 @@ namespace NLog.Targets
                 if (messageData == null)
                 {
                     messageBatchSize = 0;
-                    return Array.Empty<Message>();
+                    return Array.Empty<ServiceBusMessage>();
                 }
-                messageBatchSize = EstimateEventDataSize(messageData.Body.Length);
+                messageBatchSize = EstimateEventDataSize(messageData.Body.ToMemory().Length);
                 return new[] { messageData };
             }
 
             messageBatchSize = 0;
-            List<Message> messageBatch = new List<Message>(logEventList.Count);
+            List<ServiceBusMessage> messageBatch = new List<ServiceBusMessage>(logEventList.Count);
             for (int i = 0; i < logEventList.Count; ++i)
             {
                 var messageData = CreateMessageData(logEventList[i], partitionKey, messageBatch.Count == 0 && i == logEventList.Count - 1);
                 if (messageData != null)
                 {
-                    if (messageData.Body.Length > messageBatchSize)
-                        messageBatchSize = messageData.Body.Length;
+                    if (messageData.Body.ToMemory().Length > messageBatchSize)
+                        messageBatchSize = messageData.Body.ToMemory().Length;
                     messageBatch.Add(messageData);
                 }
             }
@@ -343,12 +376,12 @@ namespace NLog.Targets
             return (eventDataSize + 128) * 3 + 128;
         }
 
-        private Message CreateMessageData(LogEventInfo logEvent, string partitionKey, bool allowThrow)
+        private ServiceBusMessage CreateMessageData(LogEventInfo logEvent, string partitionKey, bool allowThrow)
         {
             try
             {
                 var messageBody = RenderLogEvent(Layout, logEvent) ?? string.Empty;
-                var messageData = new Message(EncodeToUTF8(messageBody));
+                var messageData = new ServiceBusMessage(EncodeToUTF8(messageBody));
 
                 if (!string.IsNullOrEmpty(partitionKey))
                 {
@@ -363,10 +396,10 @@ namespace NLog.Targets
                     messageData.ContentType = messageContentType;
                 }
 
-                var messageLabel = RenderLogEvent(Label, logEvent);
+                var messageLabel = RenderLogEvent(Subject, logEvent);
                 if (!string.IsNullOrEmpty(messageLabel))
                 {
-                    messageData.Label = messageLabel;
+                    messageData.Subject = messageLabel;
                 }
 
                 var messageId = RenderLogEvent(MessageId, logEvent);
@@ -394,7 +427,7 @@ namespace NLog.Targets
                     {
                         var propertyValue = FlattenObjectValue(property.Value);
                         if (propertyValue != null)
-                            messageData.UserProperties.Add(property.Key, propertyValue);
+                            messageData.ApplicationProperties.Add(property.Key, propertyValue);
                     }
                 }
                 else if (ContextProperties.Count > 0)
@@ -409,7 +442,7 @@ namespace NLog.Targets
                         if (!property.IncludeEmptyValue && string.IsNullOrEmpty(propertyValue))
                             continue;
 
-                        messageData.UserProperties.Add(property.Name, propertyValue ?? string.Empty);
+                        messageData.ApplicationProperties.Add(property.Name, propertyValue ?? string.Empty);
                     }
                 }
 
@@ -468,28 +501,77 @@ namespace NLog.Targets
 
         private class CloudServiceBus : ICloudServiceBus
         {
-            private ISenderClient _client;
+            private ServiceBusClient _client;
+            private ServiceBusSender _sender;
 
             public TimeSpan? DefaultTimeToLive { get; private set; }
 
-            public void Connect(string connectionString, string queuePath, string topicPath, TimeSpan? timeToLive)
+            private class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
             {
-                DefaultTimeToLive = timeToLive;
+                private readonly string _resourceIdentity;
+                private readonly string _tenantIdentity;
+                private readonly Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider _tokenProvider;
 
-                if (!string.IsNullOrEmpty(queuePath) || topicPath == null)
-                    _client = new QueueClient(connectionString, queuePath);
+                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity)
+                {
+                    if (string.IsNullOrWhiteSpace(_resourceIdentity))
+                        _resourceIdentity = "https://servicebus.azure.net/";
+                    else
+                        _resourceIdentity = resourceIdentity;
+                    if (!string.IsNullOrWhiteSpace(tenantIdentity))
+                        _tenantIdentity = tenantIdentity;
+                    _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
+                }
+
+                public override async ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
+                {
+                    try
+                    {
+                        var result = await _tokenProvider.GetAuthenticationResultAsync(_resourceIdentity, _tenantIdentity, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        return new Azure.Core.AccessToken(result.AccessToken, result.ExpiresOn);
+                    }
+                    catch (Exception ex)
+                    {
+                        InternalLogger.Error(ex, "AzureBlobStorageTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
+                        throw;
+                    }
+                }
+
+                public override Azure.Core.AccessToken GetToken(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
+                {
+                    return GetTokenAsync(requestContext, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+                }
+            }
+
+            public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentity, TimeSpan? defaultTimeToLive)
+            {
+                DefaultTimeToLive = defaultTimeToLive;
+
+                if (!string.IsNullOrEmpty(serviceUri))
+                {
+                    var tokenCredentials = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity);
+                    _client = new ServiceBusClient(serviceUri, tokenCredentials);
+                }
                 else
-                    _client = new TopicClient(connectionString, topicPath);
+                {
+                    _client = new ServiceBusClient(connectionString);
+                }
+
+                _sender = _client.CreateSender(queueOrTopicName);
             }
 
-            public Task SendAsync(IList<Message> messages)
+            public async Task CloseAsync()
             {
-                return _client.SendAsync(messages);
+                await (_sender?.CloseAsync() ?? Task.CompletedTask).ConfigureAwait(false);
+                await (_client?.DisposeAsync() ?? new ValueTask());
             }
 
-            public Task CloseAsync()
+            public Task SendAsync(IEnumerable<ServiceBusMessage> messages, CancellationToken cancellationToken)
             {
-                return _client.CloseAsync();
+                if (_client == null)
+                    throw new InvalidOperationException("ServiceBusClient has not been initialized");
+
+                return _sender.SendMessagesAsync(messages, cancellationToken);
             }
         }
     }

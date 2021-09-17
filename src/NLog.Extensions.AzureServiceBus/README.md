@@ -21,12 +21,12 @@
           topicName="Layout"
           sessionId="Layout"
           partitionKey="Layout"
-          label="Layout"
+          subject="Layout"
           contentType="Layout"
           messageId="Layout"
           correlationId="Layout">
-	    <userProperty name="level" layout="${level}" />
-	    <userProperty name="exception" layout="${exception:format=shorttype}" includeEmptyValue="false" />
+	    <messageProperty name="level" layout="${level}" />
+	    <messageProperty name="exception" layout="${exception:format=shorttype}" includeEmptyValue="false" />
 	    <layout type="JsonLayout" includeAllProperties="true">
 		    <attribute name="time" layout="${longdate}" />
 		    <attribute name="message" layout="${message}" />
@@ -51,7 +51,7 @@ _sessionId_ - SessionId-Key which Service Bus uses to generate PartitionId-hash.
 
 _partitionKey_ - Partition-Key which Service Bus uses to generate PartitionId-hash. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_label_ - Service Bus Message Label to be used as subject for the message. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_subject_ - Service Bus Message Subject to be used as label for the message. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _layout_ - Service Bus Message Body to be rendered and encoded as UTF8. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required. 
 
@@ -65,6 +65,11 @@ _timeToLiveSeconds_ - Default Time-To-Live (TTL) for ServiceBus messages in seco
 
 _timeToLiveDays_ - Default Time-To-Live (TTL) for ServiceBus messages in days (Optional)
 
+_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from AzureServiceTokenProvider.
+
+_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
+
+_resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
 
 ### Batching Policy
 

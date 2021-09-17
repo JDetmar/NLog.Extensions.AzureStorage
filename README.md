@@ -62,7 +62,7 @@ But Microsoft decided to discontinue [WindowsAzure.Storage](https://www.nuget.or
             layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
             label="Message from NLog"
             topiceName="NLogTopic">
-                <userproperty name="exceptiontype" layout="${exception:format=type}" />   <!-- Multiple allowed -->
+                <messageProperty name="exceptiontype" layout="${exception:format=type}" />   <!-- Multiple allowed -->
     </target>
 </targets>
 ```
