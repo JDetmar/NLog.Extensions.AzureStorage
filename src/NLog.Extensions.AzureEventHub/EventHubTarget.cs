@@ -120,25 +120,36 @@ namespace NLog.Targets
             base.InitializeTarget();
 
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
-            var entityPath = EventHubName?.Render(defaultLogEvent)?.Trim() ?? string.Empty;
-            var connectionString = ConnectionString?.Render(defaultLogEvent) ?? string.Empty;
             string serviceUri = string.Empty;
             string tenantIdentity = string.Empty;
             string resourceIdentity = string.Empty;
+            string connectionString = string.Empty;
+            string entityPath = string.Empty;
 
-            if (string.IsNullOrEmpty(connectionString))
+            try
             {
-                serviceUri = ServiceUri?.Render(defaultLogEvent);
-                tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
-                resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
-            }
+                entityPath = EventHubName?.Render(defaultLogEvent)?.Trim() ?? string.Empty;
+                connectionString = ConnectionString?.Render(defaultLogEvent) ?? string.Empty;
+                if (string.IsNullOrEmpty(connectionString))
+                {
+                    serviceUri = ServiceUri?.Render(defaultLogEvent);
+                    tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
+                    resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
+                }
 
-            _eventHubService.Connect(connectionString, entityPath, serviceUri, tenantIdentity, resourceIdentity);
+                _eventHubService.Connect(connectionString, entityPath, serviceUri, tenantIdentity, resourceIdentity);
+            }
+            catch (Exception ex)
+            {
+                InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed to create EventHubClient with connectionString={1} to eventhub={2}.", Name, connectionString, entityPath);
+                throw;
+            }
         }
 
         protected override void CloseTarget()
         {
-            _eventHubService.Close();
+            var task = Task.Run(async () => await _eventHubService.CloseAsync().ConfigureAwait(false));
+            task.Wait(TimeSpan.FromMilliseconds(500));
             base.CloseTarget();
         }
 
@@ -186,14 +197,14 @@ namespace NLog.Targets
 
         private Task WritePartitionBucketAsync(IList<EventData> eventDataList, int eventDataSize, string partitionKey, CancellationToken cancellationToken)
         {
-            int batchSize = CalculateBatchSize(eventDataList, eventDataSize);
-            if (eventDataList.Count <= batchSize)
+            int maxBatchSize = CalculateBatchSize(eventDataList, eventDataSize);
+            if (eventDataList.Count <= maxBatchSize)
             {
                 return WriteSingleBatchAsync(eventDataList, partitionKey, cancellationToken);
             }
             else
             {
-                var batchCollection = GenerateBatches(eventDataList, batchSize);
+                var batchCollection = GenerateBatches(eventDataList, maxBatchSize);
                 return WriteMultipleBatchesAsync(batchCollection, partitionKey, cancellationToken);
             }
         }
@@ -436,9 +447,9 @@ namespace NLog.Targets
                     _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString, entityPath);
             }
 
-            public void Close()
+            public Task CloseAsync()
             {
-                _client?.DisposeAsync();
+                return _client?.CloseAsync() ?? Task.CompletedTask;
             }
 
             public Task SendAsync(IEnumerable<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken)
