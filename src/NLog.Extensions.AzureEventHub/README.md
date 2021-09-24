@@ -22,8 +22,8 @@
           contentType="Layout"
           messageId="Layout"
           correlationId="Layout">
-	    <userProperty name="level" layout="${level}" />
-	    <userProperty name="exception" layout="${exception:format=shorttype}" includeEmptyValue="false" />
+	    <messageProperty name="level" layout="${level}" />
+	    <messageProperty name="exception" layout="${exception:format=shorttype}" includeEmptyValue="false" />
 	    <layout type="JsonLayout" includeAllProperties="true">
 		    <attribute name="time" layout="${longdate}" />
 		    <attribute name="message" layout="${message}" />

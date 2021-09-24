@@ -107,7 +107,7 @@ namespace NLog.Targets
         /// <summary>
         /// Gets a list of application properties (aka custom user properties) to add to the AMQP message
         /// </summary>
-        [ArrayParameter(typeof(TargetPropertyWithContext), "eventproperty")]
+        [ArrayParameter(typeof(TargetPropertyWithContext), "messageproperty")]
         public IList<TargetPropertyWithContext> ApplicationProperties { get => ContextProperties; }
 
         public EventHubTarget()
@@ -131,11 +131,11 @@ namespace NLog.Targets
             string tenantIdentity = string.Empty;
             string resourceIdentity = string.Empty;
             string connectionString = string.Empty;
-            string entityPath = string.Empty;
+            string eventHubName = string.Empty;
 
             try
             {
-                entityPath = EventHubName?.Render(defaultLogEvent)?.Trim() ?? string.Empty;
+                eventHubName = EventHubName?.Render(defaultLogEvent)?.Trim() ?? string.Empty;
                 connectionString = ConnectionString?.Render(defaultLogEvent) ?? string.Empty;
                 if (string.IsNullOrEmpty(connectionString))
                 {
@@ -144,11 +144,11 @@ namespace NLog.Targets
                     resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
                 }
 
-                _eventHubService.Connect(connectionString, entityPath, serviceUri, tenantIdentity, resourceIdentity);
+                _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, resourceIdentity);
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed to create EventHubClient with connectionString={1} to eventhub={2}.", Name, connectionString, entityPath);
+                InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed to create EventHubClient with connectionString={1} to EntityPath={2}.", Name, connectionString, eventHubName);
                 throw;
             }
         }
@@ -441,17 +441,17 @@ namespace NLog.Targets
                 }
             }
 
-            public void Connect(string connectionString, string entityPath, string serviceUri, string tenantIdentity, string resourceIdentity)
+            public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentity)
             {
                 if (!string.IsNullOrEmpty(serviceUri))
                 {
                     var tokenCredentials = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity);
-                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, entityPath, tokenCredentials);
+                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, tokenCredentials);
                 }
-                else if (string.IsNullOrEmpty(entityPath))
+                else if (string.IsNullOrEmpty(eventHubName))
                     _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString);
                 else
-                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString, entityPath);
+                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString, eventHubName);
             }
 
             public Task CloseAsync()
@@ -459,7 +459,7 @@ namespace NLog.Targets
                 return _client?.CloseAsync() ?? Task.CompletedTask;
             }
 
-            public Task SendAsync(IEnumerable<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken)
+            public Task SendAsync(IEnumerable<EventData> eventDataBatch, string partitionKey, CancellationToken cancellationToken)
             {
                 if (_client == null)
                     throw new InvalidOperationException("EventHubClient has not been initialized");
@@ -475,9 +475,9 @@ namespace NLog.Targets
                 }
 
                 if (sendEventOptions != null)
-                    return _client.SendAsync(eventDataList, sendEventOptions, cancellationToken);
+                    return _client.SendAsync(eventDataBatch, sendEventOptions, cancellationToken);
                 else
-                    return _client.SendAsync(eventDataList, cancellationToken);
+                    return _client.SendAsync(eventDataBatch, cancellationToken);
             }
         }
     }

@@ -185,7 +185,7 @@ namespace NLog.Targets
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed to create ServiceBusClient with connectionString={1} and entitypath={2}.", Name, connectionString, queueOrTopicName);
+                InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed to create ServiceBusClient with connectionString={1} and EntityPath={2}.", Name, connectionString, queueOrTopicName);
                 throw;
             }
         }
