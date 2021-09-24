@@ -71,8 +71,8 @@ namespace NLog.Extensions.AzureServiceBus.Test
             logFactory.Flush();
             Assert.Single(serviceBusMock.MessageDataSent);
             Assert.Equal("Hello", serviceBusMock.PeekLastMessageBody());
-            Assert.Single(serviceBusMock.MessageDataSent.First().First().UserProperties);
-            Assert.Equal(LogLevel.Info.ToString(), serviceBusMock.MessageDataSent.First().First().UserProperties["Level"]);
+            Assert.Single(serviceBusMock.MessageDataSent.First().First().ApplicationProperties);
+            Assert.Equal(LogLevel.Info.ToString(), serviceBusMock.MessageDataSent.First().First().ApplicationProperties["Level"]);
         }
     }
 }

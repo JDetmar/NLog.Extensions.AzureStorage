@@ -2,18 +2,16 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Azure.ServiceBus;
+using Azure.Messaging.ServiceBus;
 using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureServiceBus.Test
 {
     class ServiceBusMock : ICloudServiceBus
     {
-        public List<IList<Message>> MessageDataSent { get; } = new List<IList<Message>>();
+        public List<List<ServiceBusMessage>> MessageDataSent { get; } = new List<List<ServiceBusMessage>>();
         public string ConnectionString { get; private set; }
-        public string QueuePath { get; private set; }
-        public string TopicPath { get; private set; }
-
+        public string EntityPath { get; private set; }
         public TimeSpan? DefaultTimeToLive { get; private set; }
 
         public string PeekLastMessageBody()
@@ -33,31 +31,30 @@ namespace NLog.Extensions.AzureServiceBus.Test
             return null;
         }
 
-        public void Connect(string connectionString, string queuePath, string topicPath, TimeSpan? timeToLive)
+        public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentity, TimeSpan? timeToLive)
         {
             ConnectionString = connectionString;
-            QueuePath = queuePath;
-            TopicPath = topicPath;
+            EntityPath = queueOrTopicName;
             DefaultTimeToLive = timeToLive;
-    }
-
-        public Task SendAsync(IList<Message> messages)
-        {
-            if (string.IsNullOrEmpty(ConnectionString))
-                throw new InvalidOperationException("EventHubService not connected");
-
-            return Task.Delay(10).ContinueWith(t =>
-            {
-                lock (MessageDataSent)
-                    MessageDataSent.Add(messages);
-            });
         }
 
-        public Task CloseAsync()
+        public Task SendAsync(IEnumerable<ServiceBusMessage> messages, System.Threading.CancellationToken cancellationToken)
         {
+            if (string.IsNullOrEmpty(ConnectionString))
+                throw new InvalidOperationException("ServiceBusService not connected");
+
+            return Task.Delay(10, cancellationToken).ContinueWith(t =>
+            {
+                lock (MessageDataSent)
+                    MessageDataSent.Add(new List<ServiceBusMessage>(messages));
+            }, cancellationToken);
+        }
+
+        public async Task CloseAsync()
+        {
+            await Task.Delay(1).ConfigureAwait(false);
             lock (MessageDataSent)
                 MessageDataSent.Clear();
-            return Task.FromResult<object>(null);
         }
     }
 }

@@ -103,10 +103,6 @@ namespace NLog.Targets
 
         public string LogTimeStampFormat { get; set; } = "O";
 
-        public Layout TimeToLiveSeconds { get; set; }
-
-        public Layout TimeToLiveDays { get; set; }
-
         public DataTablesTarget()
             :this(new CloudTableService())
         {

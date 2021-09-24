@@ -16,8 +16,9 @@ namespace NLog.Extensions.AzureEventHub.Test
         public string ConnectionString { get; private set; }
         public string EntityPath { get; private set; }
 
-        public void Close()
+        public async Task CloseAsync()
         {
+            await Task.Delay(1).ConfigureAwait(false);
             lock (EventDataSent)
                 EventDataSent.Clear();
         }
