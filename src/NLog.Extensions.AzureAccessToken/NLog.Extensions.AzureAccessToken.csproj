@@ -5,7 +5,7 @@
     <DisableImplicitFrameworkReferences Condition=" '$(TargetFramework)' == 'net452' Or '$(TargetFramework)' == 'net461' ">true</DisableImplicitFrameworkReferences>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>2.2.0</Version>
+    <Version>2.3.0</Version>
 
     <Description>NLog AccessTokenLayoutRenderer for application authentication and acquire AccessToken for resource.</Description>
     <Authors>jdetmar</Authors>
@@ -19,7 +19,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Updated dependency Microsoft.Azure.Services.AppAuthentication ver. 1.6.0 (Bug fixes)
+Updated dependency Microsoft.Azure.Services.AppAuthentication ver. 1.6.2 (Bug fixes)
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -28,7 +28,7 @@ Updated dependency Microsoft.Azure.Services.AppAuthentication ver. 1.6.0 (Bug fi
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" Version="1.6.0" />
+    <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" Version="1.6.2" />
     <PackageReference Include="NLog" Version="4.6.8" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
