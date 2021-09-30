@@ -28,18 +28,18 @@ namespace NLog.Targets
         struct TablePartitionKey : IEquatable<TablePartitionKey>
         {
             public readonly string TableName;
-            public readonly string PartitionId;
+            public readonly string PartitionKey;
 
             public TablePartitionKey(string tableName, string partitionId)
             {
                 TableName = tableName;
-                PartitionId = partitionId;
+                PartitionKey = partitionId;
             }
 
             public bool Equals(TablePartitionKey other)
             {
                 return TableName == other.TableName &&
-                       PartitionId == other.PartitionId;
+                       PartitionKey == other.PartitionKey;
             }
 
             public override bool Equals(object obj)
@@ -49,7 +49,7 @@ namespace NLog.Targets
 
             public override int GetHashCode()
             {
-                return TableName.GetHashCode() ^ PartitionId.GetHashCode();
+                return TableName.GetHashCode() ^ PartitionKey.GetHashCode();
             }
         }
 
@@ -151,11 +151,11 @@ namespace NLog.Targets
                 }
 
                 _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, accountName, accessKey);
-                InternalLogger.Trace("AzureTableStorageTarget(Name={0}): Initialized", Name);
+                InternalLogger.Trace("AzureDataTablesTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureTableStorageTarget(Name={0}): Failed to create TableClient with connectionString={1}.", Name, connectionString);
+                InternalLogger.Error(ex, "AzureDataTablesTarget(Name={0}): Failed to create TableClient with connectionString={1}.", Name, connectionString);
                 throw;
             }
         }
@@ -173,8 +173,19 @@ namespace NLog.Targets
 
             if (logEvents.Count == 1)
             {
-                var batchItem = GenerateTableTransactionAction(RenderLogEvent(PartitionKey, logEvents[0]), logEvents[0]);
-                return WriteToTableAsync(RenderLogEvent(TableName, logEvents[0]), new[] { batchItem }, cancellationToken);
+                var tableName = RenderLogEvent(TableName, logEvents[0]);
+                var partitionKey = RenderLogEvent(PartitionKey, logEvents[0]);
+
+                try
+                {
+                    var batchItem = GenerateTableTransactionAction(partitionKey, logEvents[0]);
+                    return WriteToTableAsync(tableName, new[] { batchItem }, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    InternalLogger.Error(ex, "AzureDataTablesTarget(Name={0}): Failed writing {1} logevents to Table={2} with PartitionKey={3}", Name, 1, tableName, partitionKey);
+                    throw;
+                }
             }
 
             const int BatchMaxSize = 100;
@@ -183,14 +194,16 @@ namespace NLog.Targets
             IList<Task> multipleTasks = partitionBuckets.Count > 1 ? new List<Task>(partitionBuckets.Count) : null;
             foreach (var partitionBucket in partitionBuckets)
             {
-                string tableName = partitionBucket.Key.TableName;
+                var tableName = partitionBucket.Key.TableName;
+                var partitionKey = partitionBucket.Key.PartitionKey;
+                var bucketSize = partitionBucket.Value.Count;
 
                 try
                 {
                     if (partitionBucket.Value.Count <= BatchMaxSize)
                     {
-                        var batchItem = GenerateBatch(partitionBucket.Value, partitionBucket.Key.PartitionId);
-                        var writeTask = WriteToTableAsync(partitionBucket.Key.TableName, batchItem, cancellationToken);
+                        var batchItem = GenerateBatch(partitionBucket.Value, partitionKey);
+                        var writeTask = WriteToTableAsync(tableName, batchItem, cancellationToken);
                         if (multipleTasks == null)
                             return writeTask;
 
@@ -199,7 +212,7 @@ namespace NLog.Targets
                     else
                     {
                         // Must chain the tasks together so they don't run concurrently
-                        var batchCollection = GenerateBatches(partitionBucket.Value, partitionBucket.Key.PartitionId, BatchMaxSize);
+                        var batchCollection = GenerateBatches(partitionBucket.Value, partitionKey, BatchMaxSize);
                         Task writeTask = WriteMultipleBatchesAsync(batchCollection, tableName, cancellationToken);
                         if (multipleTasks == null)
                             return writeTask;
@@ -209,7 +222,7 @@ namespace NLog.Targets
                 }
                 catch (Exception ex)
                 {
-                    InternalLogger.Error(ex, "AzureTableStorageTarget(Name={0}): Failed to write table={1}", Name, tableName);
+                    InternalLogger.Error(ex, "AzureDataTablesTarget(Name={0}): Failed writing {1} logevents to Table={2} with PartitionKey={3}", Name, bucketSize, tableName, partitionKey);
                     if (multipleTasks == null)
                         throw;
                 }
@@ -226,34 +239,26 @@ namespace NLog.Targets
             }
         }
 
-        IEnumerable<IEnumerable<TableTransactionAction>> GenerateBatches(IList<LogEventInfo> source, string partitionId, int batchSize)
+        IEnumerable<IEnumerable<TableTransactionAction>> GenerateBatches(IList<LogEventInfo> source, string partitionKey, int batchSize)
         {
             for (int i = 0; i < source.Count; i += batchSize)
-                yield return GenerateBatch(source.Skip(i).Take(batchSize), partitionId);
+                yield return GenerateBatch(source.Skip(i).Take(batchSize), partitionKey);
         }
 
-        private IEnumerable<TableTransactionAction> GenerateBatch(IEnumerable<LogEventInfo> logEvents, string partitionId)
+        private IEnumerable<TableTransactionAction> GenerateBatch(IEnumerable<LogEventInfo> logEvents, string partitionKey)
         {
-            return logEvents.Select(evt => GenerateTableTransactionAction(partitionId, evt));
+            return logEvents.Select(evt => GenerateTableTransactionAction(partitionKey, evt));
         }
 
-        private TableTransactionAction GenerateTableTransactionAction(string partitionId, LogEventInfo evt)
+        private TableTransactionAction GenerateTableTransactionAction(string partitionKey, LogEventInfo evt)
         {
-            return new TableTransactionAction(TableTransactionActionType.Add, CreateTableEntity(evt, partitionId));
+            return new TableTransactionAction(TableTransactionActionType.Add, CreateTableEntity(evt, partitionKey));
         }
 
         private Task WriteToTableAsync(string tableName, IEnumerable<TableTransactionAction> tableTransaction, CancellationToken cancellationToken)
         {
-            try
-            {
-                tableName = CheckAndRepairTableName(tableName);
-                return _cloudTableService.SubmitTransactionAsync(tableName, tableTransaction, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                InternalLogger.Error(ex, "AzureTableStorageTarget(Name={0}): Failed to write table={1}", Name, tableName);
-                throw;
-            }
+            tableName = CheckAndRepairTableName(tableName);
+            return _cloudTableService.SubmitTransactionAsync(tableName, tableTransaction, cancellationToken);
         }
 
         private ITableEntity CreateTableEntity(LogEventInfo logEvent, string partitionKey)
@@ -298,15 +303,15 @@ namespace NLog.Targets
 
         private string CheckAndRepairTableNamingRules(string tableName)
         {
-            InternalLogger.Trace("AzureTableStorageTarget(Name={0}): Requested Table Name: {1}", Name, tableName);
+            InternalLogger.Trace("AzureDataTablesTarget(Name={0}): Requested Table Name: {1}", Name, tableName);
             string validTableName = AzureStorageNameCache.CheckAndRepairTableNamingRules(tableName);
             if (validTableName == tableName)
             {
-                InternalLogger.Trace("AzureTableStorageTarget(Name={0}): Using Table Name: {0}", Name, validTableName);
+                InternalLogger.Trace("AzureDataTablesTarget(Name={0}): Using Table Name: {1}", Name, validTableName);
             }
             else
             {
-                InternalLogger.Trace("AzureTableStorageTarget(Name={0}): Using Cleaned Table name: {0}", Name, validTableName);
+                InternalLogger.Trace("AzureDataTablesTarget(Name={0}): Using Cleaned Table name: {1}", Name, validTableName);
             }
             return validTableName;
         }
@@ -333,7 +338,7 @@ namespace NLog.Targets
             }
             catch (Exception ex)
             {
-                InternalLogger.Warn(ex, "AzureTableStorageTarget: Failed to lookup {0}", lookupType);
+                InternalLogger.Warn(ex, "AzureDataTablesTarget: Failed to lookup {0}", lookupType);
                 return null;
             }
         }
@@ -369,7 +374,7 @@ namespace NLog.Targets
                     }
                     catch (Exception ex)
                     {
-                        InternalLogger.Error(ex, "AzureBlobStorageTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
+                        InternalLogger.Error(ex, "AzureDataTablesTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
                         throw;
                     }
                 }
@@ -419,20 +424,23 @@ namespace NLog.Targets
                     if (_client == null)
                         throw new InvalidOperationException("CloudTableClient has not been initialized");
 
-                    var table = _client.GetTableClient(tableName);
+                    InternalLogger.Debug("AzureDataTablesTarget: Opening table: {0}", tableName);
 
-                    var tableExists = await table.CreateIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
+                    var tableExists = await _client.CreateTableIfNotExistsAsync(tableName, cancellationToken).ConfigureAwait(false);
+                    
+                    var table = _client.GetTableClient(tableName);
+                    
                     if (tableExists.Value != null)
-                    {
-                        InternalLogger.Debug("AzureTableStorageTarget: Created table: {0}", tableName);
-                    }
+                        InternalLogger.Debug("AzureDataTablesTarget: Created new table: {0}", tableName);
+                    else
+                        InternalLogger.Debug("AzureDataTablesTarget: Opened existing table: {0}", tableName);
 
                     _table = table;
                     return table;
                 }
                 catch (Exception exception)
                 {
-                    InternalLogger.Error(exception, "AzureTableStorageTarget: Failed to initialize table={1}", tableName);
+                    InternalLogger.Error(exception, "AzureDataTablesTarget: Failed to initialize table={0}", tableName);
                     throw;
                 }
             }
