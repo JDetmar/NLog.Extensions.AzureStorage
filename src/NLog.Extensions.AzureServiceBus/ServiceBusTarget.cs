@@ -256,14 +256,26 @@ namespace NLog.Targets
             if (logEvents.Count == 1)
             {
                 var partitionKey = _getMessagePartitionKeyDelegate(logEvents[0]);
-                var messageBatch = CreateMessageBatch(logEvents, partitionKey, out var messageBatchSize);
-                return WriteSingleBatchAsync(messageBatch, cancellationToken);
+
+                try
+                {
+                    var messageBatch = CreateMessageBatch(logEvents, partitionKey, out var messageBatchSize);
+                    return WriteSingleBatchAsync(messageBatch, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, 1, _cloudServiceBus?.EntityPath, partitionKey);
+                    throw;
+                }
             }
 
             var partitionBuckets = (SessionId != null || PartitionKey != null) ? SortHelpers.BucketSort(logEvents, _getMessagePartitionKeyDelegate) : new Dictionary<string, IList<LogEventInfo>>() { { string.Empty, logEvents } };
             IList<Task> multipleTasks = partitionBuckets.Count > 1 ? new List<Task>(partitionBuckets.Count) : null;
             foreach (var partitionBucket in partitionBuckets)
             {
+                var partitionKey = partitionBucket.Key;
+                var bucketCount = partitionBucket.Value.Count;
+
                 try
                 {
                     var messageBatch = CreateMessageBatch(partitionBucket.Value, partitionBucket.Key, out var messageBatchSize);
@@ -276,7 +288,7 @@ namespace NLog.Targets
                 }
                 catch (Exception ex)
                 {
-                    InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed to create Message batch.", Name);
+                    InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, bucketCount, _cloudServiceBus?.EntityPath, partitionKey);
                     if (multipleTasks == null)
                         throw;
                 }
@@ -506,6 +518,8 @@ namespace NLog.Targets
 
             public TimeSpan? DefaultTimeToLive { get; private set; }
 
+            public string EntityPath { get; private set; }
+
             private class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
             {
                 private readonly string _resourceIdentity;
@@ -532,7 +546,7 @@ namespace NLog.Targets
                     }
                     catch (Exception ex)
                     {
-                        InternalLogger.Error(ex, "AzureBlobStorageTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
+                        InternalLogger.Error(ex, "AzureServiceBus - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
                         throw;
                     }
                 }
@@ -545,6 +559,7 @@ namespace NLog.Targets
 
             public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentity, TimeSpan? defaultTimeToLive)
             {
+                EntityPath = queueOrTopicName;
                 DefaultTimeToLive = defaultTimeToLive;
 
                 if (!string.IsNullOrEmpty(serviceUri))

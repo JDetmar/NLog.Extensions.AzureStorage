@@ -148,7 +148,7 @@ namespace NLog.Targets
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed to create EventHubClient with connectionString={1} to EntityPath={2}.", Name, connectionString, eventHubName);
+                InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed to create EventHubClient with connectionString={1} to EventHubName={2}.", Name, connectionString, eventHubName);
                 throw;
             }
         }
@@ -173,19 +173,31 @@ namespace NLog.Targets
             if (logEvents.Count == 1)
             {
                 var partitionKey = _getEventHubPartitionKeyDelegate(logEvents[0]);
-                var eventDataBatch = CreateEventDataBatch(logEvents, partitionKey, out var eventDataSize);
-                return WriteSingleBatchAsync(eventDataBatch, partitionKey, cancellationToken);
+
+                try
+                {
+                    var eventDataBatch = CreateEventDataBatch(logEvents, partitionKey, out var eventDataSize);
+                    return WriteSingleBatchAsync(eventDataBatch, partitionKey, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, 1, _eventHubService?.EventHubName, partitionKey);
+                    throw;
+                }
             }
 
             var partitionBuckets = PartitionKey != null ? SortHelpers.BucketSort(logEvents, _getEventHubPartitionKeyDelegate) : new Dictionary<string, IList<LogEventInfo>>() { { string.Empty, logEvents } };
             IList<Task> multipleTasks = partitionBuckets.Count > 1 ? new List<Task>(partitionBuckets.Count) : null;
             foreach (var partitionBucket in partitionBuckets)
             {
+                var partitionKey = partitionBucket.Key;
+                var bucketCount = partitionBucket.Value.Count;
+
                 try
                 {
-                    var eventDataBatch = CreateEventDataBatch(partitionBucket.Value, partitionBucket.Key, out var eventDataSize);
+                    var eventDataBatch = CreateEventDataBatch(partitionBucket.Value, partitionKey, out var eventDataSize);
 
-                    Task sendTask = WritePartitionBucketAsync(eventDataBatch, eventDataSize, partitionBucket.Key, cancellationToken);
+                    Task sendTask = WritePartitionBucketAsync(eventDataBatch, eventDataSize, partitionKey, cancellationToken);
                     if (multipleTasks == null)
                         return sendTask;
 
@@ -193,7 +205,7 @@ namespace NLog.Targets
                 }
                 catch (Exception ex)
                 {
-                    InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed to create EventData batch.", Name);
+                    InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, bucketCount, _eventHubService?.EventHubName, partitionKey);
                     if (multipleTasks == null)
                         throw;
                 }
@@ -404,6 +416,8 @@ namespace NLog.Targets
             private Azure.Messaging.EventHubs.Producer.EventHubProducerClient _client;
             private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Azure.Messaging.EventHubs.Producer.SendEventOptions> _partitionKeys = new System.Collections.Concurrent.ConcurrentDictionary<string, Azure.Messaging.EventHubs.Producer.SendEventOptions>();
 
+            public string EventHubName { get; private set; }
+
             private class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
             {
                 private readonly string _resourceIdentity;
@@ -430,7 +444,7 @@ namespace NLog.Targets
                     }
                     catch (Exception ex)
                     {
-                        InternalLogger.Error(ex, "AzureBlobStorageTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
+                        InternalLogger.Error(ex, "AzureEventHub - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
                         throw;
                     }
                 }
@@ -443,6 +457,8 @@ namespace NLog.Targets
 
             public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentity)
             {
+                EventHubName = eventHubName;
+
                 if (!string.IsNullOrEmpty(serviceUri))
                 {
                     var tokenCredentials = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity);

@@ -166,18 +166,33 @@ namespace NLog.Targets
 
             if (logEvents.Count == 1)
             {
-                var blobPayload = CreateBlobPayload(logEvents);
-                return WriteToBlobAsync(blobPayload, RenderLogEvent(Container, logEvents[0]), RenderLogEvent(BlobName, logEvents[0]), cancellationToken);
+                var containerName = RenderLogEvent(Container, logEvents[0]);
+                var blobName = RenderLogEvent(BlobName, logEvents[0]);
+
+                try
+                {
+                    var blobPayload = CreateBlobPayload(logEvents);
+                    return WriteToBlobAsync(blobPayload, containerName, blobName, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    InternalLogger.Error(ex, "AzureBlobStorage(Name={0}): Failed writing {1} logevents to BlobName={2} in ContainerName={3}", Name, 1, blobName, containerName);
+                    throw;
+                }
             }
 
             var partitionBuckets = SortHelpers.BucketSort(logEvents, _getContainerBlobNameDelegate);
             IList<Task> multipleTasks = partitionBuckets.Count > 1 ? new List<Task>(partitionBuckets.Count) : null;
             foreach (var partitionBucket in partitionBuckets)
             {
+                var containerName = partitionBucket.Key.ContainerName;
+                var blobName = partitionBucket.Key.BlobName;
+                var bucketSize = partitionBucket.Value.Count;
+
                 try
                 {
                     var blobPayload = CreateBlobPayload(partitionBucket.Value);
-                    var sendTask = WriteToBlobAsync(blobPayload, partitionBucket.Key.ContainerName, partitionBucket.Key.BlobName, cancellationToken);
+                    var sendTask = WriteToBlobAsync(blobPayload, containerName, blobName, cancellationToken);
                     if (multipleTasks == null)
                         return sendTask;
 
@@ -185,7 +200,7 @@ namespace NLog.Targets
                 }
                 catch (Exception ex)
                 {
-                    InternalLogger.Error(ex, "AzureBlobStorage(Name={0}): Failed to write {1} logevents to blob. ContainerName={2}, BlobName={3}", Name, partitionBucket.Value.Count, partitionBucket.Key.ContainerName, partitionBucket.Key.BlobName);
+                    InternalLogger.Error(ex, "AzureBlobStorage(Name={0}): Failed writing {1} logevents to BlobName={2} in ContainerName={3}", Name, bucketSize, blobName, containerName);
                     if (multipleTasks == null)
                         throw;
                 }

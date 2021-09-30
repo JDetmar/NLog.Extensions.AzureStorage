@@ -14,7 +14,7 @@ namespace NLog.Extensions.AzureEventHub.Test
 
         public Dictionary<string, List<EventData>> EventDataSent { get; } = new Dictionary<string, List<EventData>>();
         public string ConnectionString { get; private set; }
-        public string EntityPath { get; private set; }
+        public string EventHubName { get; private set; }
 
         public async Task CloseAsync()
         {
@@ -26,7 +26,7 @@ namespace NLog.Extensions.AzureEventHub.Test
         public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentity)
         {
             ConnectionString = connectionString;
-            EntityPath = eventHubName;
+            EventHubName = eventHubName;
         }
 
         public Task SendAsync(IEnumerable<EventData> eventDataBatch, string partitionKey, CancellationToken cancellationToken)
