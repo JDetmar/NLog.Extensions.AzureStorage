@@ -30,10 +30,10 @@ namespace NLog.Targets
             public readonly string TableName;
             public readonly string PartitionKey;
 
-            public TablePartitionKey(string tableName, string partitionId)
+            public TablePartitionKey(string tableName, string partitionKey)
             {
                 TableName = tableName;
-                PartitionKey = partitionId;
+                PartitionKey = partitionKey;
             }
 
             public bool Equals(TablePartitionKey other)
@@ -424,7 +424,7 @@ namespace NLog.Targets
                     if (_client == null)
                         throw new InvalidOperationException("CloudTableClient has not been initialized");
 
-                    InternalLogger.Debug("AzureDataTablesTarget: Opening table: {0}", tableName);
+                    InternalLogger.Debug("AzureDataTablesTarget: Initializing table: {0}", tableName);
 
                     var tableExists = await _client.CreateTableIfNotExistsAsync(tableName, cancellationToken).ConfigureAwait(false);
                     
