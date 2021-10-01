@@ -419,16 +419,16 @@ namespace NLog.Targets
                     if (_client == null)
                         throw new InvalidOperationException("CloudTableClient has not been initialized");
 
-                    var table = _client.GetTableClient(tableName);
 
-                    var tableExists = await table.CreateIfNotExistsAsync(cancellationToken).ConfigureAwait(false);
-                    if (tableExists.Value != null)
+                    var tableExists = await _client.CreateTableIfNotExistsAsync(tableName, cancellationToken);
+
+                    if (tableExists != null)
                     {
                         InternalLogger.Debug("AzureTableStorageTarget: Created table: {0}", tableName);
                     }
 
-                    _table = table;
-                    return table;
+                    _table = _client.GetTableClient(tableName);
+                    return _table;
                 }
                 catch (Exception exception)
                 {
