@@ -233,7 +233,17 @@ namespace NLog.Targets
             // Must chain the tasks together so they don't run concurrently
             foreach (var batchItem in batchCollection)
             {
-                await WriteSingleBatchAsync(batchItem, partitionKey, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await WriteSingleBatchAsync(batchItem, partitionKey, cancellationToken).ConfigureAwait(false);
+                }
+                catch (EventHubsException ex)
+                {
+                    if (ex.Reason != EventHubsException.FailureReason.MessageSizeExceeded && ex.Reason != EventHubsException.FailureReason.QuotaExceeded)
+                        throw;
+
+                    InternalLogger.Error(ex, "AzureEventHub(Name={0}): Skipping failing logevents for EntityPath={2} with PartitionKey={3}", Name, ex.EventHubName, partitionKey);
+                }
             }
         }
 
