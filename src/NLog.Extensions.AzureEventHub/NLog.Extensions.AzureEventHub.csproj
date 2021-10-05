@@ -5,7 +5,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DefineConstants>$(DefineConstants);NETCORE</DefineConstants>
 
-    <Version>3.0.0</Version>
+    <Version>3.1.0</Version>
 
     <Description>NLog EventHubTarget for writing to Azure Event Hubs datastreams</Description>
     <Authors>jdetmar</Authors>
@@ -19,9 +19,11 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Changed to Azure.Messaging.EventHubs ver. 5.5.0, because Microsoft.Azure.EventHubs is now legacy.
-
-Added support for CorrelationId + MessageId
+EventHubTarget - Updated Azure.Messaging.EventHubs to ver. 5.6.1 (#107)
+EventHubTarget - Support messageproperty to match updated ServiceBus (#107)
+EventHubTarget - Improve error logging to include bacth-size and partitionkey (#107)
+EventHubTarget - Skip list allocation when splitting batch into chunks (#105)
+EventHubTarget - Closing using CloseAsync and delay shutdown until complete (#106)
     </PackageReleaseNotes>
   </PropertyGroup>
 
@@ -34,7 +36,7 @@ Added support for CorrelationId + MessageId
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Messaging.EventHubs" Version="5.5.0" />
+    <PackageReference Include="Azure.Messaging.EventHubs" Version="5.6.1" />
     <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" Version="1.6.1" />
     <PackageReference Include="NLog" Version="4.6.8" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />

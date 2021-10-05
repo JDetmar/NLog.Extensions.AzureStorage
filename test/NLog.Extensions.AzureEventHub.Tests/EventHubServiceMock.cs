@@ -14,7 +14,7 @@ namespace NLog.Extensions.AzureEventHub.Test
 
         public Dictionary<string, List<EventData>> EventDataSent { get; } = new Dictionary<string, List<EventData>>();
         public string ConnectionString { get; private set; }
-        public string EntityPath { get; private set; }
+        public string EventHubName { get; private set; }
 
         public async Task CloseAsync()
         {
@@ -23,27 +23,27 @@ namespace NLog.Extensions.AzureEventHub.Test
                 EventDataSent.Clear();
         }
 
-        public void Connect(string connectionString, string entityPath, string serviceUri, string tenantIdentity, string resourceIdentity)
+        public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentity)
         {
             ConnectionString = connectionString;
-            EntityPath = entityPath;
+            EventHubName = eventHubName;
         }
 
-        public Task SendAsync(IEnumerable<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken)
+        public Task SendAsync(IEnumerable<EventData> eventDataBatch, string partitionKey, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("EventHubService not connected");
 
-            return Task.Delay(_random.Next(5, 10)).ContinueWith(t =>
+            return Task.Delay(_random.Next(5, 10), cancellationToken).ContinueWith(t =>
             {
                 lock (EventDataSent)
                 {
                     if (EventDataSent.TryGetValue(partitionKey, out var existingBatch))
-                        existingBatch.AddRange(eventDataList);
+                        existingBatch.AddRange(eventDataBatch);
                     else
-                        EventDataSent[partitionKey] = new List<EventData>(eventDataList);
+                        EventDataSent[partitionKey] = new List<EventData>(eventDataBatch);
                 }
-            });
+            }, cancellationToken);
         }
 
         public string PeekLastSent(string partitionKey)
