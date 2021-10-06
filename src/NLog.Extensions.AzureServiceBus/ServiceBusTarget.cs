@@ -316,7 +316,17 @@ namespace NLog.Targets
             // Must chain the tasks together so they don't run concurrently
             foreach (var batchItem in batchCollection)
             {
-                await WriteSingleBatchAsync(batchItem, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await WriteSingleBatchAsync(batchItem, cancellationToken).ConfigureAwait(false);
+                }
+                catch (ServiceBusException ex)
+                {
+                    if (ex.Reason != ServiceBusFailureReason.MessageSizeExceeded && ex.Reason != ServiceBusFailureReason.QuotaExceeded)
+                        throw;
+
+                    InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Skipping failing logevents for EntityPath={2}", Name, ex.EntityPath);
+                }
             }
         }
 
