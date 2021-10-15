@@ -430,7 +430,7 @@ namespace NLog.Targets
                     
                     var table = _client.GetTableClient(tableName);
                     
-                    if (tableExists.Value != null)
+                    if (tableExists != null)
                         InternalLogger.Debug("AzureDataTablesTarget: Created new table: {0}", tableName);
                     else
                         InternalLogger.Debug("AzureDataTablesTarget: Opened existing table: {0}", tableName);
