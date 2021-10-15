@@ -4,7 +4,7 @@
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>3.1.0</Version>
+    <Version>3.2.0</Version>
 
     <Description>NLog DataTablesTarget for writing to Azure Tables in Azure storage accounts or Azure Cosmos DB table API</Description>
     <Authors>jdetmar</Authors>
@@ -18,8 +18,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Fixed bug where it failed to write when table already exists (#111) (Thanks @m4ss1m0g)
-Updated to Azure.Data.Tables ver. 12.2.0 (#111)
+Fixed bug where it failed to write when table already exists (#115) (Thanks @m4ss1m0g)
     </PackageReleaseNotes>
   </PropertyGroup>
 
