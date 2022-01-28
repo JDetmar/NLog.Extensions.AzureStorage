@@ -1,8 +1,8 @@
 version: 1.0.{build}
-image: Visual Studio 2019
+image: Visual Studio 2022
 configuration: Release
 
-before_build:
+build_script:
 - cmd: msbuild /t:Restore src\NLog.Extensions.AzureStorage.sln /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureBlobStorage /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureDataTables /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
@@ -10,6 +10,8 @@ before_build:
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureEventHub /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureServiceBus /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureAccessToken /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
+
+test_script:
 - cmd: dotnet test test\NLog.Extensions.AzureBlobStorage.Tests /p:Configuration=Release --verbosity minimal
 - cmd: dotnet test test\NLog.Extensions.AzureDataTables.Tests /p:Configuration=Release --verbosity minimal
 - cmd: dotnet test test\NLog.Extensions.AzureQueueStorage.Tests /p:Configuration=Release --verbosity minimal

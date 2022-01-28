@@ -19,7 +19,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Support override of LogTimeStamp using first &lt;contextproperty&gt;
+Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureCosmosTable/README.md
     </PackageReleaseNotes>
   </PropertyGroup>
 

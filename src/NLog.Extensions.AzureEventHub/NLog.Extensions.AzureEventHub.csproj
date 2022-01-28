@@ -19,11 +19,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-EventHubTarget - Updated Azure.Messaging.EventHubs to ver. 5.6.1 (#107)
-EventHubTarget - Support messageproperty to match updated ServiceBus (#107)
-EventHubTarget - Improve error logging to include bacth-size and partitionkey (#107)
-EventHubTarget - Skip list allocation when splitting batch into chunks (#105)
-EventHubTarget - Closing using CloseAsync and delay shutdown until complete (#106)
+Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureEventHub/README.md
     </PackageReleaseNotes>
   </PropertyGroup>
 

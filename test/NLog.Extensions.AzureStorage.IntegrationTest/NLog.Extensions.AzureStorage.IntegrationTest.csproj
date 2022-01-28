@@ -8,9 +8,10 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>NLog.Extensions.AzureStorage.IntegrationTest</RootNamespace>
     <AssemblyName>NLog.Extensions.AzureStorage.IntegrationTest</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -34,13 +35,14 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <HintPath>..\..\src\packages\NLog.4.6.8\lib\net45\NLog.dll</HintPath>
+      <HintPath>..\..\src\packages\NLog.4.7.0\lib\net45\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -63,9 +65,9 @@
       <Project>{21b2270d-1f45-4be0-8cce-dec8ff293704}</Project>
       <Name>NLog.Extensions.AzureBlobStorage</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\src\NLog.Extensions.AzureCosmosTable\NLog.Extensions.AzureCosmosTable.csproj">
-      <Project>{89add958-81c2-4042-81ba-88e613f7b550}</Project>
-      <Name>NLog.Extensions.AzureCosmosTable</Name>
+    <ProjectReference Include="..\..\src\NLog.Extensions.AzureDataTables\NLog.Extensions.AzureDataTables.csproj">
+      <Project>{0969c9d5-f3f1-4ab0-8887-a62f877ee68a}</Project>
+      <Name>NLog.Extensions.AzureDataTables</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\src\NLog.Extensions.AzureEventHub\NLog.Extensions.AzureEventHub.csproj">
       <Project>{cf5e1262-d006-4c3a-9a62-98c31a3ad5f0}</Project>
