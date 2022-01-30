@@ -18,7 +18,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Fixed bug where it failed to write when table already exists (#115) (Thanks @m4ss1m0g)
+Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureDataTables/README.md
     </PackageReleaseNotes>
   </PropertyGroup>
 

@@ -18,7 +18,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-Updated to Azure.Messaging.ServiceBus ver. 7.3.0 , since Microsoft.Azure.ServiceBus is now obsolete.
+Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureServiceBus/README.md
     </PackageReleaseNotes>
   </PropertyGroup>
 
