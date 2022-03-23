@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.EventHubs;
+using Azure.Identity;
 using NLog.Common;
 using NLog.Config;
 using NLog.Extensions.AzureStorage;
@@ -25,7 +26,6 @@ namespace NLog.Targets
         /// <summary>
         /// Lookup the ConnectionString for the EventHub
         /// </summary>
-        [RequiredParameter]
         public Layout ConnectionString { get; set; }
 
         /// <summary>
@@ -93,6 +93,13 @@ namespace NLog.Targets
         public Layout TenantIdentity { get; set; }
 
         /// <summary>
+        /// Alternative to ConnectionString. Used in (ServiceUri, ClientIdentity) combo.
+        /// This combo is used to reach an event hub with a user assigned managed identity.
+        /// This is the client id of the user assigned managed identity.
+        /// </summary>
+        public Layout ClientIdentity { get; set; }
+
+        /// <summary>
         /// Alternative to ConnectionString (Defaults to https://eventhubs.azure.net when not set)
         /// </summary>
         public Layout ResourceIdentity { get; set; }
@@ -129,6 +136,7 @@ namespace NLog.Targets
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
             string serviceUri = string.Empty;
             string tenantIdentity = string.Empty;
+            string clientIdentity = string.Empty;
             string resourceIdentity = string.Empty;
             string connectionString = string.Empty;
             string eventHubName = string.Empty;
@@ -141,10 +149,11 @@ namespace NLog.Targets
                 {
                     serviceUri = ServiceUri?.Render(defaultLogEvent);
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
+                    clientIdentity = ClientIdentity?.Render(defaultLogEvent);
                     resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
                 }
 
-                _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, resourceIdentity);
+                _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, clientIdentity, resourceIdentity);
             }
             catch (Exception ex)
             {
@@ -465,13 +474,20 @@ namespace NLog.Targets
                 }
             }
 
-            public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentity)
+            public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string clientIdentity, string resourceIdentity)
             {
                 EventHubName = eventHubName;
 
                 if (!string.IsNullOrEmpty(serviceUri))
                 {
-                    var tokenCredentials = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity);
+                    Azure.Core.TokenCredential tokenCredentials;
+                    if (!string.IsNullOrEmpty(clientIdentity))
+                    {
+                        tokenCredentials = new ManagedIdentityCredential(clientIdentity, new TokenCredentialOptions());
+                    } else
+                    {
+                        tokenCredentials = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity);
+                    }
                     _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, tokenCredentials);
                 }
                 else if (string.IsNullOrEmpty(eventHubName))
