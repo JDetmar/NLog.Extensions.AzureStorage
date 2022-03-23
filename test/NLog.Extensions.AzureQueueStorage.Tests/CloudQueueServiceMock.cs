@@ -28,7 +28,7 @@ namespace NLog.Extensions.AzureQueueStorage.Tests
             });
         }
 
-        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
+        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, string clientIdentity, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
         {
             ConnectionString = connectionString;
             QueueMetadata = queueMetadata;

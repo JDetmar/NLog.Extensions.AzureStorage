@@ -10,7 +10,7 @@ namespace NLog.Extensions.AzureStorage
     {
         string EntityPath { get; }
         TimeSpan? DefaultTimeToLive { get; }
-        void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentity, TimeSpan? timeToLive);
+        void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentity, string clientIdentity, TimeSpan? timeToLive);
         Task SendAsync(IEnumerable<ServiceBusMessage> messages, CancellationToken cancellationToken);
         Task CloseAsync();
     }

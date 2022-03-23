@@ -44,6 +44,11 @@ namespace NLog.Targets
         /// </summary>
         public Layout ResourceIdentity { get; set; }
 
+        /// <summary>
+        /// Alternative to ConnectionString
+        /// </summary>
+        public Layout ClientIdentity { get; set; }
+
         [RequiredParameter]
         public Layout Container { get; set; }
 
@@ -89,6 +94,7 @@ namespace NLog.Targets
             string serviceUri = string.Empty;
             string tenantIdentity = string.Empty;
             string resourceIdentity = string.Empty;
+            string clientIdentity = string.Empty;
 
             Dictionary<string, string> blobMetadata = null;
             Dictionary<string, string> blobTags = null;
@@ -103,6 +109,7 @@ namespace NLog.Targets
                     serviceUri = ServiceUri?.Render(defaultLogEvent);
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
                     resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
+                    clientIdentity = ClientIdentity?.Render(defaultLogEvent);
                 }
 
                 if (BlobMetadata?.Count > 0)
@@ -134,7 +141,7 @@ namespace NLog.Targets
                     }
                 }
 
-                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, blobMetadata, blobTags);
+                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, clientIdentity, blobMetadata, blobTags);
                 InternalLogger.Trace("AzureBlobStorageTarget - Initialized");
             }
             catch (Exception ex)
@@ -341,13 +348,13 @@ namespace NLog.Targets
             private AppendBlobClient _appendBlob;
             private BlobContainerClient _container;
 
-            private class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
+            private sealed class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
             {
                 private readonly string _resourceIdentity;
                 private readonly string _tenantIdentity;
                 private readonly Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider _tokenProvider;
 
-                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity)
+                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity, string clientIdentity)
                 {
                     if (string.IsNullOrWhiteSpace(_resourceIdentity))
                         _resourceIdentity = "https://storage.azure.com/";
@@ -355,7 +362,11 @@ namespace NLog.Targets
                         _resourceIdentity = resourceIdentity;
                     if (!string.IsNullOrWhiteSpace(tenantIdentity))
                         _tenantIdentity = tenantIdentity;
-                    _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
+
+                    if (string.IsNullOrWhiteSpace(clientIdentity))
+                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
+                    else
+                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider($"RunAs=App;AppId={clientIdentity}");
                 }
 
                 public override async ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
@@ -378,14 +389,14 @@ namespace NLog.Targets
                 }
             }
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, string clientIdentity, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
             {
                 _blobMetadata = blobMetadata?.Count > 0 ? blobMetadata : null;
                 _blobTags = blobTags?.Count > 0 ? blobTags : null;
 
                 if (string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(serviceUri))
                 {
-                    var tokenCredential = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity);
+                    var tokenCredential = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity, clientIdentity);
                     _client = new BlobServiceClient(new Uri(serviceUri), tokenCredential);
                 }
                 else

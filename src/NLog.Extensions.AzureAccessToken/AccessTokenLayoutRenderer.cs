@@ -293,7 +293,7 @@ namespace NLog.Extensions.AzureAccessToken
             Task<KeyValuePair<string, DateTimeOffset>> GetAuthenticationResultAsync(string resource, string tenantId, CancellationToken cancellationToken);
         }
 
-        private class AzureServiceTokenProviderService : IAzureServiceTokenProviderService
+        private sealed class AzureServiceTokenProviderService : IAzureServiceTokenProviderService
         {
             private readonly AzureServiceTokenProvider _tokenProvider;
 

@@ -25,7 +25,6 @@ namespace NLog.Targets
         /// <summary>
         /// Lookup the ConnectionString for the EventHub
         /// </summary>
-        [RequiredParameter]
         public Layout ConnectionString { get; set; }
 
         /// <summary>
@@ -98,6 +97,11 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
+        /// Alternative to ConnectionString
+        /// </summary>
+        public Layout ClientIdentity { get; set; }
+
+        /// <summary>
         /// Gets a list of user properties (aka custom properties) to add to the AMQP message
         /// </summary>
         [Obsolete("Replaced by ApplicationProperties")]
@@ -126,12 +130,14 @@ namespace NLog.Targets
         {
             base.InitializeTarget();
 
-            var defaultLogEvent = LogEventInfo.CreateNullEvent();
+            string connectionString = string.Empty;
             string serviceUri = string.Empty;
             string tenantIdentity = string.Empty;
             string resourceIdentity = string.Empty;
-            string connectionString = string.Empty;
+            string clientIdentity = string.Empty;
             string eventHubName = string.Empty;
+
+            var defaultLogEvent = LogEventInfo.CreateNullEvent();
 
             try
             {
@@ -142,9 +148,10 @@ namespace NLog.Targets
                     serviceUri = ServiceUri?.Render(defaultLogEvent);
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
                     resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
+                    clientIdentity = ClientIdentity?.Render(defaultLogEvent);
                 }
 
-                _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, resourceIdentity);
+                _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, resourceIdentity, clientIdentity);
             }
             catch (Exception ex)
             {
@@ -421,20 +428,20 @@ namespace NLog.Targets
             }
         }
 
-        private class EventHubService : IEventHubService
+        private sealed class EventHubService : IEventHubService
         {
             private Azure.Messaging.EventHubs.Producer.EventHubProducerClient _client;
             private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Azure.Messaging.EventHubs.Producer.SendEventOptions> _partitionKeys = new System.Collections.Concurrent.ConcurrentDictionary<string, Azure.Messaging.EventHubs.Producer.SendEventOptions>();
 
             public string EventHubName { get; private set; }
 
-            private class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
+            private sealed class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
             {
                 private readonly string _resourceIdentity;
                 private readonly string _tenantIdentity;
                 private readonly Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider _tokenProvider;
 
-                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity)
+                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity, string clientIdentity)
                 {
                     if (string.IsNullOrWhiteSpace(_resourceIdentity))
                         _resourceIdentity = "https://eventhubs.azure.net/";
@@ -442,7 +449,11 @@ namespace NLog.Targets
                         _resourceIdentity = resourceIdentity;
                     if (!string.IsNullOrWhiteSpace(tenantIdentity))
                         _tenantIdentity = tenantIdentity;
-                    _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
+
+                    if (string.IsNullOrWhiteSpace(clientIdentity))
+                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
+                    else
+                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider($"RunAs=App;AppId={clientIdentity}");
                 }
 
                 public override async ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
@@ -465,13 +476,13 @@ namespace NLog.Targets
                 }
             }
 
-            public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentity)
+            public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentity, string clientIdentity)
             {
                 EventHubName = eventHubName;
 
                 if (!string.IsNullOrEmpty(serviceUri))
                 {
-                    var tokenCredentials = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity);
+                    var tokenCredentials = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity, clientIdentity);
                     _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, tokenCredentials);
                 }
                 else if (string.IsNullOrEmpty(eventHubName))
