@@ -39,6 +39,8 @@ _tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUr
 
 _resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
 
+_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider (`RunAs=App;AppId={ClientIdentity}`)
+
 _timeToLiveSeconds_ - Default Time-To-Live (TTL) for Queue messages in seconds (Optional)
 
 _timeToLiveDays_ - Default Time-To-Live (TTL) for Queue messages in days (Optional)

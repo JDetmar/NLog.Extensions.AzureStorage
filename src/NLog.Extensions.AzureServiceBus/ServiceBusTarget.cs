@@ -25,7 +25,6 @@ namespace NLog.Targets
         /// <summary>
         /// Gets or sets the service bus connection string
         /// </summary>
-        [RequiredParameter]
         public Layout ConnectionString { get; set; }
 
         /// <summary>
@@ -119,6 +118,11 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
+        /// Alternative to ConnectionString
+        /// </summary>
+        public Layout ClientIdentity { get; set; }
+
+        /// <summary>
         /// Gets a list of user properties (aka custom application properties) to add to the AMQP message
         /// </summary>
         [Obsolete("Replaced by ApplicationProperties")]
@@ -149,12 +153,14 @@ namespace NLog.Targets
         {
             base.InitializeTarget();
 
-            var defaultLogEvent = LogEventInfo.CreateNullEvent();
+            string connectionString = string.Empty;
             string serviceUri = string.Empty;
             string tenantIdentity = string.Empty;
             string resourceIdentity = string.Empty;
-            string connectionString = string.Empty;
+            string clientIdentity = string.Empty;
             string queueOrTopicName = string.Empty;
+
+            var defaultLogEvent = LogEventInfo.CreateNullEvent();
 
             try
             {
@@ -172,6 +178,7 @@ namespace NLog.Targets
                     serviceUri = ServiceUri?.Render(defaultLogEvent);
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
                     resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
+                    clientIdentity = ClientIdentity?.Render(defaultLogEvent);
                 }
 
                 var timeToLive = RenderDefaultTimeToLive();
@@ -180,7 +187,7 @@ namespace NLog.Targets
                     timeToLive = default(TimeSpan?);
                 }
 
-                _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, resourceIdentity, timeToLive);
+                _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, resourceIdentity, clientIdentity, timeToLive);
                 InternalLogger.Trace("AzureServiceBus - Initialized");
             }
             catch (Exception ex)
@@ -521,7 +528,7 @@ namespace NLog.Targets
             }
         }
 
-        private class CloudServiceBus : ICloudServiceBus
+        private sealed class CloudServiceBus : ICloudServiceBus
         {
             private ServiceBusClient _client;
             private ServiceBusSender _sender;
@@ -530,13 +537,13 @@ namespace NLog.Targets
 
             public string EntityPath { get; private set; }
 
-            private class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
+            private sealed class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
             {
                 private readonly string _resourceIdentity;
                 private readonly string _tenantIdentity;
                 private readonly Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider _tokenProvider;
 
-                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity)
+                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity, string clientIdentity)
                 {
                     if (string.IsNullOrWhiteSpace(_resourceIdentity))
                         _resourceIdentity = "https://servicebus.azure.net/";
@@ -544,7 +551,11 @@ namespace NLog.Targets
                         _resourceIdentity = resourceIdentity;
                     if (!string.IsNullOrWhiteSpace(tenantIdentity))
                         _tenantIdentity = tenantIdentity;
-                    _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
+
+                    if (string.IsNullOrWhiteSpace(clientIdentity))
+                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
+                    else
+                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider($"RunAs=App;AppId={clientIdentity}");
                 }
 
                 public override async ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
@@ -567,14 +578,14 @@ namespace NLog.Targets
                 }
             }
 
-            public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentity, TimeSpan? defaultTimeToLive)
+            public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentity, string clientIdentity, TimeSpan? defaultTimeToLive)
             {
                 EntityPath = queueOrTopicName;
                 DefaultTimeToLive = defaultTimeToLive;
 
                 if (!string.IsNullOrEmpty(serviceUri))
                 {
-                    var tokenCredentials = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity);
+                    var tokenCredentials = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity, clientIdentity);
                     _client = new ServiceBusClient(serviceUri, tokenCredentials);
                 }
                 else

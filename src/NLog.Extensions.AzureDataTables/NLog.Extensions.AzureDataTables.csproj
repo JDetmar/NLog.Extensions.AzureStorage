@@ -4,7 +4,7 @@
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>3.2.0</Version>
+    <Version>3.3.0</Version>
 
     <Description>NLog DataTablesTarget for writing to Azure Tables in Azure storage accounts or Azure Cosmos DB table API</Description>
     <Authors>jdetmar</Authors>
@@ -18,6 +18,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
+- Added support for ClientIdentity with AzureServiceTokenProvider and ServiceUri
+      
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureDataTables/README.md
     </PackageReleaseNotes>
   </PropertyGroup>

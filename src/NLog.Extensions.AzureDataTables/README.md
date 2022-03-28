@@ -36,6 +36,8 @@ _tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUr
 
 _resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
 
+_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider (`RunAs=App;AppId={ClientIdentity}`)
+
 _accountName_ - Alternative to ConnectionString. Used together with ServiceUri. Input for TableSharedKeyCredential storage account-name.
 
 _accessKey_ - Alternative to ConnectionString. Used together with ServiceUri. Input for TableSharedKeyCredential account-access-key.

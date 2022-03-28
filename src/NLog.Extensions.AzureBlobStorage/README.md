@@ -45,6 +45,8 @@ _tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUr
 
 _resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
 
+_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider (`RunAs=App;AppId={ClientIdentity}`)
+
 ### Batching Policy
 
 _batchSize_ - Number of EventData items to send in a single batch (Default=100)
