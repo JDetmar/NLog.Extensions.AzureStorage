@@ -65,13 +65,13 @@ _timeToLiveSeconds_ - Default Time-To-Live (TTL) for ServiceBus messages in seco
 
 _timeToLiveDays_ - Default Time-To-Live (TTL) for ServiceBus messages in days (Optional)
 
-_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from AzureServiceTokenProvider.
+_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from DefaultAzureCredential for User delegation SAS.
 
-_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
+_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.
 
-_resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
+_resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityResourceId.
 
-_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider (`RunAs=App;AppId={ClientIdentity}`)
+_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
 
 ### Batching Policy
 

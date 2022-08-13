@@ -31,7 +31,7 @@ namespace NLog.Extensions.AzureServiceBus.Test
             return null;
         }
 
-        public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentity, string clientIdentity, TimeSpan? timeToLive)
+        public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, TimeSpan? timeToLive)
         {
             ConnectionString = connectionString;
             EntityPath = queueOrTopicName;

@@ -65,20 +65,17 @@ namespace NLog.Targets
         public Layout ServiceUri { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString when using ServiceUri. For <see cref="Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider"/>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
         /// </summary>
         public Layout TenantIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString when using ServiceUri. For <see cref="Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider"/>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
         /// </summary>
-        /// <remarks>
-        /// Defaults to https://database.windows.net/ when not set
-        /// </remarks>
-        public Layout ResourceIdentity { get; set; }
+        public Layout ResourceIdentity { get; set; } = "https://database.windows.net/";
 
         /// <summary>
-        /// Alternative to ConnectionString
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
         /// </summary>
         public Layout ClientIdentity { get; set; }
 
@@ -137,7 +134,7 @@ namespace NLog.Targets
             string connectionString = string.Empty;
             string serviceUri = string.Empty;
             string tenantIdentity = string.Empty;
-            string resourceIdentity = string.Empty;
+            string resourceIdentifier = string.Empty;
             string clientIdentity = string.Empty;
             string accountName = string.Empty;
             string accessKey = string.Empty;
@@ -151,13 +148,13 @@ namespace NLog.Targets
                 {
                     serviceUri = ServiceUri?.Render(defaultLogEvent);
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
-                    resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
+                    resourceIdentifier = ResourceIdentity?.Render(defaultLogEvent);
                     clientIdentity = ClientIdentity?.Render(defaultLogEvent);
                     accountName = AccountName?.Render(defaultLogEvent);
                     accessKey = AccessKey?.Render(defaultLogEvent);
                 }
 
-                _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, clientIdentity, accountName, accessKey);
+                _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, accountName, accessKey);
                 InternalLogger.Debug("AzureDataTablesTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -355,48 +352,7 @@ namespace NLog.Targets
             private TableServiceClient _client;
             private TableClient _table;
 
-            private sealed class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
-            {
-                private readonly string _resourceIdentity;
-                private readonly string _tenantIdentity;
-                private readonly Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider _tokenProvider;
-
-                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity, string clientIdentity)
-                {
-                    if (string.IsNullOrWhiteSpace(resourceIdentity))
-                        _resourceIdentity = "https://database.windows.net/";
-                    else
-                        _resourceIdentity = resourceIdentity;
-                    if (!string.IsNullOrWhiteSpace(tenantIdentity))
-                        _tenantIdentity = tenantIdentity;
-
-                    if (string.IsNullOrWhiteSpace(clientIdentity))
-                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
-                    else
-                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider($"RunAs=App;AppId={clientIdentity}");
-                }
-
-                public override async ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
-                {
-                    try
-                    {
-                        var result = await _tokenProvider.GetAuthenticationResultAsync(_resourceIdentity, _tenantIdentity, cancellationToken: cancellationToken).ConfigureAwait(false);
-                        return new Azure.Core.AccessToken(result.AccessToken, result.ExpiresOn);
-                    }
-                    catch (Exception ex)
-                    {
-                        InternalLogger.Error(ex, "AzureDataTablesTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
-                        throw;
-                    }
-                }
-
-                public override Azure.Core.AccessToken GetToken(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
-                {
-                    return GetTokenAsync(requestContext, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-                }
-            }
-
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, string clientIdentity, string storageAccountName, string accessKey)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string storageAccountName, string accessKey)
             {
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
@@ -404,7 +360,8 @@ namespace NLog.Targets
                 }
                 else if (string.IsNullOrWhiteSpace(accessKey))
                 {
-                    _client = new TableServiceClient(new Uri(serviceUri), new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity, clientIdentity));
+                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
+                    _client = new TableServiceClient(new Uri(serviceUri), tokenCredentials);
                 }
                 else
                 {
