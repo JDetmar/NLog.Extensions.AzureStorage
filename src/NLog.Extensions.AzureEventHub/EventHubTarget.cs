@@ -152,10 +152,11 @@ namespace NLog.Targets
                 }
 
                 _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, resourceIdentity, clientIdentity);
+                InternalLogger.Debug("AzureEventHubTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed to create EventHubClient with connectionString={1} to EventHubName={2}.", Name, connectionString, eventHubName);
+                InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Failed to create EventHubClient with connectionString={1} to EventHubName={2}.", Name, connectionString, eventHubName);
                 throw;
             }
         }
@@ -188,7 +189,7 @@ namespace NLog.Targets
                 }
                 catch (Exception ex)
                 {
-                    InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, 1, _eventHubService?.EventHubName, partitionKey);
+                    InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, 1, _eventHubService?.EventHubName, partitionKey);
                     throw;
                 }
             }
@@ -212,7 +213,7 @@ namespace NLog.Targets
                 }
                 catch (Exception ex)
                 {
-                    InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, bucketCount, _eventHubService?.EventHubName, partitionKey);
+                    InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, bucketCount, _eventHubService?.EventHubName, partitionKey);
                     if (multipleTasks == null)
                         throw;
                 }
@@ -249,7 +250,7 @@ namespace NLog.Targets
                     if (ex.Reason != EventHubsException.FailureReason.MessageSizeExceeded && ex.Reason != EventHubsException.FailureReason.QuotaExceeded)
                         throw;
 
-                    InternalLogger.Error(ex, "AzureEventHub(Name={0}): Skipping failing logevents for EntityPath={2} with PartitionKey={3}", Name, ex.EventHubName, partitionKey);
+                    InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Skipping failing logevents for EntityPath={2} with PartitionKey={3}", Name, ex.EventHubName, partitionKey);
                 }
             }
         }
@@ -379,7 +380,7 @@ namespace NLog.Targets
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed to convert to EventData.", Name);
+                InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Failed to convert to EventData.", Name);
 
                 if (allowThrow || LogManager.ThrowExceptions)
                     throw;
@@ -407,7 +408,7 @@ namespace NLog.Targets
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureEventHub(Name={0}): Failed converting {1} value to EventData.", Name, value?.GetType());
+                InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Failed converting {1} value to EventData.", Name, value?.GetType());
                 return null;
             }
         }
@@ -443,7 +444,7 @@ namespace NLog.Targets
 
                 public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity, string clientIdentity)
                 {
-                    if (string.IsNullOrWhiteSpace(_resourceIdentity))
+                    if (string.IsNullOrWhiteSpace(resourceIdentity))
                         _resourceIdentity = "https://eventhubs.azure.net/";
                     else
                         _resourceIdentity = resourceIdentity;
@@ -465,7 +466,7 @@ namespace NLog.Targets
                     }
                     catch (Exception ex)
                     {
-                        InternalLogger.Error(ex, "AzureEventHub - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
+                        InternalLogger.Error(ex, "AzureEventHubTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
                         throw;
                     }
                 }

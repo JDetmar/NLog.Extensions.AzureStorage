@@ -188,11 +188,11 @@ namespace NLog.Targets
                 }
 
                 _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, resourceIdentity, clientIdentity, timeToLive);
-                InternalLogger.Trace("AzureServiceBus - Initialized");
+                InternalLogger.Debug("AzureServiceBusTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed to create ServiceBusClient with connectionString={1} and EntityPath={2}.", Name, connectionString, queueOrTopicName);
+                InternalLogger.Error(ex, "AzureServiceBusTarget(Name={0}): Failed to create ServiceBusClient with connectionString={1} and EntityPath={2}.", Name, connectionString, queueOrTopicName);
                 throw;
             }
         }
@@ -213,7 +213,7 @@ namespace NLog.Targets
                     }
                     else
                     {
-                        InternalLogger.Error("AzureServiceBus(Name={0}): Failed to parse TimeToLiveSeconds={1}", Name, timeToLiveSeconds);
+                        InternalLogger.Error("AzureServiceBusTarget(Name={0}): Failed to parse TimeToLiveSeconds={1}", Name, timeToLiveSeconds);
                     }
                 }
                 else
@@ -227,14 +227,14 @@ namespace NLog.Targets
                         }
                         else
                         {
-                            InternalLogger.Error("AzureServiceBus(Name={0}): Failed to parse TimeToLiveDays={1}", Name, timeToLiveDays);
+                            InternalLogger.Error("AzureServiceBusTarget(Name={0}): Failed to parse TimeToLiveDays={1}", Name, timeToLiveDays);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed to parse TimeToLive value. Seconds={1}, Days={2}", Name, timeToLiveSeconds, timeToLiveDays);
+                InternalLogger.Error(ex, "AzureServiceBusTarget(Name={0}): Failed to parse TimeToLive value. Seconds={1}, Days={2}", Name, timeToLiveSeconds, timeToLiveDays);
             }
 
             return default(TimeSpan?);
@@ -271,7 +271,7 @@ namespace NLog.Targets
                 }
                 catch (Exception ex)
                 {
-                    InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, 1, _cloudServiceBus?.EntityPath, partitionKey);
+                    InternalLogger.Error(ex, "AzureServiceBusTarget(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, 1, _cloudServiceBus?.EntityPath, partitionKey);
                     throw;
                 }
             }
@@ -295,7 +295,7 @@ namespace NLog.Targets
                 }
                 catch (Exception ex)
                 {
-                    InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, bucketCount, _cloudServiceBus?.EntityPath, partitionKey);
+                    InternalLogger.Error(ex, "AzureServiceBusTarget(Name={0}): Failed writing {1} logevents to EntityPath={2} with PartitionKey={3}", Name, bucketCount, _cloudServiceBus?.EntityPath, partitionKey);
                     if (multipleTasks == null)
                         throw;
                 }
@@ -332,7 +332,7 @@ namespace NLog.Targets
                     if (ex.Reason != ServiceBusFailureReason.MessageSizeExceeded && ex.Reason != ServiceBusFailureReason.QuotaExceeded)
                         throw;
 
-                    InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Skipping failing logevents for EntityPath={2}", Name, ex.EntityPath);
+                    InternalLogger.Error(ex, "AzureServiceBusTarget(Name={0}): Skipping failing logevents for EntityPath={2}", Name, ex.EntityPath);
                 }
             }
         }
@@ -479,7 +479,7 @@ namespace NLog.Targets
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed to convert to Message.", Name);
+                InternalLogger.Error(ex, "AzureServiceBusTarget(Name={0}): Failed to convert to Message.", Name);
 
                 if (allowThrow || LogManager.ThrowExceptions)
                     throw;
@@ -507,7 +507,7 @@ namespace NLog.Targets
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureServiceBus(Name={0}): Failed converting {1} value to Message.", Name, value?.GetType());
+                InternalLogger.Error(ex, "AzureServiceBusTarget(Name={0}): Failed converting {1} value to Message.", Name, value?.GetType());
                 return null;
             }
         }
@@ -545,7 +545,7 @@ namespace NLog.Targets
 
                 public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity, string clientIdentity)
                 {
-                    if (string.IsNullOrWhiteSpace(_resourceIdentity))
+                    if (string.IsNullOrWhiteSpace(resourceIdentity))
                         _resourceIdentity = "https://servicebus.azure.net/";
                     else
                         _resourceIdentity = resourceIdentity;
@@ -567,7 +567,7 @@ namespace NLog.Targets
                     }
                     catch (Exception ex)
                     {
-                        InternalLogger.Error(ex, "AzureServiceBus - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
+                        InternalLogger.Error(ex, "AzureServiceBusTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
                         throw;
                     }
                 }
