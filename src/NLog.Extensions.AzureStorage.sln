@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29905.134
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32804.467
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EACADB54-1A72-4CEE-AF3A-5AEDC3CB553A}"
 	ProjectSection(SolutionItems) = preProject
@@ -36,6 +36,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureDataTables", "NLog.Extensions.AzureDataTables\NLog.Extensions.AzureDataTables.csproj", "{0969C9D5-F3F1-4AB0-8887-A62F877EE68A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureDataTables.Tests", "..\test\NLog.Extensions.AzureDataTables.Tests\NLog.Extensions.AzureDataTables.Tests.csproj", "{972C36EF-406F-4276-A8F4-EC859B188B9C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureEventGrid", "NLog.Extensions.AzureEventGrid\NLog.Extensions.AzureEventGrid.csproj", "{111D9918-5708-4C62-A52F-95F400370B0E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NLog.Extensions.AzureEventGrid.Tests", "..\test\NLog.Extensions.AzureEventGrid.Tests\NLog.Extensions.AzureEventGrid.Tests.csproj", "{822D7B8F-1B2A-4E87-9FA2-2A50367E99E7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -95,6 +99,14 @@ Global
 		{972C36EF-406F-4276-A8F4-EC859B188B9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{972C36EF-406F-4276-A8F4-EC859B188B9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{972C36EF-406F-4276-A8F4-EC859B188B9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{111D9918-5708-4C62-A52F-95F400370B0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{111D9918-5708-4C62-A52F-95F400370B0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{111D9918-5708-4C62-A52F-95F400370B0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{111D9918-5708-4C62-A52F-95F400370B0E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{822D7B8F-1B2A-4E87-9FA2-2A50367E99E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{822D7B8F-1B2A-4E87-9FA2-2A50367E99E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{822D7B8F-1B2A-4E87-9FA2-2A50367E99E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{822D7B8F-1B2A-4E87-9FA2-2A50367E99E7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -107,6 +119,7 @@ Global
 		{8609512C-29FD-4984-A318-BFA5A681F0A1} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
 		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
 		{972C36EF-406F-4276-A8F4-EC859B188B9C} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
+		{822D7B8F-1B2A-4E87-9FA2-2A50367E99E7} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {57F963D5-962F-4205-B49E-B4CCE3888D73}

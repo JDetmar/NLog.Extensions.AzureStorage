@@ -7,6 +7,7 @@
 | **NLog.Extensions.AzureBlobStorage**  | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureBlobStorage.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureBlobStorage/) | Azure Blob Storage | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureBlobStorage/README.md) | 
 | **NLog.Extensions.AzureDataTables**  | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureDataTables.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureDataTables/) | Azure Table Storage or Azure CosmosDb Tables | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureDataTables/README.md) | 
 | **NLog.Extensions.AzureEventHub**     | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureEventHub.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureEventHub/) | Azure EventHubs | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureEventHub/README.md) | 
+| **NLog.Extensions.AzureEventGrid**     | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureEventGrid.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureEventGrid/) | Azure Event Grid | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureEventGrid/README.md) | 
 | **NLog.Extensions.AzureQueueStorage** | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureQueueStorage.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureQueueStorage/) | Azure Queue Storage | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureQueueStorage/README.md) | 
 | **NLog.Extensions.AzureServiceBus** | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureServiceBus.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureServiceBus/) | Azure Service Bus | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureServiceBus/README.md) | 
 | **NLog.Extensions.AzureAccessToken**  | [![NuGet](https://img.shields.io/nuget/v/NLog.Extensions.AzureAccessToken.svg)](https://www.nuget.org/packages/NLog.Extensions.AzureAccessToken/) | Azure App Authentication Access Token for Managed Identity | [![](https://img.shields.io/badge/Readme-Docs-blue)](src/NLog.Extensions.AzureAccessToken/README.md) | 
@@ -24,6 +25,7 @@ and so [NLog.Extensions.AzureCosmosTable](https://www.nuget.org/packages/NLog.Ex
   <add assembly="NLog.Extensions.AzureDataTables" /> 
   <add assembly="NLog.Extensions.AzureQueueStorage" /> 
   <add assembly="NLog.Extensions.AzureEventHub" /> 
+  <add assembly="NLog.Extensions.AzureEventGrid" /> 
   <add assembly="NLog.Extensions.AzureServiceBus" /> 
   <add assembly="NLog.Extensions.AzureAccessToken" /> 
 </extensions>
