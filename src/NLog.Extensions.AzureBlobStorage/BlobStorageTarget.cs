@@ -142,7 +142,7 @@ namespace NLog.Targets
                 }
 
                 _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, clientIdentity, blobMetadata, blobTags);
-                InternalLogger.Debug("AzureBlobStorageTarget - Initialized");
+                InternalLogger.Debug("AzureBlobStorageTarget(Name={0}): - Initialized", Name);
             }
             catch (Exception ex)
             {

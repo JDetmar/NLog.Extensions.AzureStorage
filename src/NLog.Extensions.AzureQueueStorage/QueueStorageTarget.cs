@@ -130,7 +130,7 @@ namespace NLog.Targets
                 }
 
                 _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, clientIdentity, timeToLive, queueMetadata);
-                InternalLogger.Debug("AzureQueueStorageTarget - Initialized");
+                InternalLogger.Debug("AzureQueueStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
             {
