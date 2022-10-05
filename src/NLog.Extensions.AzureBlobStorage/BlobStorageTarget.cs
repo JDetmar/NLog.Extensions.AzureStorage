@@ -142,7 +142,7 @@ namespace NLog.Targets
                 }
 
                 _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, clientIdentity, blobMetadata, blobTags);
-                InternalLogger.Trace("AzureBlobStorageTarget - Initialized");
+                InternalLogger.Debug("AzureBlobStorageTarget - Initialized");
             }
             catch (Exception ex)
             {
@@ -356,7 +356,7 @@ namespace NLog.Targets
 
                 public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity, string clientIdentity)
                 {
-                    if (string.IsNullOrWhiteSpace(_resourceIdentity))
+                    if (string.IsNullOrWhiteSpace(resourceIdentity))
                         _resourceIdentity = "https://storage.azure.com/";
                     else
                         _resourceIdentity = resourceIdentity;

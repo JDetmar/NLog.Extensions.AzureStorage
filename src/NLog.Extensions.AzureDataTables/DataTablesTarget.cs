@@ -158,7 +158,7 @@ namespace NLog.Targets
                 }
 
                 _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, clientIdentity, accountName, accessKey);
-                InternalLogger.Trace("AzureDataTablesTarget(Name={0}): Initialized", Name);
+                InternalLogger.Debug("AzureDataTablesTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
             {
@@ -363,7 +363,7 @@ namespace NLog.Targets
 
                 public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity, string clientIdentity)
                 {
-                    if (string.IsNullOrWhiteSpace(_resourceIdentity))
+                    if (string.IsNullOrWhiteSpace(resourceIdentity))
                         _resourceIdentity = "https://database.windows.net/";
                     else
                         _resourceIdentity = resourceIdentity;
