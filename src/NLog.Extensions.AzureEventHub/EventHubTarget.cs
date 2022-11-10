@@ -87,17 +87,17 @@ namespace NLog.Targets
         public Layout ServiceUri { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
         /// </summary>
         public Layout TenantIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString (Defaults to https://eventhubs.azure.net when not set)
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>. (Defaults to https://eventhubs.azure.net when not set)
         /// </summary>
-        public Layout ResourceIdentity { get; set; }
+        public Layout ResourceIdentity { get; set; } = "https://eventhubs.azure.net/";
 
         /// <summary>
-        /// Alternative to ConnectionString
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
         /// </summary>
         public Layout ClientIdentity { get; set; }
 
@@ -133,7 +133,7 @@ namespace NLog.Targets
             string connectionString = string.Empty;
             string serviceUri = string.Empty;
             string tenantIdentity = string.Empty;
-            string resourceIdentity = string.Empty;
+            string resourceIdentifier = string.Empty;
             string clientIdentity = string.Empty;
             string eventHubName = string.Empty;
 
@@ -147,11 +147,11 @@ namespace NLog.Targets
                 {
                     serviceUri = ServiceUri?.Render(defaultLogEvent);
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
-                    resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
+                    resourceIdentifier = ResourceIdentity?.Render(defaultLogEvent);
                     clientIdentity = ClientIdentity?.Render(defaultLogEvent);
                 }
 
-                _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, resourceIdentity, clientIdentity);
+                _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity);
                 InternalLogger.Debug("AzureEventHubTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -436,60 +436,23 @@ namespace NLog.Targets
 
             public string EventHubName { get; private set; }
 
-            private sealed class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
-            {
-                private readonly string _resourceIdentity;
-                private readonly string _tenantIdentity;
-                private readonly Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider _tokenProvider;
-
-                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity, string clientIdentity)
-                {
-                    if (string.IsNullOrWhiteSpace(resourceIdentity))
-                        _resourceIdentity = "https://eventhubs.azure.net/";
-                    else
-                        _resourceIdentity = resourceIdentity;
-                    if (!string.IsNullOrWhiteSpace(tenantIdentity))
-                        _tenantIdentity = tenantIdentity;
-
-                    if (string.IsNullOrWhiteSpace(clientIdentity))
-                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
-                    else
-                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider($"RunAs=App;AppId={clientIdentity}");
-                }
-
-                public override async ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
-                {
-                    try
-                    {
-                        var result = await _tokenProvider.GetAuthenticationResultAsync(_resourceIdentity, _tenantIdentity, cancellationToken: cancellationToken).ConfigureAwait(false);
-                        return new Azure.Core.AccessToken(result.AccessToken, result.ExpiresOn);
-                    }
-                    catch (Exception ex)
-                    {
-                        InternalLogger.Error(ex, "AzureEventHubTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
-                        throw;
-                    }
-                }
-
-                public override Azure.Core.AccessToken GetToken(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
-                {
-                    return GetTokenAsync(requestContext, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-                }
-            }
-
-            public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentity, string clientIdentity)
+            public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity)
             {
                 EventHubName = eventHubName;
 
-                if (!string.IsNullOrEmpty(serviceUri))
+                if (!string.IsNullOrWhiteSpace(serviceUri))
                 {
-                    var tokenCredentials = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity, clientIdentity);
+                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
                     _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, tokenCredentials);
                 }
-                else if (string.IsNullOrEmpty(eventHubName))
+                else if (string.IsNullOrWhiteSpace(eventHubName))
+                {
                     _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString);
+                }
                 else
+                {
                     _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString, eventHubName);
+                }
             }
 
             public Task CloseAsync()

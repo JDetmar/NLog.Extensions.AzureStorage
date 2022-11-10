@@ -30,13 +30,13 @@ _layout_ - Text to be rendered. [Layout](https://github.com/NLog/NLog/wiki/Layou
 
 _connectionString_ - Azure storage connection string. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from AzureServiceTokenProvider for User delegation SAS.
+_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from DefaultAzureCredential for User delegation SAS.
 
-_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
+_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.
 
-_resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider.
+_resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityResourceId.
 
-_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureServiceTokenProvider (`RunAs=App;AppId={ClientIdentity}`)
+_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
 
 _accountName_ - Alternative to ConnectionString. Used together with ServiceUri. Input for TableSharedKeyCredential storage account-name.
 

@@ -31,17 +31,17 @@ namespace NLog.Targets
         public Layout ServiceUri { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
         /// </summary>
         public Layout TenantIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString (Defaults to https://storage.azure.com when not set)
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> (Defaults to https://storage.azure.com when not set)
         /// </summary>
-        public Layout ResourceIdentity { get; set; }
+        public Layout ResourceIdentity { get; set; } = @"https://storage.azure.com/";
 
         /// <summary>
-        /// Alternative to ConnectionString
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
         /// </summary>
         public Layout ClientIdentity { get; set; }
 
@@ -89,7 +89,7 @@ namespace NLog.Targets
             string connectionString = string.Empty;
             string serviceUri = string.Empty;
             string tenantIdentity = string.Empty;
-            string resourceIdentity = string.Empty;
+            string resourceIdentifier = string.Empty;
             string clientIdentity = string.Empty;
 
             Dictionary<string, string> queueMetadata = null;
@@ -103,7 +103,7 @@ namespace NLog.Targets
                 {
                     serviceUri = ServiceUri?.Render(defaultLogEvent);
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
-                    resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
+                    resourceIdentifier = ResourceIdentity?.Render(defaultLogEvent);
                     clientIdentity = ClientIdentity?.Render(defaultLogEvent);
                 }
 
@@ -129,7 +129,7 @@ namespace NLog.Targets
                     timeToLive = default(TimeSpan?);
                 }
 
-                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentity, clientIdentity, timeToLive, queueMetadata);
+                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, timeToLive, queueMetadata);
                 InternalLogger.Debug("AzureQueueStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -189,12 +189,11 @@ namespace NLog.Targets
         protected override Task WriteAsyncTask(LogEventInfo logEvent, CancellationToken cancellationToken)
         {
             var queueName = RenderLogEvent(QueueName, logEvent);
+            var layoutMessage = RenderLogEvent(Layout, logEvent);
 
             try
             {
                 queueName = _containerNameCache.LookupStorageName(queueName, _checkAndRepairQueueNameDelegate);
-
-                var layoutMessage = RenderLogEvent(Layout, logEvent);
 
                 return _cloudQueueService.AddMessageAsync(queueName, layoutMessage, cancellationToken);
             }
@@ -227,56 +226,15 @@ namespace NLog.Targets
             private IDictionary<string, string> _queueMetadata;
             private TimeSpan? _timeToLive;
 
-            private sealed class AzureServiceTokenProviderCredentials : Azure.Core.TokenCredential
-            {
-                private readonly string _resourceIdentity;
-                private readonly string _tenantIdentity;
-                private readonly Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider _tokenProvider;
-
-                public AzureServiceTokenProviderCredentials(string tenantIdentity, string resourceIdentity, string clientIdentity)
-                {
-                    if (string.IsNullOrWhiteSpace(resourceIdentity))
-                        _resourceIdentity = "https://storage.azure.com/";
-                    else
-                        _resourceIdentity = resourceIdentity;
-                    if (!string.IsNullOrWhiteSpace(tenantIdentity))
-                        _tenantIdentity = tenantIdentity;
-
-                    if (string.IsNullOrWhiteSpace(clientIdentity))
-                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider();
-                    else
-                        _tokenProvider = new Microsoft.Azure.Services.AppAuthentication.AzureServiceTokenProvider($"RunAs=App;AppId={clientIdentity}");
-                }
-
-                public override async ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
-                {
-                    try
-                    {
-                        var result = await _tokenProvider.GetAuthenticationResultAsync(_resourceIdentity, _tenantIdentity, cancellationToken: cancellationToken).ConfigureAwait(false);
-                        return new Azure.Core.AccessToken(result.AccessToken, result.ExpiresOn);
-                    }
-                    catch (Exception ex)
-                    {
-                        InternalLogger.Error(ex, "AzureQueueStorageTarget - Failed getting AccessToken from AzureServiceTokenProvider for resource {0}", _resourceIdentity);
-                        throw;
-                    }
-                }
-
-                public override Azure.Core.AccessToken GetToken(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken)
-                {
-                    return GetTokenAsync(requestContext, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-                }
-            }
-
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentity, string clientIdentity, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
             {
                 _timeToLive = timeToLive;
                 _queueMetadata = queueMetadata;
 
-                if (string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(serviceUri))
+                if (!string.IsNullOrWhiteSpace(serviceUri))
                 {
-                    var tokenCredential = new AzureServiceTokenProviderCredentials(tenantIdentity, resourceIdentity, clientIdentity);
-                    _client = new QueueServiceClient(new Uri(serviceUri), tokenCredential);
+                    Azure.Core.TokenCredential tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
+                    _client = new QueueServiceClient(new Uri(serviceUri), tokenCredentials);
                 }
                 else
                 {

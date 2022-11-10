@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace NLog.Extensions.AzureStorage
 {
-    internal sealed class SortHelpers
+    internal static class SortHelpers
     {
         /// <summary>
         /// Key Selector Delegate
