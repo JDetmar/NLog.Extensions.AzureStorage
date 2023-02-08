@@ -113,9 +113,9 @@ namespace NLog.Targets
         public Layout TenantIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> (Defaults to https://servicebus.azure.net when not set)
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
         /// </summary>
-        public Layout ResourceIdentity { get; set; } = @"https://servicebus.azure.net/";
+        public Layout ResourceIdentity { get; set; }
 
         /// <summary>
         /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>

@@ -72,7 +72,7 @@ namespace NLog.Targets
         /// <summary>
         /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
         /// </summary>
-        public Layout ResourceIdentity { get; set; } = "https://database.windows.net/";
+        public Layout ResourceIdentity { get; set; }
 
         /// <summary>
         /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
