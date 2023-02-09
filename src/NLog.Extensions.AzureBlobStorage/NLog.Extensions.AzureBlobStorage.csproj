@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>4.0.0</Version>
+    <Version>4.1.0</Version>
 
     <Description>NLog BlobStorageTarget for writing to Azure Cloud Blob Storage</Description>
     <Authors>jdetmar</Authors>
@@ -18,7 +18,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Replaced legacy AzureServiceTokenProvider with Azure.Identity
+- Updated to Azure.Identity v1.8.2
+- ResourceIdentity without implicit default value
       
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureBlobStorage/README.md
     </PackageReleaseNotes>
@@ -35,7 +36,7 @@ Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NL
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.8.0" />
+    <PackageReference Include="Azure.Identity" Version="1.8.2" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
     <PackageReference Include="NLog" Version="4.7.15" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
