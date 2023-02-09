@@ -125,15 +125,21 @@ namespace NLog.Targets
         /// <summary>
         /// Gets a list of user properties (aka custom application properties) to add to the AMQP message
         /// </summary>
-        [Obsolete("Replaced by ApplicationProperties")]
+        [Obsolete("Replaced by MessageProperties")]
         [ArrayParameter(typeof(TargetPropertyWithContext), "userproperty")]
-        public IList<TargetPropertyWithContext> UserProperties { get => ContextProperties; }
+        public IList<TargetPropertyWithContext> UserProperties { get => MessageProperties; }
 
         /// <summary>
         /// Gets a list of application properties (aka custom user properties) to add to the AMQP message
         /// </summary>
+        [Obsolete("Replaced by MessageProperties")]
+        public IList<TargetPropertyWithContext> ApplicationProperties { get => MessageProperties; }
+
+        /// <summary>
+        /// Gets a list of message properties (aka custom user-application properties) to add to the AMQP message
+        /// </summary>
         [ArrayParameter(typeof(TargetPropertyWithContext), "messageproperty")]
-        public IList<TargetPropertyWithContext> ApplicationProperties { get => ContextProperties; }
+        public IList<TargetPropertyWithContext> MessageProperties { get => ContextProperties; }
 
         public ServiceBusTarget()
             :this(new CloudServiceBus())
