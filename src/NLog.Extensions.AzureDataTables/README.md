@@ -38,6 +38,8 @@ _resourceIdentity_ - Alternative to ConnectionString. Used together with Service
 
 _clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
 
+_sharedAccessSignature_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureSasCredential
+
 _accountName_ - Alternative to ConnectionString. Used together with ServiceUri. Input for TableSharedKeyCredential storage account-name.
 
 _accessKey_ - Alternative to ConnectionString. Used together with ServiceUri. Input for TableSharedKeyCredential account-access-key.

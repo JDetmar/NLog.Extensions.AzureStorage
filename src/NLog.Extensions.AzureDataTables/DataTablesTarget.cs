@@ -75,12 +75,17 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with ManagedIdentityClientId
         /// </summary>
         public Layout ClientIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString when using ServiceUri. For <see cref="TableSharedKeyCredential"/> storage account name.
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with AzureSasCredential
+        /// </summary>
+        public Layout SharedAccessSignature { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="TableSharedKeyCredential"/> storage account name.
         /// </summary>
         /// <remarks>
         /// You'll need a Storage or Cosmos DB account name, primary key, and endpoint Uri. 
@@ -90,7 +95,7 @@ namespace NLog.Targets
         public Layout AccountName { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString when using ServiceUri. For <see cref="TableSharedKeyCredential"/> access-key or <see cref="Azure.AzureSasCredential"/>  signature.
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="TableSharedKeyCredential"/> storage account access-key.
         /// </summary>
         public Layout AccessKey { get; set; }
 
@@ -136,6 +141,7 @@ namespace NLog.Targets
             string tenantIdentity = string.Empty;
             string resourceIdentifier = string.Empty;
             string clientIdentity = string.Empty;
+            string sharedAccessSignature = string.Empty;
             string accountName = string.Empty;
             string accessKey = string.Empty;
 
@@ -150,11 +156,12 @@ namespace NLog.Targets
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
                     resourceIdentifier = ResourceIdentity?.Render(defaultLogEvent);
                     clientIdentity = ClientIdentity?.Render(defaultLogEvent);
+                    sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
                     accountName = AccountName?.Render(defaultLogEvent);
                     accessKey = AccessKey?.Render(defaultLogEvent);
                 }
 
-                _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, accountName, accessKey);
+                _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, accountName, accessKey);
                 InternalLogger.Debug("AzureDataTablesTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -352,23 +359,24 @@ namespace NLog.Targets
             private TableServiceClient _client;
             private TableClient _table;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string storageAccountName, string accessKey)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey)
             {
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
                     _client = new TableServiceClient(connectionString);
                 }
-                else if (string.IsNullOrWhiteSpace(accessKey))
+                else if (!string.IsNullOrWhiteSpace(sharedAccessSignature))
                 {
-                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
-                    _client = new TableServiceClient(new Uri(serviceUri), tokenCredentials);
+                    _client = new TableServiceClient(new Uri(serviceUri), new Azure.AzureSasCredential(sharedAccessSignature));
+                }
+                else if (!string.IsNullOrWhiteSpace(storageAccountName))
+                {
+                    _client = new TableServiceClient(new Uri(serviceUri), new TableSharedKeyCredential(storageAccountName, storageAccountAccessKey));
                 }
                 else
                 {
-                    if (string.IsNullOrWhiteSpace(storageAccountName))
-                        _client = new TableServiceClient(new Uri(serviceUri), new Azure.AzureSasCredential(accessKey));
-                    else
-                        _client = new TableServiceClient(new Uri(serviceUri), new TableSharedKeyCredential(storageAccountName, accessKey));
+                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
+                    _client = new TableServiceClient(new Uri(serviceUri), tokenCredentials);
                 }
             }
 

@@ -23,7 +23,7 @@ namespace NLog.Extensions.AzureEventHub.Test
                 EventDataSent.Clear();
         }
 
-        public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity)
+        public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey)
         {
             ConnectionString = connectionString;
             EventHubName = eventHubName;

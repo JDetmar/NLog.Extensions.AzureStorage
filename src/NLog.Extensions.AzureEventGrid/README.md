@@ -17,8 +17,8 @@
           name="String"
           layout="Layout"
           topic="Layout"
-          gridEventSubject="Layout"
-          cloudEventSource="Layout"
+          cloudEventSource="Layout" <!-- Only for CloudEvent -->
+          gridEventSubject="Layout" <!-- Only for EventGridEvent -->
           eventType="Layout"
           contentType="Layout"
           dataSchema="Layout"
@@ -36,9 +36,9 @@ _layout_ - Event data-payload. [Layout](https://github.com/NLog/NLog/wiki/Layout
 
 _topic_ - Topic EndPoint Uri. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_gridEventSubject_ - Resource path relative to the topic path. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_cloudEventSource_ - Only for CloudEvent and specify context where event occurred. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_cloudEventSource_ - Conext where the event happened. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_gridEventSubject_ - Only for EventGridEvent and specify resource path relative to the topic path. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _eventType_ - Type of the event. Ex. "Contoso.Items.ItemReceived". [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 

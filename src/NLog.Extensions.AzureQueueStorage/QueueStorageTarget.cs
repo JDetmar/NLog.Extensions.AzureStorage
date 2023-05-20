@@ -41,9 +41,24 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with ManagedIdentityClientId
         /// </summary>
         public Layout ClientIdentity { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with AzureSasCredential
+        /// </summary>
+        public Layout SharedAccessSignature { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="Azure.Storage.StorageSharedKeyCredential"/> storage account name.
+        /// </summary>
+        public Layout AccountName { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="Azure.Storage.StorageSharedKeyCredential"/> storage account access-key.
+        /// </summary>
+        public Layout AccessKey { get; set; }
 
         [ArrayParameter(typeof(TargetPropertyWithContext), "metadata")]
         public IList<TargetPropertyWithContext> QueueMetadata { get; private set; }
@@ -91,6 +106,9 @@ namespace NLog.Targets
             string tenantIdentity = string.Empty;
             string resourceIdentifier = string.Empty;
             string clientIdentity = string.Empty;
+            string sharedAccessSignature = string.Empty;
+            string storageAccountName = string.Empty;
+            string storageAccountAccessKey = string.Empty;
 
             Dictionary<string, string> queueMetadata = null;
 
@@ -105,6 +123,9 @@ namespace NLog.Targets
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
                     resourceIdentifier = ResourceIdentity?.Render(defaultLogEvent);
                     clientIdentity = ClientIdentity?.Render(defaultLogEvent);
+                    sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
+                    storageAccountName = AccountName?.Render(defaultLogEvent);
+                    storageAccountAccessKey = AccessKey?.Render(defaultLogEvent);
                 }
 
                 if (QueueMetadata?.Count > 0)
@@ -129,7 +150,7 @@ namespace NLog.Targets
                     timeToLive = default(TimeSpan?);
                 }
 
-                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, timeToLive, queueMetadata);
+                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, storageAccountName, storageAccountAccessKey, timeToLive, queueMetadata);
                 InternalLogger.Debug("AzureQueueStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -226,19 +247,27 @@ namespace NLog.Targets
             private IDictionary<string, string> _queueMetadata;
             private TimeSpan? _timeToLive;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
             {
                 _timeToLive = timeToLive;
                 _queueMetadata = queueMetadata;
 
-                if (!string.IsNullOrWhiteSpace(serviceUri))
+                if (string.IsNullOrWhiteSpace(serviceUri))
                 {
-                    Azure.Core.TokenCredential tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
-                    _client = new QueueServiceClient(new Uri(serviceUri), tokenCredentials);
+                    _client = new QueueServiceClient(connectionString);
+                }
+                else if (!string.IsNullOrWhiteSpace(sharedAccessSignature))
+                {
+                    _client = new QueueServiceClient(new Uri(serviceUri), new Azure.AzureSasCredential(sharedAccessSignature));
+                }
+                else if (!string.IsNullOrWhiteSpace(storageAccountName))
+                {
+                    _client = new QueueServiceClient(new Uri(serviceUri), new Azure.Storage.StorageSharedKeyCredential(storageAccountName, storageAccountAccessKey));
                 }
                 else
                 {
-                    _client = new QueueServiceClient(connectionString);
+                    Azure.Core.TokenCredential tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
+                    _client = new QueueServiceClient(new Uri(serviceUri), tokenCredentials);
                 }
             }
 

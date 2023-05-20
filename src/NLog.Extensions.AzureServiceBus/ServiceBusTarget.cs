@@ -118,9 +118,24 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with ManagedIdentityClientId
         /// </summary>
         public Layout ClientIdentity { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with AzureSasCredential
+        /// </summary>
+        public Layout SharedAccessSignature { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="Azure.AzureNamedKeyCredential"/> storage account name.
+        /// </summary>
+        public Layout AccountName { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="Azure.AzureNamedKeyCredential"/> storage account access-key.
+        /// </summary>
+        public Layout AccessKey { get; set; }
 
         /// <summary>
         /// Gets a list of user properties (aka custom application properties) to add to the AMQP message
@@ -164,6 +179,9 @@ namespace NLog.Targets
             string tenantIdentity = string.Empty;
             string resourceIdentifier = string.Empty;
             string clientIdentity = string.Empty;
+            string sharedAccessSignature = string.Empty;
+            string storageAccountName = string.Empty;
+            string storageAccountAccessKey = string.Empty;
             string queueOrTopicName = string.Empty;
 
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
@@ -185,6 +203,9 @@ namespace NLog.Targets
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
                     resourceIdentifier = ResourceIdentity?.Render(defaultLogEvent);
                     clientIdentity = ClientIdentity?.Render(defaultLogEvent);
+                    sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
+                    storageAccountName = AccountName?.Render(defaultLogEvent);
+                    storageAccountAccessKey = AccessKey?.Render(defaultLogEvent);
                 }
 
                 var timeToLive = RenderDefaultTimeToLive();
@@ -193,7 +214,7 @@ namespace NLog.Targets
                     timeToLive = default(TimeSpan?);
                 }
 
-                _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, timeToLive);
+                _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, storageAccountName, storageAccountAccessKey, timeToLive);
                 InternalLogger.Debug("AzureServiceBusTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -543,19 +564,27 @@ namespace NLog.Targets
 
             public string EntityPath { get; private set; }
 
-            public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, TimeSpan? timeToLive)
+            public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, TimeSpan? timeToLive)
             {
                 EntityPath = queueOrTopicName;
                 DefaultTimeToLive = timeToLive;
 
-                if (!string.IsNullOrEmpty(serviceUri))
+                if (string.IsNullOrEmpty(serviceUri))
                 {
-                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
-                    _client = new ServiceBusClient(serviceUri, tokenCredentials);
+                    _client = new ServiceBusClient(connectionString);
+                }
+                else if (!string.IsNullOrWhiteSpace(sharedAccessSignature))
+                {
+                    _client = new ServiceBusClient(serviceUri, new Azure.AzureSasCredential(sharedAccessSignature));
+                }
+                else if (!string.IsNullOrWhiteSpace(storageAccountName))
+                {
+                    _client = new ServiceBusClient(serviceUri, new Azure.AzureNamedKeyCredential(storageAccountName, storageAccountAccessKey));
                 }
                 else
                 {
-                    _client = new ServiceBusClient(connectionString);
+                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
+                    _client = new ServiceBusClient(serviceUri, tokenCredentials);
                 }
 
                 _sender = _client.CreateSender(queueOrTopicName);

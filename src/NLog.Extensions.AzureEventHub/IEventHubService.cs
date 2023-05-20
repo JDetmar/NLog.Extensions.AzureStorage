@@ -8,7 +8,7 @@ namespace NLog.Extensions.AzureStorage
     internal interface IEventHubService
     {
         string EventHubName { get; }
-        void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity);
+        void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey);
         Task CloseAsync();
         Task SendAsync(IEnumerable<EventData> eventDataBatch, string partitionKey, CancellationToken cancellationToken);
     }

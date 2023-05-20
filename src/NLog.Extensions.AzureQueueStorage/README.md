@@ -16,8 +16,8 @@
   <target xsi:type="AzureQueueStorage"
           name="String"
           layout="Layout"
-          queueName="Layout"
-          connectionString="Layout">
+          connectionString="Layout"
+          queueName="Layout">
             <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
   </target>
 </targets>
@@ -40,6 +40,12 @@ _tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUr
 _resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityResourceId.
 
 _clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
+
+_sharedAccessSignature_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureSasCredential
+
+_accountName_ - Alternative to ConnectionString. Used together with ServiceUri. Input for StorageSharedKeyCredential-AccountName
+
+_accessKey_ - Alternative to ConnectionString. Used together with ServiceUri. Input for StorageSharedKeyCredential-AccessKey
 
 _timeToLiveSeconds_ - Default Time-To-Live (TTL) for Queue messages in seconds (Optional)
 

@@ -5,7 +5,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DefineConstants>$(DefineConstants);NETCORE</DefineConstants>
 
-    <Version>4.1.0</Version>
+    <Version>4.2.0</Version>
 
     <Description>NLog EventHubTarget for writing to Azure Event Hubs datastreams</Description>
     <Authors>jdetmar</Authors>
@@ -19,8 +19,7 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Updated to Azure.Identity v1.8.2
-- ResourceIdentity without implicit default value
+- Support for SharedAccessSignature-option as input for AzureSasCredential
       
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureEventHub/README.md
     </PackageReleaseNotes>
@@ -37,7 +36,7 @@ Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NL
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.8.2" />
-    <PackageReference Include="Azure.Messaging.EventHubs" Version="5.7.5" />
+    <PackageReference Include="Azure.Messaging.EventHubs" Version="5.7.4" />
     <PackageReference Include="NLog" Version="4.7.15" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>

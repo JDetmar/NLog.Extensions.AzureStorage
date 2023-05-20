@@ -68,9 +68,14 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to AccessKey. Input for <see cref="Azure.Identity.DefaultAzureCredential"/>
+        /// Alternative to AccessKey. Input for <see cref="Azure.Identity.DefaultAzureCredential"/> with ManagedIdentityClientId
         /// </summary>
         public Layout ClientIdentity { get; set; }
+
+        /// <summary>
+        /// Alternative to AccessKey. Input for AzureSasCredential for EventGridPublisherClient constructor
+        /// </summary>
+        public Layout SharedAccessSignature { get; set; }
 
         /// <summary>
         /// Gets a list of message properties aka. custom CloudEvent Extension Attributes
@@ -113,6 +118,7 @@ namespace NLog.Targets
             string tenantIdentity = string.Empty;
             string resourceIdentity = string.Empty;
             string clientIdentity = string.Empty;
+            string sharedAccessSignature = string.Empty;
             string accessKey = string.Empty;
 
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
@@ -123,9 +129,10 @@ namespace NLog.Targets
                 tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
                 resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
                 clientIdentity = ClientIdentity?.Render(defaultLogEvent);
+                sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
                 accessKey = AccessKey?.Render(defaultLogEvent);
 
-                _eventGridService.Connect(topic, tenantIdentity, resourceIdentity, clientIdentity, accessKey);
+                _eventGridService.Connect(topic, tenantIdentity, resourceIdentity, clientIdentity, sharedAccessSignature, accessKey);
                 InternalLogger.Debug("AzureEventGridTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -163,11 +170,15 @@ namespace NLog.Targets
 
             public string Topic { get; private set; }
 
-            public void Connect(string topic, string tenantIdentity, string resourceIdentifier, string clientIdentity, string accessKey)
+            public void Connect(string topic, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string accessKey)
             {
                 Topic = topic;
 
-                if (!string.IsNullOrWhiteSpace(accessKey))
+                if (!string.IsNullOrWhiteSpace(sharedAccessSignature))
+                {
+                    _client = new EventGridPublisherClient(new Uri(topic), new AzureSasCredential(sharedAccessSignature));
+                }
+                else if (!string.IsNullOrWhiteSpace(accessKey))
                 {
                     _client = new EventGridPublisherClient(new Uri(topic), new AzureKeyCredential(accessKey));
                 }

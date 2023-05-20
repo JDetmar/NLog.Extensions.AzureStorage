@@ -12,7 +12,7 @@ namespace NLog.Extensions.AzureStorage
     {
         string Topic { get; }
 
-        void Connect(string topic, string tenantIdentity, string resourceIdentifier, string clientIdentity, string accessKey);
+        void Connect(string topic, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string accessKey);
 
         Task SendEventAsync(EventGridEvent gridEvent, CancellationToken cancellationToken);
 

@@ -60,6 +60,12 @@ _resourceIdentity_ - Alternative to ConnectionString. Used together with Service
 
 _clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
 
+_sharedAccessSignature_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureSasCredential
+
+_accountName_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureNamedKeyCredential-AccountName
+
+_accessKey_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureNamedKeyCredential-AccessKey
+
 ### Batching Policy
 
 _maxBatchSizeBytes_ - Max size of a single batch in bytes [Integer](https://github.com/NLog/NLog/wiki/Data-types) (Default=1024*1024)
