@@ -16,8 +16,8 @@
   <target xsi:type="AzureBlobStorage"
           name="String"
           layout="Layout"
-          blobName="Layout"
           connectionString="Layout"
+          blobName="Layout"
           container="Layout">
             <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
             <tag name="mytag" layout="mytagvalue" /> <!-- Multiple allowed (Requires v2 storage accounts) -->
@@ -46,6 +46,12 @@ _tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUr
 _resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityResourceId.
 
 _clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
+
+_sharedAccessSignature_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureSasCredential
+
+_accountName_ - Alternative to ConnectionString. Used together with ServiceUri. Input for StorageSharedKeyCredential-AccountName
+
+_accessKey_ - Alternative to ConnectionString. Used together with ServiceUri. Input for StorageSharedKeyCredential-AccessKey
 
 ### Batching Policy
 

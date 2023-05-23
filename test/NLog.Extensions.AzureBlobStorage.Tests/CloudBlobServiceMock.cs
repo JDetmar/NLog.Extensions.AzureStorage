@@ -17,7 +17,7 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
 
         public IDictionary<string, string> BlobTags { get; private set; }
 
-        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
+        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
         {
             ConnectionString = connectionString;
             BlobMetadata = blobMetadata;

@@ -45,9 +45,24 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with ManagedIdentityClientId
         /// </summary>
         public Layout ClientIdentity { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with AzureSasCredential
+        /// </summary>
+        public Layout SharedAccessSignature { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="Azure.Storage.StorageSharedKeyCredential"/> storage account name.
+        /// </summary>
+        public Layout AccountName { get; set; }
+
+        /// <summary>
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="Azure.Storage.StorageSharedKeyCredential"/> storage account access-key.
+        /// </summary>
+        public Layout AccessKey { get; set; }
 
         [RequiredParameter]
         public Layout Container { get; set; }
@@ -62,8 +77,6 @@ namespace NLog.Targets
 
         [ArrayParameter(typeof(TargetPropertyWithContext), "tag")]
         public IList<TargetPropertyWithContext> BlobTags { get; private set; }
-
-        private readonly LogEventInfo _defaultLogEvent = LogEventInfo.CreateNullEvent();
 
         public BlobStorageTarget()
             :this(new CloudBlobService())
@@ -95,6 +108,9 @@ namespace NLog.Targets
             string tenantIdentity = string.Empty;
             string resourceIdentifier = string.Empty;
             string clientIdentity = string.Empty;
+            string sharedAccessSignature = string.Empty;
+            string storageAccountName = string.Empty;
+            string storageAccountAccessKey = string.Empty;
 
             Dictionary<string, string> blobMetadata = null;
             Dictionary<string, string> blobTags = null;
@@ -110,6 +126,9 @@ namespace NLog.Targets
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
                     resourceIdentifier = ResourceIdentity?.Render(defaultLogEvent);
                     clientIdentity = ClientIdentity?.Render(defaultLogEvent);
+                    sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
+                    storageAccountName = AccountName?.Render(defaultLogEvent);
+                    storageAccountAccessKey = AccessKey?.Render(defaultLogEvent);
                 }
 
                 if (BlobMetadata?.Count > 0)
@@ -141,7 +160,7 @@ namespace NLog.Targets
                     }
                 }
 
-                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, blobMetadata, blobTags);
+                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, storageAccountName, storageAccountAccessKey, blobMetadata, blobTags);
                 InternalLogger.Debug("AzureBlobStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -348,19 +367,27 @@ namespace NLog.Targets
             private AppendBlobClient _appendBlob;
             private BlobContainerClient _container;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
             {
                 _blobMetadata = blobMetadata?.Count > 0 ? blobMetadata : null;
                 _blobTags = blobTags?.Count > 0 ? blobTags : null;
 
-                if (!string.IsNullOrWhiteSpace(serviceUri))
+                if (string.IsNullOrWhiteSpace(serviceUri))
                 {
-                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
-                    _client = new BlobServiceClient(new Uri(serviceUri), tokenCredentials);
+                    _client = new BlobServiceClient(connectionString);
+                }
+                else if (!string.IsNullOrEmpty(sharedAccessSignature))
+                {
+                    _client = new BlobServiceClient(new Uri(serviceUri), new Azure.AzureSasCredential(sharedAccessSignature));
+                }
+                else if (!string.IsNullOrWhiteSpace(storageAccountName))
+                {
+                    _client = new BlobServiceClient(new Uri(serviceUri), new Azure.Storage.StorageSharedKeyCredential(storageAccountName, storageAccountAccessKey));
                 }
                 else
                 {
-                    _client = new BlobServiceClient(connectionString);
+                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
+                    _client = new BlobServiceClient(new Uri(serviceUri), tokenCredentials);
                 }
             }
 

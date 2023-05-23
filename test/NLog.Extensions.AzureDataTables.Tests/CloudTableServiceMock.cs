@@ -13,7 +13,7 @@ namespace NLog.Extensions.AzureTableStorage.Tests
         public Dictionary<string, IEnumerable<TableTransactionAction>> BatchExecuted { get; } = new Dictionary<string, IEnumerable<TableTransactionAction>>();
         public string ConnectionString { get; private set; }
 
-        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string storageAccountName, string accessKey)
+        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey)
         {
             ConnectionString = connectionString;
         }
