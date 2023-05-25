@@ -17,8 +17,8 @@
           name="String"
           layout="Layout"
           topic="Layout"
-          cloudEventSource="Layout" <!-- Only for CloudEvent -->
-          gridEventSubject="Layout" <!-- Only for EventGridEvent -->
+          cloudEventSource="Layout"
+          gridEventSubject="Layout"
           eventType="Layout"
           contentType="Layout"
           dataSchema="Layout"
@@ -46,13 +46,15 @@ _contentType_ - Content type of the data-payload. [Layout](https://github.com/NL
 
 _dataSchema_ - Schema version of the data-payload. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_accessKey_ - Input for AzureKeyCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_tenantIdentity_ - Input for DefaultAzureCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_tenantIdentity_ - Alternative to AccessKey. Input for DefaultAzureCredential.
+_resourceIdentity_ - Input for DefaultAzureCredential as ManagedIdentityResourceId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_resourceIdentity_ - Alternative to AccessKey. Input for DefaultAzureCredential as ManagedIdentityResourceId.
+_clientIdentity_ - Input for DefaultAzureCredential as ManagedIdentityClientId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_clientIdentity_ - Alternative to AccessKey. Input for DefaultAzureCredential as ManagedIdentityClientId.
+_accessKey_ - Alternative to DefaultAzureCredential. Input for AzureKeyCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+
+_sharedAccessSignature_ - Alternative to DefaultAzureCredential. Input for AzureSasCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 ### Retry Policy
 

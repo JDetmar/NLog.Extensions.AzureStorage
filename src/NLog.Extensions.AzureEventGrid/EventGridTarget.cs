@@ -53,27 +53,27 @@ namespace NLog.Targets
         public Layout DataSchema { get; set; }
 
         /// <summary>
-        /// Input for AzureKeyCredential for EventGridPublisherClient constructor
-        /// </summary>
-        public Layout AccessKey { get; set; }
-
-        /// <summary>
-        /// Alternative to AccessKey. Input for <see cref="Azure.Identity.DefaultAzureCredential"/>
+        /// Input for <see cref="Azure.Identity.DefaultAzureCredential"/>
         /// </summary>
         public Layout TenantIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to AccessKey. Input for <see cref="Azure.Identity.DefaultAzureCredential"/>
+        /// Input for <see cref="Azure.Identity.DefaultAzureCredential"/>
         /// </summary>
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to AccessKey. Input for <see cref="Azure.Identity.DefaultAzureCredential"/> with ManagedIdentityClientId
+        /// Input for <see cref="Azure.Identity.DefaultAzureCredential"/> with ManagedIdentityClientId
         /// </summary>
         public Layout ClientIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to AccessKey. Input for AzureSasCredential for EventGridPublisherClient constructor
+        /// Alternative to DefaultAzureCredential. Input for AzureKeyCredential for EventGridPublisherClient constructor
+        /// </summary>
+        public Layout AccessKey { get; set; }
+
+        /// <summary>
+        /// Alternative to DefaultAzureCredential. Input for AzureSasCredential for EventGridPublisherClient constructor
         /// </summary>
         public Layout SharedAccessSignature { get; set; }
 
