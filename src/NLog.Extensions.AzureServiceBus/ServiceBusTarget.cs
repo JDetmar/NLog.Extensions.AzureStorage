@@ -359,7 +359,7 @@ namespace NLog.Targets
                     if (ex.Reason != ServiceBusFailureReason.MessageSizeExceeded && ex.Reason != ServiceBusFailureReason.QuotaExceeded)
                         throw;
 
-                    InternalLogger.Error(ex, "AzureServiceBusTarget(Name={0}): Skipping failing logevents for EntityPath={2}", Name, ex.EntityPath);
+                    InternalLogger.Error(ex, "AzureServiceBusTarget(Name={0}): Skipping failing logevents for EntityPath={1}", Name, ex.EntityPath);
                 }
             }
         }

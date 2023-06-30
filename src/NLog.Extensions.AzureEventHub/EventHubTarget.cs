@@ -277,7 +277,7 @@ namespace NLog.Targets
                     if (ex.Reason != EventHubsException.FailureReason.MessageSizeExceeded && ex.Reason != EventHubsException.FailureReason.QuotaExceeded)
                         throw;
 
-                    InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Skipping failing logevents for EntityPath={2} with PartitionKey={3}", Name, ex.EventHubName, partitionKey);
+                    InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Skipping failing logevents for EntityPath={1} with PartitionKey={2}", Name, ex.EventHubName, partitionKey);
                 }
             }
         }

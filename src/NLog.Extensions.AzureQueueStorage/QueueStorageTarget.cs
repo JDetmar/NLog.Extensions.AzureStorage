@@ -231,11 +231,11 @@ namespace NLog.Targets
             string validQueueName = AzureStorageNameCache.CheckAndRepairContainerNamingRules(queueName);
             if (validQueueName == queueName.ToLowerInvariant())
             {
-                InternalLogger.Trace("AzureQueueStorageTarget(Name={0}): Using Queue Name: {0}", Name, validQueueName);
+                InternalLogger.Trace("AzureQueueStorageTarget(Name={0}): Using Queue Name: {1}", Name, validQueueName);
             }
             else
             {
-                InternalLogger.Trace("AzureQueueStorageTarget(Name={0}): Using Cleaned Queue name: {0}", Name, validQueueName);
+                InternalLogger.Trace("AzureQueueStorageTarget(Name={0}): Using Cleaned Queue name: {1}", Name, validQueueName);
             }
             return validQueueName;
         }
@@ -289,12 +289,14 @@ namespace NLog.Targets
                 try
                 {
                     if (_client == null)
-                        throw new InvalidOperationException("CloudQueueClient has not been initialized");
+                        throw new InvalidOperationException("QueueServiceClient has not been initialized");
 
+                    InternalLogger.Debug("AzureQueueStorageTarget: Initializing queue: {0}", queueName);
                     var queue = _client.GetQueueClient(queueName);
                     bool queueExists = await queue.ExistsAsync(cancellationToken).ConfigureAwait(false);
                     if (!queueExists)
                     {
+                        InternalLogger.Debug("AzureQueueStorageTarget: Creating new queue: {0}", queueName);
                         await queue.CreateIfNotExistsAsync(_queueMetadata, cancellationToken).ConfigureAwait(false);
                     }
                     _queue = queue;
@@ -302,7 +304,7 @@ namespace NLog.Targets
                 }
                 catch (Exception exception)
                 {
-                    InternalLogger.Error(exception, "AzureQueueStorageTarget: Failed to initialize queue {1}", queueName);
+                    InternalLogger.Error(exception, "AzureQueueStorageTarget: Failed to initialize queue {0}", queueName);
                     throw;
                 }
             }
