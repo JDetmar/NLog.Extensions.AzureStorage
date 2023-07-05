@@ -292,11 +292,11 @@ namespace NLog.Targets
             string validContainerName = AzureStorageNameCache.CheckAndRepairContainerNamingRules(containerName);
             if (validContainerName == containerName.ToLowerInvariant())
             {
-                InternalLogger.Trace("AzureBlobStorageTarget(Name={0}): Using Container Name: {0}", Name, validContainerName);
+                InternalLogger.Trace("AzureBlobStorageTarget(Name={0}): Using Container Name: {1}", Name, validContainerName);
             }
             else
             {
-                InternalLogger.Trace("AzureBlobStorageTarget(Name={0}): Using Cleaned Container name: {0}", Name, validContainerName);
+                InternalLogger.Trace("AzureBlobStorageTarget(Name={0}): Using Cleaned Container name: {1}", Name, validContainerName);
             }
             return validContainerName;
         }
@@ -446,12 +446,14 @@ namespace NLog.Targets
             /// <param name="blobName">Name of the BLOB.</param>
             private async Task<AppendBlobClient> InitializeBlob(string blobName, BlobContainerClient blobContainer, string contentType, CancellationToken cancellationToken)
             {
+                InternalLogger.Debug("AzureBlobStorageTarget: Initializing blob: {0}", blobName);
                 var appendBlob = blobContainer.GetAppendBlobClient(blobName);
 
                 var blobExits = await appendBlob.ExistsAsync(cancellationToken).ConfigureAwait(false);
                 if (blobExits)
                     return appendBlob;
 
+                InternalLogger.Debug("AzureBlobStorageTarget: Creating new blob: {0}", blobName);
                 var blobCreateOptions = new Azure.Storage.Blobs.Models.AppendBlobCreateOptions();
                 var httpHeaders = new Azure.Storage.Blobs.Models.BlobHttpHeaders()
                 {
@@ -473,14 +475,16 @@ namespace NLog.Targets
             private async Task<BlobContainerClient> InitializeContainer(string containerName, CancellationToken cancellationToken)
             {
                 if (_client == null)
-                    throw new InvalidOperationException("CloudBlobClient has not been initialized");
+                    throw new InvalidOperationException("BlobServiceClient has not been initialized");
 
+                InternalLogger.Debug("AzureBlobStorageTarget: Initializing container: {0}", containerName);
                 var container = _client.GetBlobContainerClient(containerName);
 
                 var containerExists = await container.ExistsAsync(cancellationToken).ConfigureAwait(false);
                 if (containerExists)
                     return container;
 
+                InternalLogger.Debug("AzureBlobStorageTarget: Creating new container: {0}", containerName);
                 await container.CreateIfNotExistsAsync(Azure.Storage.Blobs.Models.PublicAccessType.None, null, cancellationToken).ConfigureAwait(false);
                 return container;
             }
