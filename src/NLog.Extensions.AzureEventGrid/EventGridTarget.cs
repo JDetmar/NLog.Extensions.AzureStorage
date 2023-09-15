@@ -207,7 +207,8 @@ namespace NLog.Targets
             var eventType = RenderLogEvent(EventType, logEvent) ?? string.Empty;
             var eventDataSchema = RenderLogEvent(DataSchema, logEvent) ?? string.Empty;
             var eventContentType = RenderLogEvent(ContentType, logEvent) ?? string.Empty;
-            var cloudEvent =  new CloudEvent(eventSource, eventType, new BinaryData(EncodeToUTF8(eventDataBody)), eventContentType, CloudEventDataFormat.Binary);
+            var cloudEventFormat = Layout is JsonLayout ? CloudEventDataFormat.Json : CloudEventDataFormat.Binary;
+            var cloudEvent =  new CloudEvent(eventSource, eventType, new BinaryData(EncodeToUTF8(eventDataBody)), eventContentType, cloudEventFormat);
             cloudEvent.Time = logEvent.TimeStamp.ToUniversalTime();
 
             if (!string.IsNullOrEmpty(eventDataSchema))
