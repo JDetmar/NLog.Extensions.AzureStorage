@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>4.2.0</Version>
+    <Version>4.3.0</Version>
 
     <Description>NLog ServiceBusTarget for writing to Azure Service Bus Topic or Queue</Description>
     <Authors>jdetmar</Authors>
@@ -18,7 +18,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Support for SharedAccessSignature-option as input for AzureSasCredential
+- Updated dependency Azure.Messaging.ServiceBus v7.16.1
+- Updated dependency Azure.Identity v1.10.1
       
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureServiceBus/README.md
     </PackageReleaseNotes>
@@ -35,8 +36,8 @@ Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NL
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.11.1" />
-    <PackageReference Include="Azure.Identity" Version="1.8.2" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.16.1" />
+    <PackageReference Include="Azure.Identity" Version="1.10.1" />
     <PackageReference Include="NLog" Version="4.7.15" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
