@@ -36,9 +36,9 @@ _layout_ - Event data-payload. [Layout](https://github.com/NLog/NLog/wiki/Layout
 
 _topic_ - Topic EndPoint Uri. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_cloudEventSource_ - Only for CloudEvent and specify context where event occurred. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_cloudEventSource_ - Only for [CloudEvent](https://learn.microsoft.com/en-us/azure/event-grid/cloud-event-schema)-format (Recommended event format) and specify context where event occurred. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_gridEventSubject_ - Only for EventGridEvent and specify resource path relative to the topic path. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_gridEventSubject_ - Only for [GridEvent](https://learn.microsoft.com/en-us/azure/event-grid/event-schema)-format and specify resource path relative to the topic path. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _eventType_ - Type of the event. Ex. "Contoso.Items.ItemReceived". [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
