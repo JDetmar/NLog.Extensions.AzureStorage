@@ -45,7 +45,29 @@ namespace NLog.Targets
         /// <summary>
         /// Content type of the payload. A content type different from "application/json" should be specified if payload is not JSON.
         /// </summary>
-        public Layout ContentType { get; set; }
+        public Layout ContentType
+        {
+            get => _contentType;
+            set
+            {
+                _contentType = value;
+                if (!_dataFormatJson.HasValue && value?.ToString()?.IndexOf("json", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    _dataFormatJson = true;
+                }
+            }
+        }
+        private Layout _contentType;
+
+        /// <summary>
+        /// The serialize format of the data object. Json / Binary
+        /// </summary>
+        public string DataFormat
+        {
+            get => _dataFormatJson == true ? "Json" : "Binary";
+            set => _dataFormatJson = value?.IndexOf("Json", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+        private bool? _dataFormatJson;
 
         /// <summary>
         /// The schema version of the data object.
@@ -207,7 +229,7 @@ namespace NLog.Targets
             var eventType = RenderLogEvent(EventType, logEvent) ?? string.Empty;
             var eventDataSchema = RenderLogEvent(DataSchema, logEvent) ?? string.Empty;
             var eventContentType = RenderLogEvent(ContentType, logEvent) ?? string.Empty;
-            var cloudEventFormat = Layout is JsonLayout ? CloudEventDataFormat.Json : CloudEventDataFormat.Binary;
+            var cloudEventFormat = _dataFormatJson == true ? CloudEventDataFormat.Json : CloudEventDataFormat.Binary;
             var cloudEvent =  new CloudEvent(eventSource, eventType, new BinaryData(EncodeToUTF8(eventDataBody)), eventContentType, cloudEventFormat);
             cloudEvent.Time = logEvent.TimeStamp.ToUniversalTime();
 

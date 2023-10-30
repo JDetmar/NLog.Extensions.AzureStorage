@@ -44,6 +44,8 @@ _eventType_ - Type of the event. Ex. "Contoso.Items.ItemReceived". [Layout](http
 
 _contentType_ - Content type of the data-payload. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
+_dataFormat_ - Format of the data-payload (Binary / Json). Default Binary. `String`
+
 _dataSchema_ - Schema version of the data-payload. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _tenantIdentity_ - Input for DefaultAzureCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
