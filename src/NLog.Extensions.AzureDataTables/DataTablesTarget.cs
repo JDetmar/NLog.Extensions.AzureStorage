@@ -64,6 +64,10 @@ namespace NLog.Targets
         /// </remarks>
         public Layout ServiceUri { get; set; }
 
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+        [Obsolete("Instead use ServiceUri")]
+        public Layout ServiceUrl { get => ServiceUri; set => ServiceUri = value; }
+
         /// <summary>
         /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
         /// </summary>
