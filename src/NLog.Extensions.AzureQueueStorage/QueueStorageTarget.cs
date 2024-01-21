@@ -159,7 +159,7 @@ namespace NLog.Targets
             }
             catch (Exception ex)
             {
-                if (string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(serviceUri))
+                if (!string.IsNullOrEmpty(serviceUri))
                     InternalLogger.Error(ex, "AzureQueueStorageTarget(Name={0}): Failed to create QueueClient with ServiceUri={1}.", Name, serviceUri);
                 else
                     InternalLogger.Error(ex, "AzureQueueStorageTarget(Name={0}): Failed to create QueueClient with connectionString={1}.", Name, connectionString);

@@ -187,7 +187,10 @@ namespace NLog.Targets
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Failed to create EventHubClient with connectionString={1} to EventHubName={2}.", Name, connectionString, eventHubName);
+                if (!string.IsNullOrEmpty(serviceUri))
+                    InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Failed to create EventHubClient with EventHubName={1} and ServiceUri={2}.", Name, eventHubName, serviceUri);
+                else
+                    InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Failed to create EventHubClient with EventHubName={1} and ConnectionString={2}", Name, eventHubName, connectionString);
                 throw;
             }
         }
