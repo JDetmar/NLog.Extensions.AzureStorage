@@ -170,8 +170,11 @@ namespace NLog.Targets
             }
             catch (Exception ex)
             {
-                InternalLogger.Error(ex, "AzureDataTablesTarget(Name={0}): Failed to create TableClient with connectionString={1}.", Name, connectionString);
-                throw;
+                if (!string.IsNullOrEmpty(serviceUri))
+                    InternalLogger.Error(ex, "AzureDataTablesTarget(Name={0}): Failed to create TableClient with ServiceUri={1}.", Name, serviceUri);
+                else
+                    InternalLogger.Error(ex, "AzureDataTablesTarget(Name={0}): Failed to create TableClient with ConnectionString={1}.", Name, connectionString);
+               throw;
             }
         }
 

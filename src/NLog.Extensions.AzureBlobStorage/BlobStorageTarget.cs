@@ -173,7 +173,7 @@ namespace NLog.Targets
             }
             catch (Exception ex)
             {
-                if (string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(serviceUri))
+                if (!string.IsNullOrEmpty(serviceUri))
                     InternalLogger.Error(ex, "AzureBlobStorageTarget(Name={0}): Failed to create BlobClient with ServiceUri={1}.", Name, serviceUri);
                 else
                     InternalLogger.Error(ex, "AzureBlobStorageTarget(Name={0}): Failed to create BlobClient with connectionString={1}.", Name, connectionString);
