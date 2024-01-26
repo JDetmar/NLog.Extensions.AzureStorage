@@ -3,7 +3,6 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DefineConstants>$(DefineConstants);NETCORE</DefineConstants>
 
     <Version>4.3.1</Version>
 
@@ -19,8 +18,9 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Updated dependency Azure.Messaging.EventHubs v5.9.3
-- Updated dependency Azure.Identity v1.10.3
+- Added option UseWebSockets (true / false)
+- Added option WebSocketProxyAddress (Uri)
+- Added option CustomEndpointAddress (Uri)
       
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureEventHub/README.md
     </PackageReleaseNotes>
