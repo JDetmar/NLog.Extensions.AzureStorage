@@ -52,6 +52,12 @@ _messageId_ - EventData MessageId. [Layout](https://github.com/NLog/NLog/wiki/La
 
 _correlationId_ - EventData Correlationid. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
+_useWebSockets_ - Enable AmqpWebSockets. Ex. true/false (optional)
+
+_webSocketProxyAddress_ - Custom WebProxy address for WebSockets (optional)
+
+_customEndpointAddress_ - Custom endpoint address that can be used when establishing the connection (optional)
+
 _serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from DefaultAzureCredential for User delegation SAS.
 
 _tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.

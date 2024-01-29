@@ -121,6 +121,21 @@ namespace NLog.Targets
         public Layout AccessKey { get; set; }
 
         /// <summary>
+        /// The connection uses the AMQP protocol over web sockets. See also <see cref="EventHubsTransportType.AmqpWebSockets"/>
+        /// </summary>
+        public Layout UseWebSockets { get; set; }
+
+        /// <summary>
+        /// The proxy to use for communication over web sockets.
+        /// </summary>
+        public Layout WebSocketProxyAddress { get; set; }
+
+        /// <summary>
+        /// Custom endpoint address that can be used when establishing the connection.
+        /// </summary>
+        public Layout CustomEndpointAddress { get; set; }
+
+        /// <summary>
         /// Gets a list of user properties (aka custom properties) to add to the AMQP message
         /// </summary>
         [Obsolete("Replaced by MessageProperties")]
@@ -164,6 +179,9 @@ namespace NLog.Targets
             string storageAccountName = string.Empty;
             string storageAccountAccessKey = string.Empty;
             string eventHubName = string.Empty;
+            string useWebSockets = string.Empty;
+            string webSocketProxyAddress = string.Empty;
+            string customEndPointAddress = string.Empty;
 
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
 
@@ -182,7 +200,15 @@ namespace NLog.Targets
                     storageAccountAccessKey = AccessKey?.Render(defaultLogEvent);
                 }
 
-                _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, storageAccountName, storageAccountAccessKey);
+                useWebSockets = UseWebSockets?.Render(defaultLogEvent) ?? string.Empty;
+                if (!string.IsNullOrEmpty(useWebSockets) && (string.Equals(useWebSockets.Trim(), bool.TrueString, StringComparison.OrdinalIgnoreCase) || string.Equals(useWebSockets.Trim(), "1", StringComparison.OrdinalIgnoreCase)))
+                {
+                    useWebSockets = bool.TrueString;
+                }
+                customEndPointAddress = CustomEndpointAddress?.Render(defaultLogEvent) ?? string.Empty;
+                webSocketProxyAddress = WebSocketProxyAddress?.Render(defaultLogEvent) ?? string.Empty;
+
+                _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, storageAccountName, storageAccountAccessKey, bool.TrueString == useWebSockets, webSocketProxyAddress, customEndPointAddress);
                 InternalLogger.Debug("AzureEventHubTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -470,33 +496,42 @@ namespace NLog.Targets
 
             public string EventHubName { get; private set; }
 
-            public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey)
+            public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, bool useWebSockets, string webSocketsProxyAddress, string endPointAddress)
             {
                 EventHubName = eventHubName;
+
+                Azure.Messaging.EventHubs.Producer.EventHubProducerClientOptions options = default;
+                if (useWebSockets || !string.IsNullOrEmpty(webSocketsProxyAddress) || !string.IsNullOrEmpty(endPointAddress))
+                {
+                    options = new Azure.Messaging.EventHubs.Producer.EventHubProducerClientOptions();
+                    options.ConnectionOptions.TransportType = useWebSockets ? EventHubsTransportType.AmqpWebSockets : options.ConnectionOptions.TransportType;
+                    options.ConnectionOptions.Proxy = !string.IsNullOrEmpty(webSocketsProxyAddress) ? new System.Net.WebProxy(webSocketsProxyAddress, true) : options.ConnectionOptions.Proxy;
+                    options.ConnectionOptions.CustomEndpointAddress = !string.IsNullOrEmpty(endPointAddress) ? new Uri(endPointAddress) : options.ConnectionOptions.CustomEndpointAddress;
+                }
 
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
                     if (string.IsNullOrWhiteSpace(eventHubName))
                     {
-                        _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString);
+                        _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString, options);
                     }
                     else
                     {
-                        _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString, eventHubName);
+                        _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(connectionString, eventHubName, options);
                     }
                 }
                 else if (!string.IsNullOrWhiteSpace(sharedAccessSignature))
                 {
-                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, new Azure.AzureSasCredential(sharedAccessSignature));
+                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, new Azure.AzureSasCredential(sharedAccessSignature), options);
                 }
                 else if (!string.IsNullOrWhiteSpace(storageAccountName))
                 {
-                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, new Azure.AzureNamedKeyCredential(storageAccountName, storageAccountAccessKey));
+                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, new Azure.AzureNamedKeyCredential(storageAccountName, storageAccountAccessKey), options);
                 }
                 else
                 {
                     var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
-                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, tokenCredentials);
+                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, tokenCredentials, options);
                 }
             }
 

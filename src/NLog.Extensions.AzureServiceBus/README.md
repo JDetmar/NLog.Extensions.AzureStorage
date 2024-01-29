@@ -65,6 +65,12 @@ _timeToLiveSeconds_ - Default Time-To-Live (TTL) for ServiceBus messages in seco
 
 _timeToLiveDays_ - Default Time-To-Live (TTL) for ServiceBus messages in days (Optional)
 
+_useWebSockets_ - Enable AmqpWebSockets. Ex. true/false (optional)
+
+_webSocketProxyAddress_ - Custom WebProxy address for WebSockets (optional)
+
+_customEndpointAddress_ - Custom endpoint address that can be used when establishing the connection (optional)
+
 _serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from DefaultAzureCredential for User delegation SAS.
 
 _tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.

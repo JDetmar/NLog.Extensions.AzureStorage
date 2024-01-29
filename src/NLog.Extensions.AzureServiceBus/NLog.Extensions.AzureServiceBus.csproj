@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>4.3.1</Version>
+    <Version>4.4.0</Version>
 
     <Description>NLog ServiceBusTarget for writing to Azure Service Bus Topic or Queue</Description>
     <Authors>jdetmar</Authors>
@@ -18,8 +18,10 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Updated dependency Azure.Messaging.ServiceBus v7.16.1
-- Updated dependency Azure.Identity v1.10.3
+- Added option UseWebSockets (true / false)
+- Added option WebSocketProxyAddress (Uri)
+- Added option CustomEndpointAddress (Uri)
+- Updated dependency Azure.Messaging.ServiceBus v7.16.2
       
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureServiceBus/README.md
     </PackageReleaseNotes>

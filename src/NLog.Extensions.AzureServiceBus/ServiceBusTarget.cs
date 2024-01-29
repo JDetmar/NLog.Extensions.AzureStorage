@@ -142,6 +142,21 @@ namespace NLog.Targets
         public Layout AccessKey { get; set; }
 
         /// <summary>
+        /// The connection uses the AMQP protocol over web sockets. See also <see cref="ServiceBusTransportType.AmqpWebSockets"/>
+        /// </summary>
+        public Layout UseWebSockets { get; set; }
+
+        /// <summary>
+        /// The proxy to use for communication over web sockets.
+        /// </summary>
+        public Layout WebSocketProxyAddress { get; set; }
+
+        /// <summary>
+        /// Custom endpoint address that can be used when establishing the connection.
+        /// </summary>
+        public Layout CustomEndpointAddress { get; set; }
+
+        /// <summary>
         /// Gets a list of user properties (aka custom application properties) to add to the AMQP message
         /// </summary>
         [Obsolete("Replaced by MessageProperties")]
@@ -187,6 +202,9 @@ namespace NLog.Targets
             string storageAccountName = string.Empty;
             string storageAccountAccessKey = string.Empty;
             string queueOrTopicName = string.Empty;
+            string useWebSockets = string.Empty;
+            string webSocketProxyAddress = string.Empty;
+            string customEndPointAddress = string.Empty;
 
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
 
@@ -212,13 +230,21 @@ namespace NLog.Targets
                     storageAccountAccessKey = AccessKey?.Render(defaultLogEvent);
                 }
 
+                useWebSockets = UseWebSockets?.Render(defaultLogEvent) ?? string.Empty;
+                if (!string.IsNullOrEmpty(useWebSockets) && (string.Equals(useWebSockets.Trim(), bool.TrueString, StringComparison.OrdinalIgnoreCase) || string.Equals(useWebSockets.Trim(), "1", StringComparison.OrdinalIgnoreCase)))
+                {
+                    useWebSockets = bool.TrueString;
+                }
+                webSocketProxyAddress = WebSocketProxyAddress?.Render(defaultLogEvent) ?? string.Empty;
+                customEndPointAddress = CustomEndpointAddress?.Render(defaultLogEvent) ?? string.Empty;
+
                 var timeToLive = RenderDefaultTimeToLive();
                 if (timeToLive <= TimeSpan.Zero)
                 {
                     timeToLive = default(TimeSpan?);
                 }
 
-                _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, storageAccountName, storageAccountAccessKey, timeToLive);
+                _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, storageAccountName, storageAccountAccessKey, bool.TrueString == useWebSockets, webSocketProxyAddress, customEndPointAddress, timeToLive);
                 InternalLogger.Debug("AzureServiceBusTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -571,27 +597,36 @@ namespace NLog.Targets
 
             public string EntityPath { get; private set; }
 
-            public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, TimeSpan? timeToLive)
+            public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, bool useWebSockets, string webSocketProxyAddress, string endPointAddress, TimeSpan? timeToLive)
             {
                 EntityPath = queueOrTopicName;
                 DefaultTimeToLive = timeToLive;
 
+                Azure.Messaging.ServiceBus.ServiceBusClientOptions options = default;
+                if (useWebSockets || !string.IsNullOrEmpty(webSocketProxyAddress) || !string.IsNullOrEmpty(endPointAddress))
+                {
+                    options = new Azure.Messaging.ServiceBus.ServiceBusClientOptions();
+                    options.TransportType = useWebSockets ? ServiceBusTransportType.AmqpWebSockets : options.TransportType;
+                    options.WebProxy = !string.IsNullOrEmpty(webSocketProxyAddress) ? new System.Net.WebProxy(webSocketProxyAddress, true) : options.WebProxy;
+                    options.CustomEndpointAddress = !string.IsNullOrEmpty(endPointAddress) ? new Uri(endPointAddress) : options.CustomEndpointAddress;
+                }
+
                 if (string.IsNullOrEmpty(serviceUri))
                 {
-                    _client = new ServiceBusClient(connectionString);
+                    _client = new ServiceBusClient(connectionString, options);
                 }
                 else if (!string.IsNullOrWhiteSpace(sharedAccessSignature))
                 {
-                    _client = new ServiceBusClient(serviceUri, new Azure.AzureSasCredential(sharedAccessSignature));
+                    _client = new ServiceBusClient(serviceUri, new Azure.AzureSasCredential(sharedAccessSignature), options);
                 }
                 else if (!string.IsNullOrWhiteSpace(storageAccountName))
                 {
-                    _client = new ServiceBusClient(serviceUri, new Azure.AzureNamedKeyCredential(storageAccountName, storageAccountAccessKey));
+                    _client = new ServiceBusClient(serviceUri, new Azure.AzureNamedKeyCredential(storageAccountName, storageAccountAccessKey), options);
                 }
                 else
                 {
                     var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
-                    _client = new ServiceBusClient(serviceUri, tokenCredentials);
+                    _client = new ServiceBusClient(serviceUri, tokenCredentials, options);
                 }
 
                 _sender = _client.CreateSender(queueOrTopicName);
