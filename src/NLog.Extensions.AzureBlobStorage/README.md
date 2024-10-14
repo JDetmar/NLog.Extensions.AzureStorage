@@ -81,6 +81,13 @@ Azure.RequestFailedException: This feature is not currently supported by the Sto
 
 Instead one can try an alternative Azure Storage Emulator like [Azurite](https://github.com/azure/azurite)
 
+## Azure Identity Environment
+When using `ServiceUri` (Instead of ConnectionString), then `DefaultAzureCredential` is used for Azure Identity which supports environment variables:
+- `AZURE_CLIENT_ID` - For ManagedIdentityClientId / WorkloadIdentityClientId
+- `AZURE_TENANT_ID` - For TenantId
+
+See also: [Set up Your Environment for Authentication](https://github.com/Azure/azure-sdk-for-go/wiki/Set-up-Your-Environment-for-Authentication)
+
 ## Azure ConnectionString
 
 NLog Layout makes it possible to retrieve settings from [many locations](https://nlog-project.org/config/?tab=layout-renderers).
