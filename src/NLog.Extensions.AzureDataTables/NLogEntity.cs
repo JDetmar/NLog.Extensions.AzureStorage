@@ -22,10 +22,10 @@ namespace NLog.Extensions.AzureStorage
 
         public NLogEntity(LogEventInfo logEvent, string layoutMessage, string machineName, string partitionKey, string rowKey, string logTimeStampFormat)
         {
-            FullMessage = layoutMessage;
+            FullMessage = TruncateWhenTooBig(layoutMessage);
             Level = logEvent.Level.Name;
             LoggerName = logEvent.LoggerName;
-            Message = logEvent.Message;
+            Message = TruncateWhenTooBig(logEvent.Message);
             LogTimeStamp = logEvent.TimeStamp.ToString(logTimeStampFormat);
             MachineName = machineName;
             if(logEvent.Exception != null)
@@ -55,15 +55,23 @@ namespace NLog.Extensions.AzureStorage
                 }
 
                 Exception = string.Concat(exception.Message, " - ", exception.GetType().ToString());
-                StackTrace = exception.StackTrace;
+                StackTrace = TruncateWhenTooBig(exception.StackTrace);
                 if (innerException != null)
                 {
-                    InnerException = innerException.ToString();
+                    var innerExceptionText = innerException.ToString();
+                    InnerException = TruncateWhenTooBig(innerExceptionText);
                 }
             }
             RowKey = rowKey;
             PartitionKey = partitionKey;
         }
+
+        private static string TruncateWhenTooBig(string stringValue)
+        {
+             return stringValue?.Length >= Targets.DataTablesTarget.ColumnStringValueMaxSize ?
+                stringValue.Substring(0, Targets.DataTablesTarget.ColumnStringValueMaxSize - 1) : stringValue;
+        }
+
         public NLogEntity() { }
     }
 }

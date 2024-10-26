@@ -103,6 +103,16 @@ When using `ServiceUri` (Instead of ConnectionString), then `DefaultAzureCredent
 
 See also: [Set up Your Environment for Authentication](https://github.com/Azure/azure-sdk-for-go/wiki/Set-up-Your-Environment-for-Authentication)
 
+## Azure Table Service Size Limits
+
+There are restrictions for how big column values can be:
+
+- PartitionKey has max limit of 1024 characters
+- RowKey has max limit of 1024 characters
+- Column string-Values has max limit of 32.768 characters
+
+When breaking these limits, then [Azure Table Service](https://learn.microsoft.com/en-us/rest/api/storageservices/understanding-the-table-service-data-model) will discard the data, so NLog AzureDataTables will automatically truncate if needed.
+
 ## Azure ConnectionString
 
 NLog Layout makes it possible to retrieve settings from [many locations](https://nlog-project.org/config/?tab=layout-renderers).

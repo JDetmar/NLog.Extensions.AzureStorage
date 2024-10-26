@@ -17,6 +17,8 @@ namespace NLog.Targets
     [Target("AzureDataTables")]
     public sealed class DataTablesTarget : AsyncTaskTarget
     {
+        internal const int ColumnStringValueMaxSize = 32768;
+
         private readonly ICloudTableService _cloudTableService;
         private string _machineName;
         private readonly AzureStorageNameCache _containerNameCache = new AzureStorageNameCache();
@@ -299,9 +301,18 @@ namespace NLog.Targets
                     if (string.IsNullOrEmpty(contextproperty.Name))
                         continue;
 
-                    var propertyValue = contextproperty.Layout != null ? RenderLogEvent(contextproperty.Layout, logEvent) : string.Empty;
+                    var propertyValue = RenderLogEvent(contextproperty.Layout, logEvent) ?? string.Empty;
                     if (logTimeStampOverridden && i == 0 && string.IsNullOrEmpty(propertyValue))
                         continue;
+
+                    if (!contextproperty.IncludeEmptyValue && string.IsNullOrEmpty(propertyValue))
+                        continue;
+
+                    if (propertyValue.Length >= ColumnStringValueMaxSize)
+                    {
+                        InternalLogger.Debug("AzureDataTablesTarget(Name={0}): Truncating value from column '{1}', because string-length above 32K", Name, contextproperty.Name);
+                        propertyValue = propertyValue.Substring(0, ColumnStringValueMaxSize - 1);
+                    }
 
                     entity.Add(contextproperty.Name, propertyValue);
                 }
@@ -310,7 +321,12 @@ namespace NLog.Targets
             }
             else
             {
-                var layoutMessage = RenderLogEvent(Layout, logEvent);
+                var layoutMessage = RenderLogEvent(Layout, logEvent) ?? string.Empty;
+                if (layoutMessage.Length >= ColumnStringValueMaxSize)
+                {
+                    layoutMessage = layoutMessage.Substring(0, ColumnStringValueMaxSize - 1);
+                    InternalLogger.Debug("AzureDataTablesTarget(Name={0}): Truncating value from Layout, because string-length above 32K", Name);
+                }
                 return new NLogEntity(logEvent, layoutMessage, _machineName, partitionKey, rowKey, LogTimeStampFormat);
             }
         }
