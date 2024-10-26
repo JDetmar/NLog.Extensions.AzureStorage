@@ -34,15 +34,23 @@ namespace NLog.Extensions.AzureStorage
                 var innerException = exception.InnerException;
                 if (exception is AggregateException aggregateException)
                 {
-                    var innerExceptions = aggregateException.Flatten();
-                    if (innerExceptions.InnerExceptions?.Count == 1)
+                    if (aggregateException.InnerExceptions?.Count == 1 && !(aggregateException.InnerExceptions[0] is AggregateException))
                     {
-                        exception = innerExceptions.InnerExceptions[0];
-                        innerException = null;
+                        exception = aggregateException.InnerExceptions[0];
+                        innerException = exception.InnerException;
                     }
                     else
                     {
-                        innerException = innerExceptions;
+                        var flatten = aggregateException.Flatten();
+                        if (flatten.InnerExceptions?.Count == 1)
+                        {
+                            exception = flatten.InnerExceptions[0];
+                            innerException = exception.InnerException;
+                        }
+                        else
+                        {
+                            innerException = flatten;
+                        }
                     }
                 }
 
