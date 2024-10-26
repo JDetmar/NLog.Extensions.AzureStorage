@@ -117,6 +117,7 @@ namespace NLog.Targets
         public DataTablesTarget()
             :this(new CloudTableService())
         {
+            Layout = "${message}";  // Override default Layout, since splitting into columns
         }
 
         internal DataTablesTarget(ICloudTableService cloudTableService)
