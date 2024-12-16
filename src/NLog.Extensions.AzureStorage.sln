@@ -25,10 +25,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureBlobSt
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureQueueStorage.Tests", "..\test\NLog.Extensions.AzureQueueStorage.Tests\NLog.Extensions.AzureQueueStorage.Tests.csproj", "{A56BD3E3-C388-41B9-A021-8B67C43CF225}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureAccessToken", "NLog.Extensions.AzureAccessToken\NLog.Extensions.AzureAccessToken.csproj", "{507FCA08-9341-4764-9D3C-FA4F70C21D2C}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureAccessToken.Tests", "..\test\NLog.Extensions.AzureAccessToken.Tests\NLog.Extensions.AzureAccessToken.Tests.csproj", "{8609512C-29FD-4984-A318-BFA5A681F0A1}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureServiceBus", "NLog.Extensions.AzureServiceBus\NLog.Extensions.AzureServiceBus.csproj", "{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureServiceBus.Tests", "..\test\NLog.Extensions.AzureServiceBus.Tests\NLog.Extensions.AzureServiceBus.Tests.csproj", "{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD}"
@@ -39,7 +35,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureDataTa
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureEventGrid", "NLog.Extensions.AzureEventGrid\NLog.Extensions.AzureEventGrid.csproj", "{111D9918-5708-4C62-A52F-95F400370B0E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NLog.Extensions.AzureEventGrid.Tests", "..\test\NLog.Extensions.AzureEventGrid.Tests\NLog.Extensions.AzureEventGrid.Tests.csproj", "{822D7B8F-1B2A-4E87-9FA2-2A50367E99E7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLog.Extensions.AzureEventGrid.Tests", "..\test\NLog.Extensions.AzureEventGrid.Tests\NLog.Extensions.AzureEventGrid.Tests.csproj", "{822D7B8F-1B2A-4E87-9FA2-2A50367E99E7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -75,14 +71,6 @@ Global
 		{A56BD3E3-C388-41B9-A021-8B67C43CF225}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A56BD3E3-C388-41B9-A021-8B67C43CF225}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A56BD3E3-C388-41B9-A021-8B67C43CF225}.Release|Any CPU.Build.0 = Release|Any CPU
-		{507FCA08-9341-4764-9D3C-FA4F70C21D2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{507FCA08-9341-4764-9D3C-FA4F70C21D2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{507FCA08-9341-4764-9D3C-FA4F70C21D2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{507FCA08-9341-4764-9D3C-FA4F70C21D2C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8609512C-29FD-4984-A318-BFA5A681F0A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8609512C-29FD-4984-A318-BFA5A681F0A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8609512C-29FD-4984-A318-BFA5A681F0A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8609512C-29FD-4984-A318-BFA5A681F0A1}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DFD8118B-2AFE-4DDF-BFD6-F68D6EAB3498}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -116,7 +104,6 @@ Global
 		{BD4E0EB2-99DB-41CB-A46B-DC573A7573CA} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
 		{18DBD852-28D9-43C8-9A1A-F13C13B5CA13} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
 		{A56BD3E3-C388-41B9-A021-8B67C43CF225} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
-		{8609512C-29FD-4984-A318-BFA5A681F0A1} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
 		{DDE1C98C-7DE2-4F38-B6CD-63FF976680FD} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
 		{972C36EF-406F-4276-A8F4-EC859B188B9C} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
 		{822D7B8F-1B2A-4E87-9FA2-2A50367E99E7} = {246DBA78-87B8-4982-912F-4BBFFF005AD6}
