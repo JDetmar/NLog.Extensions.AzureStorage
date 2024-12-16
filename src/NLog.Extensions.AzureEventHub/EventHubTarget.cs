@@ -163,6 +163,8 @@ namespace NLog.Targets
         {
             TaskDelayMilliseconds = 200;
             BatchSize = 100;
+            RetryDelayMilliseconds = 100;
+
             _eventHubService = eventHubService;
         }
 

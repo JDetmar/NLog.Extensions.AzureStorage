@@ -92,6 +92,8 @@ namespace NLog.Targets
 
         internal QueueStorageTarget(ICloudQueueService cloudQueueService)
         {
+            RetryDelayMilliseconds = 100;
+
             QueueMetadata = new List<TargetPropertyWithContext>();
             _cloudQueueService = cloudQueueService;
             _checkAndRepairQueueNameDelegate = CheckAndRepairQueueNamingRules;

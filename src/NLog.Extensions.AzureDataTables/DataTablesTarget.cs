@@ -126,6 +126,7 @@ namespace NLog.Targets
         {
             TaskDelayMilliseconds = 200;
             BatchSize = 100;
+            RetryDelayMilliseconds = 100;
 
             RowKey = Layout.FromMethod(l => string.Concat((DateTime.MaxValue.Ticks - l.TimeStamp.Ticks).ToString("d19"), "__", Guid.NewGuid().ToString()), LayoutRenderOptions.ThreadAgnostic);
 

@@ -108,6 +108,7 @@ namespace NLog.Targets
         public EventGridTarget()
             : this(new EventGridService())
         {
+            RetryDelayMilliseconds = 100;
         }
 
         internal EventGridTarget(IEventGridService eventGridService)

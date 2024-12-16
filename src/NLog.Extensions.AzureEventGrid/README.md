@@ -48,11 +48,11 @@ _dataFormat_ - Format of the data-payload (Binary / Json). Default Binary. `Stri
 
 _dataSchema_ - Schema version of the data-payload. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_tenantIdentity_ - Input for DefaultAzureCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_clientIdentity_ - Input for DefaultAzureCredential as ManagedIdentityClientId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _resourceIdentity_ - Input for DefaultAzureCredential as ManagedIdentityResourceId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_clientIdentity_ - Input for DefaultAzureCredential as ManagedIdentityClientId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_tenantIdentity_ - Input for DefaultAzureCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _accessKey_ - Alternative to DefaultAzureCredential. Input for AzureKeyCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 

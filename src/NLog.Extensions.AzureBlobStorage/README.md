@@ -31,9 +31,9 @@ _name_ - Name of the target.
 
 _layout_ - Text to be rendered. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required. 
 
-_blobName_ - BlobName. [Layout](https://github.com/NLog/NLog/wiki/Layouts)  
+_blobName_ - BlobName. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required. 
 
-_container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required.
 
 _contentType_ - Azure blob ContentType (Default = text/plain)
 
@@ -41,11 +41,11 @@ _connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage
 
 _serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from DefaultAzureCredential for User delegation SAS.
 
-_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.
+_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
 
 _resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityResourceId.
 
-_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
+_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.
 
 _sharedAccessSignature_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureSasCredential
 
