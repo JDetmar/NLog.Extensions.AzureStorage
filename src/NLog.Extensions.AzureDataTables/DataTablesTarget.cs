@@ -408,7 +408,7 @@ namespace NLog.Targets
             public Task SubmitTransactionAsync(string tableName, IEnumerable<TableTransactionAction> tableTransaction, CancellationToken cancellationToken)
             {
                 var table = _table;
-                if (tableName == null || table?.Name != tableName)
+                if (string.IsNullOrEmpty(tableName) || table?.Name != tableName)
                 {
                     return InitializeAndCacheTableAsync(tableName, cancellationToken).ContinueWith(async (t, operation) => await t.Result.SubmitTransactionAsync((IEnumerable<TableTransactionAction>)operation).ConfigureAwait(false), tableTransaction, cancellationToken);
                 }
