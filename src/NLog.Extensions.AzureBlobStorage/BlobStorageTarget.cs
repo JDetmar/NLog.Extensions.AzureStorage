@@ -406,7 +406,7 @@ namespace NLog.Targets
 
                 var blob = _appendBlob;
                 var container = _container;
-                if (containerName == null || container?.Name != containerName || blobName == null || blob?.Name != blobName)
+                if (string.IsNullOrEmpty(containerName) || container?.Name != containerName || string.IsNullOrEmpty(blobName) || blob?.Name != blobName)
                 {
                     return InitializeAndCacheBlobAsync(containerName, blobName, contentType, cancellationToken).ContinueWith(async (t, s) => await t.Result.AppendBlockAsync((System.IO.Stream)s, null).ConfigureAwait(false), stream, cancellationToken);
                 }
@@ -421,7 +421,7 @@ namespace NLog.Targets
                 try
                 {
                     var container = _container;
-                    if (containerName == null || container?.Name != containerName)
+                    if (string.IsNullOrEmpty(containerName) || container?.Name != containerName)
                     {
                         container = await InitializeContainer(containerName, cancellationToken).ConfigureAwait(false);
                         if (container != null)
@@ -432,7 +432,7 @@ namespace NLog.Targets
                     }
 
                     var blob = _appendBlob;
-                    if (blobName == null || blob?.Name != blobName)
+                    if (string.IsNullOrEmpty(blobName) || blob?.Name != blobName)
                     {
                         blob = await InitializeBlob(blobName, container, contentType, cancellationToken).ConfigureAwait(false);
                         if (blob != null && ReferenceEquals(container, _container))
