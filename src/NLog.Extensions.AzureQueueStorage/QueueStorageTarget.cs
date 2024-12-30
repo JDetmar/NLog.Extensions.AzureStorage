@@ -280,7 +280,7 @@ namespace NLog.Targets
             public Task AddMessageAsync(string queueName, string queueMessage, CancellationToken cancellationToken)
             {
                 var queue = _queue;
-                if (queueName == null || queue?.Name != queueName)
+                if (string.IsNullOrEmpty(queueName) || queue?.Name != queueName)
                 {
                     return InitializeAndCacheQueueAsync(queueName, cancellationToken).ContinueWith(async (t, m) => await t.Result.SendMessageAsync((string)m, null, _timeToLive, cancellationToken).ConfigureAwait(false), queueMessage, cancellationToken);
                 }
