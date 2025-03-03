@@ -58,7 +58,7 @@ _webSocketProxyAddress_ - Custom WebProxy address for WebSockets (optional)
 
 _customEndpointAddress_ - Custom endpoint address that can be used when establishing the connection (optional)
 
-_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from DefaultAzureCredential for User delegation SAS.
+_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from DefaultAzureCredential.
 
 _clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
 

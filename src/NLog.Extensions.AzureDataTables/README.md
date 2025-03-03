@@ -30,7 +30,7 @@ _layout_ - Text to be rendered. [Layout](https://github.com/NLog/NLog/wiki/Layou
 
 _connectionString_ - Azure storage connection string. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from DefaultAzureCredential for User delegation SAS.
+_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from DefaultAzureCredential.
 
 _clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
 
