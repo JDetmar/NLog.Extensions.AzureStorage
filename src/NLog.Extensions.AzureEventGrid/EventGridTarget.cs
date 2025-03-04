@@ -85,7 +85,7 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
-        /// Input for <see cref="Azure.Identity.DefaultAzureCredential"/> with ManagedIdentityClientId
+        /// Input for <see cref="Azure.Identity.DefaultAzureCredential"/> with ManagedIdentityClientId / WorkloadIdentityClientId
         /// </summary>
         public Layout ClientIdentity { get; set; }
 
@@ -108,6 +108,7 @@ namespace NLog.Targets
         public EventGridTarget()
             : this(new EventGridService())
         {
+            RetryDelayMilliseconds = 100;
         }
 
         internal EventGridTarget(IEventGridService eventGridService)

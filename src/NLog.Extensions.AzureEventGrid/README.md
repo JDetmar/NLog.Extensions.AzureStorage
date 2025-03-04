@@ -48,11 +48,11 @@ _dataFormat_ - Format of the data-payload (Binary / Json). Default Binary. `Stri
 
 _dataSchema_ - Schema version of the data-payload. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_tenantIdentity_ - Input for DefaultAzureCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_clientIdentity_ - Input for DefaultAzureCredential as ManagedIdentityClientId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _resourceIdentity_ - Input for DefaultAzureCredential as ManagedIdentityResourceId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_clientIdentity_ - Input for DefaultAzureCredential as ManagedIdentityClientId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_tenantIdentity_ - Input for DefaultAzureCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _accessKey_ - Alternative to DefaultAzureCredential. Input for AzureKeyCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
@@ -65,3 +65,10 @@ _taskTimeoutSeconds_ - How many seconds a Task is allowed to run before it is ca
 _retryDelayMilliseconds_ - How many milliseconds to wait before next retry (Default 500ms, and will be doubled on each retry).
 
 _retryCount_ - How many attempts to retry the same Task, before it is aborted (Default 0)
+
+## Azure Identity Environment
+When `DefaultAzureCredential` is used for Azure Identity, then it will recognize these environment variables:
+- `AZURE_CLIENT_ID` - For ManagedIdentityClientId / WorkloadIdentityClientId
+- `AZURE_TENANT_ID` - For TenantId
+
+See also: [Set up Your Environment for Authentication](https://github.com/Azure/azure-sdk-for-go/wiki/Set-up-Your-Environment-for-Authentication)

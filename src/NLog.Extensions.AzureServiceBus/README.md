@@ -71,13 +71,13 @@ _webSocketProxyAddress_ - Custom WebProxy address for WebSockets (optional)
 
 _customEndpointAddress_ - Custom endpoint address that can be used when establishing the connection (optional)
 
-_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from DefaultAzureCredential for User delegation SAS.
+_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from DefaultAzureCredential.
 
-_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.
+_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
 
 _resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityResourceId.
 
-_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
+_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.
 
 _sharedAccessSignature_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureSasCredential
 
@@ -104,6 +104,13 @@ _taskTimeoutSeconds_ - How many seconds a Task is allowed to run before it is ca
 _retryDelayMilliseconds_ - How many milliseconds to wait before next retry (Default 500ms, and will be doubled on each retry).
 
 _retryCount_ - How many attempts to retry the same Task, before it is aborted (Default 0)
+
+## Azure Identity Environment
+When using `ServiceUri` (Instead of ConnectionString), then `DefaultAzureCredential` is used for Azure Identity which supports environment variables:
+- `AZURE_CLIENT_ID` - For ManagedIdentityClientId / WorkloadIdentityClientId
+- `AZURE_TENANT_ID` - For TenantId
+
+See also: [Set up Your Environment for Authentication](https://github.com/Azure/azure-sdk-for-go/wiki/Set-up-Your-Environment-for-Authentication)
 
 ## Azure ConnectionString
 

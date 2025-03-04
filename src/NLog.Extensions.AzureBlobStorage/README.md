@@ -31,21 +31,21 @@ _name_ - Name of the target.
 
 _layout_ - Text to be rendered. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required. 
 
-_blobName_ - BlobName. [Layout](https://github.com/NLog/NLog/wiki/Layouts)  
+_blobName_ - BlobName. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required. 
 
-_container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required.
 
 _contentType_ - Azure blob ContentType (Default = text/plain)
 
 _connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage=true;`
 
-_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from DefaultAzureCredential for User delegation SAS.
+_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from DefaultAzureCredential.
 
-_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.
+_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
 
 _resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityResourceId.
 
-_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
+_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.
 
 _sharedAccessSignature_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureSasCredential
 
@@ -80,6 +80,13 @@ Azure.RequestFailedException: This feature is not currently supported by the Sto
 ```
 
 Instead one can try an alternative Azure Storage Emulator like [Azurite](https://github.com/azure/azurite)
+
+## Azure Identity Environment
+When using `ServiceUri` (Instead of ConnectionString), then `DefaultAzureCredential` is used for Azure Identity which supports environment variables:
+- `AZURE_CLIENT_ID` - For ManagedIdentityClientId / WorkloadIdentityClientId
+- `AZURE_TENANT_ID` - For TenantId
+
+See also: [Set up Your Environment for Authentication](https://github.com/Azure/azure-sdk-for-go/wiki/Set-up-Your-Environment-for-Authentication)
 
 ## Azure ConnectionString
 

@@ -14,6 +14,7 @@ namespace NLog.Extensions.AzureStorage
             if (!string.IsNullOrWhiteSpace(clientIdentity))
             {
                 options.ManagedIdentityClientId = clientIdentity;
+                options.WorkloadIdentityClientId = clientIdentity;
             }
             else
             {

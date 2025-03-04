@@ -17,6 +17,8 @@ namespace NLog.Targets
     [Target("AzureDataTables")]
     public sealed class DataTablesTarget : AsyncTaskTarget
     {
+        internal const int ColumnStringValueMaxSize = 32768;
+
         private readonly ICloudTableService _cloudTableService;
         private string _machineName;
         private readonly AzureStorageNameCache _containerNameCache = new AzureStorageNameCache();
@@ -79,7 +81,7 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with ManagedIdentityClientId
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with ManagedIdentityClientId / WorkloadIdentityClientId
         /// </summary>
         public Layout ClientIdentity { get; set; }
 
@@ -117,12 +119,14 @@ namespace NLog.Targets
         public DataTablesTarget()
             :this(new CloudTableService())
         {
+            Layout = "${message}";  // Override default Layout, since splitting into columns
         }
 
         internal DataTablesTarget(ICloudTableService cloudTableService)
         {
             TaskDelayMilliseconds = 200;
             BatchSize = 100;
+            RetryDelayMilliseconds = 100;
 
             RowKey = Layout.FromMethod(l => string.Concat((DateTime.MaxValue.Ticks - l.TimeStamp.Ticks).ToString("d19"), "__", Guid.NewGuid().ToString()), LayoutRenderOptions.ThreadAgnostic);
 
@@ -298,9 +302,18 @@ namespace NLog.Targets
                     if (string.IsNullOrEmpty(contextproperty.Name))
                         continue;
 
-                    var propertyValue = contextproperty.Layout != null ? RenderLogEvent(contextproperty.Layout, logEvent) : string.Empty;
+                    var propertyValue = RenderLogEvent(contextproperty.Layout, logEvent) ?? string.Empty;
                     if (logTimeStampOverridden && i == 0 && string.IsNullOrEmpty(propertyValue))
                         continue;
+
+                    if (!contextproperty.IncludeEmptyValue && string.IsNullOrEmpty(propertyValue))
+                        continue;
+
+                    if (propertyValue.Length >= ColumnStringValueMaxSize)
+                    {
+                        InternalLogger.Debug("AzureDataTablesTarget(Name={0}): Truncating value from column '{1}', because string-length above 32K", Name, contextproperty.Name);
+                        propertyValue = propertyValue.Substring(0, ColumnStringValueMaxSize - 1);
+                    }
 
                     entity.Add(contextproperty.Name, propertyValue);
                 }
@@ -309,7 +322,12 @@ namespace NLog.Targets
             }
             else
             {
-                var layoutMessage = RenderLogEvent(Layout, logEvent);
+                var layoutMessage = RenderLogEvent(Layout, logEvent) ?? string.Empty;
+                if (layoutMessage.Length >= ColumnStringValueMaxSize)
+                {
+                    layoutMessage = layoutMessage.Substring(0, ColumnStringValueMaxSize - 1);
+                    InternalLogger.Debug("AzureDataTablesTarget(Name={0}): Truncating value from Layout, because string-length above 32K", Name);
+                }
                 return new NLogEntity(logEvent, layoutMessage, _machineName, partitionKey, rowKey, LogTimeStampFormat);
             }
         }
@@ -390,7 +408,7 @@ namespace NLog.Targets
             public Task SubmitTransactionAsync(string tableName, IEnumerable<TableTransactionAction> tableTransaction, CancellationToken cancellationToken)
             {
                 var table = _table;
-                if (tableName == null || table?.Name != tableName)
+                if (string.IsNullOrEmpty(tableName) || table?.Name != tableName)
                 {
                     return InitializeAndCacheTableAsync(tableName, cancellationToken).ContinueWith(async (t, operation) => await t.Result.SubmitTransactionAsync((IEnumerable<TableTransactionAction>)operation).ConfigureAwait(false), tableTransaction, cancellationToken);
                 }

@@ -22,10 +22,10 @@ namespace NLog.Extensions.AzureStorage
 
         public NLogEntity(LogEventInfo logEvent, string layoutMessage, string machineName, string partitionKey, string rowKey, string logTimeStampFormat)
         {
-            FullMessage = layoutMessage;
+            FullMessage = TruncateWhenTooBig(layoutMessage);
             Level = logEvent.Level.Name;
             LoggerName = logEvent.LoggerName;
-            Message = logEvent.Message;
+            Message = TruncateWhenTooBig(logEvent.Message);
             LogTimeStamp = logEvent.TimeStamp.ToString(logTimeStampFormat);
             MachineName = machineName;
             if(logEvent.Exception != null)
@@ -34,28 +34,44 @@ namespace NLog.Extensions.AzureStorage
                 var innerException = exception.InnerException;
                 if (exception is AggregateException aggregateException)
                 {
-                    var innerExceptions = aggregateException.Flatten();
-                    if (innerExceptions.InnerExceptions?.Count == 1)
+                    if (aggregateException.InnerExceptions?.Count == 1 && !(aggregateException.InnerExceptions[0] is AggregateException))
                     {
-                        exception = innerExceptions.InnerExceptions[0];
-                        innerException = null;
+                        exception = aggregateException.InnerExceptions[0];
+                        innerException = exception.InnerException;
                     }
                     else
                     {
-                        innerException = innerExceptions;
+                        var flatten = aggregateException.Flatten();
+                        if (flatten.InnerExceptions?.Count == 1)
+                        {
+                            exception = flatten.InnerExceptions[0];
+                            innerException = exception.InnerException;
+                        }
+                        else
+                        {
+                            innerException = flatten;
+                        }
                     }
                 }
 
                 Exception = string.Concat(exception.Message, " - ", exception.GetType().ToString());
-                StackTrace = exception.StackTrace;
+                StackTrace = TruncateWhenTooBig(exception.StackTrace);
                 if (innerException != null)
                 {
-                    InnerException = innerException.ToString();
+                    var innerExceptionText = innerException.ToString();
+                    InnerException = TruncateWhenTooBig(innerExceptionText);
                 }
             }
             RowKey = rowKey;
             PartitionKey = partitionKey;
         }
+
+        private static string TruncateWhenTooBig(string stringValue)
+        {
+             return stringValue?.Length >= Targets.DataTablesTarget.ColumnStringValueMaxSize ?
+                stringValue.Substring(0, Targets.DataTablesTarget.ColumnStringValueMaxSize - 1) : stringValue;
+        }
+
         public NLogEntity() { }
     }
 }

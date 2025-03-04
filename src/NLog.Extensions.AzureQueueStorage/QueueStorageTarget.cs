@@ -45,7 +45,7 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with ManagedIdentityClientId
+        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with ManagedIdentityClientId / WorkloadIdentityClientId
         /// </summary>
         public Layout ClientIdentity { get; set; }
 
@@ -92,6 +92,8 @@ namespace NLog.Targets
 
         internal QueueStorageTarget(ICloudQueueService cloudQueueService)
         {
+            RetryDelayMilliseconds = 100;
+
             QueueMetadata = new List<TargetPropertyWithContext>();
             _cloudQueueService = cloudQueueService;
             _checkAndRepairQueueNameDelegate = CheckAndRepairQueueNamingRules;
@@ -278,7 +280,7 @@ namespace NLog.Targets
             public Task AddMessageAsync(string queueName, string queueMessage, CancellationToken cancellationToken)
             {
                 var queue = _queue;
-                if (queueName == null || queue?.Name != queueName)
+                if (string.IsNullOrEmpty(queueName) || queue?.Name != queueName)
                 {
                     return InitializeAndCacheQueueAsync(queueName, cancellationToken).ContinueWith(async (t, m) => await t.Result.SendMessageAsync((string)m, null, _timeToLive, cancellationToken).ConfigureAwait(false), queueMessage, cancellationToken);
                 }

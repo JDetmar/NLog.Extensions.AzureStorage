@@ -18,8 +18,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Updated dependency Azure.Identity v1.11.4 because of security issues.
-- Updated dependency Azure.Messaging.EventGrid v4.24.0
+- Assign WorkloadIdentityClientId from ClientIdentity
+- Updated to Azure.Messaging.EventGrid ver. 4.24.1
 
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureEventGrid/README.md
     </PackageReleaseNotes>
@@ -34,7 +34,7 @@ Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NL
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Messaging.EventGrid" Version="4.24.0" />
+    <PackageReference Include="Azure.Messaging.EventGrid" Version="4.24.1" />
     <PackageReference Include="Azure.Identity" Version="1.11.4" />
     <PackageReference Include="NLog" Version="4.7.15" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />

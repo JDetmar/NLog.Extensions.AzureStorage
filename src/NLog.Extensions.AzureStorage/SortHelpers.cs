@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace NLog.Extensions.AzureStorage
@@ -21,7 +22,7 @@ namespace NLog.Extensions.AzureStorage
         /// <param name="inputs">The inputs.</param>
         /// <param name="keySelector">The key selector.</param>
         /// <returns></returns>
-        internal static Dictionary<TKey, IList<TValue>> BucketSort<TValue, TKey>(IList<TValue> inputs, KeySelector<TValue, TKey> keySelector)
+        internal static Dictionary<TKey, IList<TValue>> BucketSort<TValue, TKey>(IList<TValue> inputs, KeySelector<TValue, TKey> keySelector) where TKey : IEquatable<TKey>
         {
             var retVal = new Dictionary<TKey, IList<TValue>>();
 
