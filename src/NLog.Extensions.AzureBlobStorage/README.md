@@ -45,13 +45,17 @@ _clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUr
 
 _resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityResourceId.
 
-_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.
+_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential / ClientSecretCredential.
 
 _sharedAccessSignature_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureSasCredential
 
 _accountName_ - Alternative to ConnectionString. Used together with ServiceUri. Input for StorageSharedKeyCredential-AccountName
 
 _accessKey_ - Alternative to ConnectionString. Used together with ServiceUri. Input for StorageSharedKeyCredential-AccessKey
+
+_clientId_ - Alternative to ConnectionString. Instantiates the `BlobServiceClient` using a `ClientSecretCredential` for authentication. Requires `TenantIdentity` and `ClientSecret`.
+
+_clientSecret_ - Secret when using ClientId. Instantiates the `BlobServiceClient` using a `ClientSecretCredential` for authentication. Requires `TenantIdentity` and `ClientId`.
 
 ### Batching Policy
 

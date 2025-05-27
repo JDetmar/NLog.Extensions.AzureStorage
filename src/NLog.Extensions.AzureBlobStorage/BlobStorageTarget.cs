@@ -68,6 +68,16 @@ namespace NLog.Targets
         /// </summary>
         public Layout AccessKey { get; set; }
 
+        /// <summary>
+        /// Alternative to ConnectionString. Instantiates the <see cref="BlobServiceClient"/> using a <see cref="Azure.Identity.ClientSecretCredential"/> with this value as ClientId for authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientSecret"/> to be set.
+        /// </summary>
+        public Layout ClientId { get; set; }
+
+        /// <summary>
+        /// Secret when using when using <see cref="ClientId"/>. Instantiates the <see cref="BlobServiceClient"/> using a <see cref="Azure.Identity.ClientSecretCredential"/> for authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientId"/> to be set.
+        /// </summary>
+        public Layout ClientSecret { get; set; }
+
         [RequiredParameter]
         public Layout Container { get; set; }
 
@@ -120,6 +130,8 @@ namespace NLog.Targets
             string sharedAccessSignature = string.Empty;
             string storageAccountName = string.Empty;
             string storageAccountAccessKey = string.Empty;
+            string clientId = string.Empty;
+            string clientSecret = string.Empty;
 
             Dictionary<string, string> blobMetadata = null;
             Dictionary<string, string> blobTags = null;
@@ -138,6 +150,8 @@ namespace NLog.Targets
                     sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
                     storageAccountName = AccountName?.Render(defaultLogEvent);
                     storageAccountAccessKey = AccessKey?.Render(defaultLogEvent);
+                    clientId = ClientId?.Render(defaultLogEvent);
+                    clientSecret = ClientSecret?.Render(defaultLogEvent);
                 }
 
                 if (BlobMetadata?.Count > 0)
@@ -169,7 +183,7 @@ namespace NLog.Targets
                     }
                 }
 
-                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, storageAccountName, storageAccountAccessKey, blobMetadata, blobTags);
+                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientId, clientSecret, blobMetadata, blobTags);
                 InternalLogger.Debug("AzureBlobStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -376,7 +390,7 @@ namespace NLog.Targets
             private AppendBlobClient _appendBlob;
             private BlobContainerClient _container;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientId, string clientSecret, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
             {
                 _blobMetadata = blobMetadata?.Count > 0 ? blobMetadata : null;
                 _blobTags = blobTags?.Count > 0 ? blobTags : null;
@@ -392,6 +406,11 @@ namespace NLog.Targets
                 else if (!string.IsNullOrWhiteSpace(storageAccountName))
                 {
                     _client = new BlobServiceClient(new Uri(serviceUri), new Azure.Storage.StorageSharedKeyCredential(storageAccountName, storageAccountAccessKey));
+                }
+                else if (!string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(clientSecret) && !string.IsNullOrEmpty(tenantIdentity))
+                {
+                    var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientId, clientSecret);
+                    _client = new BlobServiceClient(new Uri(serviceUri), tokenCredentials);
                 }
                 else
                 {
