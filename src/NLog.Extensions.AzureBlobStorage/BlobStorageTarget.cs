@@ -43,41 +43,52 @@ namespace NLog.Targets
         /// </summary>
         public Layout TenantIdentity { get; set; }
 
-        /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>.
-        /// </summary>
-        public Layout ResourceIdentity { get; set; }
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+        [Obsolete("Instead use ManagedIdentityResourceId")]
+        public Layout ResourceIdentity { get => ManagedIdentityResourceId; set => ManagedIdentityResourceId = value; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with ManagedIdentityClientId / WorkloadIdentityClientId
+        /// resourceId for <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityResourceId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>.
         /// </summary>
-        public Layout ClientIdentity { get; set; }
+        public Layout ManagedIdentityResourceId { get; set; }
+
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+        [Obsolete("Instead use ManagedIdentityClientId")]
+        public Layout ClientIdentity { get => ManagedIdentityClientId; set => ManagedIdentityClientId = value; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with AzureSasCredential
+        /// Sets <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityClientId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>.
+        /// </summary>
+        public Layout ManagedIdentityClientId { get; set; }
+
+        /// <summary>
+        /// Access signature for <see cref="Azure.AzureSasCredential"/> authentication. Requires <see cref="ServiceUri"/>.
         /// </summary>
         public Layout SharedAccessSignature { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="Azure.Storage.StorageSharedKeyCredential"/> storage account name.
+        /// accountName for <see cref="Azure.Storage.StorageSharedKeyCredential"/> authentication. Requires <see cref="ServiceUri"/> and <see cref="AccessKey"/>.
         /// </summary>
         public Layout AccountName { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="Azure.Storage.StorageSharedKeyCredential"/> storage account access-key.
+        /// accountKey for <see cref="Azure.Storage.StorageSharedKeyCredential"/> authentication. Requires <see cref="ServiceUri"/> and <see cref="AccountName"/>.
         /// </summary>
         public Layout AccessKey { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString. Instantiates the <see cref="BlobServiceClient"/> using a <see cref="Azure.Identity.ClientSecretCredential"/> with this value as ClientId for authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientSecret"/> to be set.
+        /// clientId for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientAuthSecret"/>.
         /// </summary>
-        public Layout ClientId { get; set; }
+        public Layout ClientAuthId { get; set; }
 
         /// <summary>
-        /// Secret when using when using <see cref="ClientId"/>. Instantiates the <see cref="BlobServiceClient"/> using a <see cref="Azure.Identity.ClientSecretCredential"/> for authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientId"/> to be set.
+        /// clientSecret for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientAuthId"/>.
         /// </summary>
-        public Layout ClientSecret { get; set; }
+        public Layout ClientAuthSecret { get; set; }
 
+        /// <summary>
+        /// Name of the Blob storage Container
+        /// </summary>
         [RequiredParameter]
         public Layout Container { get; set; }
 
@@ -85,6 +96,9 @@ namespace NLog.Targets
         [Obsolete("Instead use Container")]
         public Layout ContainerName { get => Container; set => Container = value; }
 
+        /// <summary>
+        /// name of the Blob Storage Blob
+        /// </summary>
         [RequiredParameter]
         public Layout BlobName { get; set; }
 
@@ -125,13 +139,13 @@ namespace NLog.Targets
             string connectionString = string.Empty;
             string serviceUri = string.Empty;
             string tenantIdentity = string.Empty;
-            string resourceIdentifier = string.Empty;
-            string clientIdentity = string.Empty;
+            string managedIdentityResourceId = string.Empty;
+            string managedIdentityClientId = string.Empty;
             string sharedAccessSignature = string.Empty;
             string storageAccountName = string.Empty;
             string storageAccountAccessKey = string.Empty;
-            string clientId = string.Empty;
-            string clientSecret = string.Empty;
+            string clientAuthId = string.Empty;
+            string clientAuthSecret = string.Empty;
 
             Dictionary<string, string> blobMetadata = null;
             Dictionary<string, string> blobTags = null;
@@ -145,13 +159,13 @@ namespace NLog.Targets
                 {
                     serviceUri = ServiceUri?.Render(defaultLogEvent);
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
-                    resourceIdentifier = ResourceIdentity?.Render(defaultLogEvent);
-                    clientIdentity = ClientIdentity?.Render(defaultLogEvent);
+                    managedIdentityResourceId = ManagedIdentityResourceId?.Render(defaultLogEvent);
+                    managedIdentityClientId = ManagedIdentityClientId?.Render(defaultLogEvent);
                     sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
                     storageAccountName = AccountName?.Render(defaultLogEvent);
                     storageAccountAccessKey = AccessKey?.Render(defaultLogEvent);
-                    clientId = ClientId?.Render(defaultLogEvent);
-                    clientSecret = ClientSecret?.Render(defaultLogEvent);
+                    clientAuthId = ClientAuthId?.Render(defaultLogEvent);
+                    clientAuthSecret = ClientAuthSecret?.Render(defaultLogEvent);
                 }
 
                 if (BlobMetadata?.Count > 0)
@@ -183,7 +197,7 @@ namespace NLog.Targets
                     }
                 }
 
-                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientId, clientSecret, blobMetadata, blobTags);
+                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, blobMetadata, blobTags);
                 InternalLogger.Debug("AzureBlobStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -390,7 +404,7 @@ namespace NLog.Targets
             private AppendBlobClient _appendBlob;
             private BlobContainerClient _container;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientId, string clientSecret, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
             {
                 _blobMetadata = blobMetadata?.Count > 0 ? blobMetadata : null;
                 _blobTags = blobTags?.Count > 0 ? blobTags : null;
@@ -407,14 +421,14 @@ namespace NLog.Targets
                 {
                     _client = new BlobServiceClient(new Uri(serviceUri), new Azure.Storage.StorageSharedKeyCredential(storageAccountName, storageAccountAccessKey));
                 }
-                else if (!string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(clientSecret) && !string.IsNullOrEmpty(tenantIdentity))
+                else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
                 {
-                    var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientId, clientSecret);
+                    var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
                     _client = new BlobServiceClient(new Uri(serviceUri), tokenCredentials);
                 }
                 else
                 {
-                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
+                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(managedIdentityClientId, tenantIdentity, managedIdentityResourceId);
                     _client = new BlobServiceClient(new Uri(serviceUri), tokenCredentials);
                 }
             }

@@ -2,7 +2,7 @@ namespace NLog.Extensions.AzureStorage
 {
     internal static class AzureCredentialHelpers
     {
-        internal static Azure.Identity.DefaultAzureCredential CreateTokenCredentials(string clientIdentity, string tenantIdentity, string resourceIdentifier)
+        internal static Azure.Identity.DefaultAzureCredential CreateTokenCredentials(string managedIdentityClientId, string tenantIdentity, string managedIdentityResourceId)
         {
             var options = new Azure.Identity.DefaultAzureCredentialOptions();
 
@@ -11,16 +11,16 @@ namespace NLog.Extensions.AzureStorage
                 options.TenantId = tenantIdentity;
             }
 
-            if (!string.IsNullOrWhiteSpace(clientIdentity))
+            if (!string.IsNullOrWhiteSpace(managedIdentityClientId))
             {
-                options.ManagedIdentityClientId = clientIdentity;
-                options.WorkloadIdentityClientId = clientIdentity;
+                options.ManagedIdentityClientId = managedIdentityClientId;
+                options.WorkloadIdentityClientId = managedIdentityClientId;
             }
             else
             {
-                if (!string.IsNullOrWhiteSpace(resourceIdentifier))
+                if (!string.IsNullOrWhiteSpace(managedIdentityResourceId))
                 {
-                    options.ManagedIdentityResourceId = new Azure.Core.ResourceIdentifier(resourceIdentifier);
+                    options.ManagedIdentityResourceId = new Azure.Core.ResourceIdentifier(managedIdentityResourceId);
                 }
                 else if (string.IsNullOrWhiteSpace(tenantIdentity))
                 {
