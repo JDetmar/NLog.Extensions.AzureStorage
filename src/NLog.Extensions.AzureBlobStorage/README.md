@@ -39,13 +39,13 @@ _contentType_ - Azure blob ContentType (Default = text/plain)
 
 _connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage=true;`
 
-_serviceUri_ - Uri to reference the blob service (e.g. https://{account_name}.blob.core.windows.net). Input for `BlobServiceClient`. Required, when `connectionString` is not configured. Ovverrides `connectionString` when both are set.
+_serviceUri_ - Uri to reference the blob service (e.g. https://{account_name}.blob.core.windows.net). Input for `BlobServiceClient`. Required, when `connectionString` is not configured. Overrides `connectionString` when both are set.
 
-_managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`
+_managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`
 
-_managedIdentityResourceId_ - resourceId for `ManagedIdentityResourceId` on `DefaultAzureCredentialOptions`.
+_managedIdentityResourceId_ - resourceId for `ManagedIdentityResourceId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`.
 
-_tenantIdentity_ - tenantId for `DefaultAzureCredentialOptions` and `ClientSecretCredential`.
+_tenantIdentity_ - tenantId for `DefaultAzureCredentialOptions` and `ClientSecretCredential`. Requires `serviceUri`.
 
 _sharedAccessSignature_ - Access signature for `AzureSasCredential` authentication. Requires `serviceUri`.
 
@@ -53,9 +53,9 @@ _accountName_ - accountName for `StorageSharedKeyCredential` authentication. Req
 
 _accessKey_ - accountKey for `StorageSharedKeyCredential` authentication. Requires `serviceUri` and `accountName`.
 
-_clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires `tenantIdentity` and `clientAuthSecret`.
+_clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires `serviceUri`, `tenantIdentity` and `clientAuthSecret`.
 
-_clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `tenantIdentity` and `clientAuthId`.
+_clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
 
 ### Batching Policy
 
@@ -135,16 +135,4 @@ NLog Layout makes it possible to retrieve settings from [many locations](https:/
 
 ```c#
   NLog.GlobalDiagnosticsContext.Set("AzureBlobConnectionString", "UseDevelopmentStorage=true;");
-```
-
-#### Simple configurations
-
-* Using `DefaultAzureCredential` on a given storage account appsettings.json on .NetCore:
-
-```json
-  {
-    "ConnectionStrings": {
-      "AzureBlob": "UseDevelopmentStorage=true;"
-    }
-  }
 ```

@@ -30,7 +30,8 @@ namespace NLog.Targets
         public Layout ConnectionString { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString
+        /// Uri to reference the blob service (e.g. https://{account_name}.blob.core.windows.net). 
+        /// Input for <see cref="BlobServiceClient"/>. Required, when <see cref="ConnectionString"/> is not configured. Overrides <see cref="ConnectionString"/> when both are set.
         /// </summary>
         public Layout ServiceUri { get; set; }
 
@@ -40,6 +41,7 @@ namespace NLog.Targets
 
         /// <summary>
         /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
+        /// tenantId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/> and <see cref="Azure.Identity.ClientSecretCredential"/>. Requires <see cref="ServiceUri"/>.
         /// </summary>
         public Layout TenantIdentity { get; set; }
 
@@ -48,7 +50,7 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get => ManagedIdentityResourceId; set => ManagedIdentityResourceId = value; }
 
         /// <summary>
-        /// resourceId for <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityResourceId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>.
+        /// resourceId for <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityResourceId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/> .
         /// </summary>
         public Layout ManagedIdentityResourceId { get; set; }
 
@@ -57,7 +59,7 @@ namespace NLog.Targets
         public Layout ClientIdentity { get => ManagedIdentityClientId; set => ManagedIdentityClientId = value; }
 
         /// <summary>
-        /// Sets <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityClientId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>.
+        /// Sets <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityClientId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/>.
         /// </summary>
         public Layout ManagedIdentityClientId { get; set; }
 
@@ -77,12 +79,12 @@ namespace NLog.Targets
         public Layout AccessKey { get; set; }
 
         /// <summary>
-        /// clientId for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientAuthSecret"/>.
+        /// clientId for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="ServiceUri"/>, <see cref="TenantIdentity"/> and <see cref="ClientAuthSecret"/>.
         /// </summary>
         public Layout ClientAuthId { get; set; }
 
         /// <summary>
-        /// clientSecret for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientAuthId"/>.
+        /// clientSecret for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="ServiceUri"/>, <see cref="TenantIdentity"/> and <see cref="ClientAuthId"/>.
         /// </summary>
         public Layout ClientAuthSecret { get; set; }
 
