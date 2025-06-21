@@ -39,23 +39,23 @@ _contentType_ - Azure blob ContentType (Default = text/plain)
 
 _connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage=true;`
 
-_serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from DefaultAzureCredential.
+_serviceUri_ - Uri to reference the blob service (e.g. https://{account_name}.blob.core.windows.net). Input for `BlobServiceClient`. Required, when `connectionString` is not configured. Overrides `connectionString` when both are set.
 
-_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
+_managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`
 
-_resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityResourceId.
+_managedIdentityResourceId_ - resourceId for `ManagedIdentityResourceId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`.
 
-_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential / ClientSecretCredential.
+_tenantIdentity_ - tenantId for `DefaultAzureCredentialOptions` and `ClientSecretCredential`. Requires `serviceUri`.
 
-_sharedAccessSignature_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureSasCredential
+_sharedAccessSignature_ - Access signature for `AzureSasCredential` authentication. Requires `serviceUri`.
 
-_accountName_ - Alternative to ConnectionString. Used together with ServiceUri. Input for StorageSharedKeyCredential-AccountName
+_accountName_ - accountName for `StorageSharedKeyCredential` authentication. Requires `serviceUri` and `accessKey`.
 
-_accessKey_ - Alternative to ConnectionString. Used together with ServiceUri. Input for StorageSharedKeyCredential-AccessKey
+_accessKey_ - accountKey for `StorageSharedKeyCredential` authentication. Requires `serviceUri` and `accountName`.
 
-_clientId_ - Alternative to ConnectionString. Instantiates the `BlobServiceClient` using a `ClientSecretCredential` for authentication. Requires `TenantIdentity` and `ClientSecret`.
+_clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires `serviceUri`, `tenantIdentity` and `clientAuthSecret`.
 
-_clientSecret_ - Secret when using ClientId. Instantiates the `BlobServiceClient` using a `ClientSecretCredential` for authentication. Requires `TenantIdentity` and `ClientId`.
+_clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
 
 ### Batching Policy
 
