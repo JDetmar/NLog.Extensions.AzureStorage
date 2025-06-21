@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>4.4.2</Version>
+    <Version>4.5.0</Version>
 
     <Description>NLog BlobStorageTarget for writing to Azure Cloud Blob Storage</Description>
     <Authors>jdetmar</Authors>
@@ -19,7 +19,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
       - Added support for authentication with a service principal using a secret. by @ssteiner
-
+      - Updated authentication property names for clarity. by @ssteiner
       Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureBlobStorage/README.md
     </PackageReleaseNotes>
   </PropertyGroup>
