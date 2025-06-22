@@ -35,32 +35,46 @@ namespace NLog.Targets
         /// </summary>
         public Layout ServiceUri { get; set; }
 
+        /// <summary>
+        /// Obsolete instead use <see cref="ServiceUri"/>
+        /// </summary>
         [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
         [Obsolete("Instead use ServiceUri")]
         public Layout ServiceUrl { get => ServiceUri; set => ServiceUri = value; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
-        /// tenantId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/> and <see cref="Azure.Identity.ClientSecretCredential"/>. Requires <see cref="ServiceUri"/>.
+        /// TenantId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/> and <see cref="Azure.Identity.ClientSecretCredential"/>. Requires <see cref="ServiceUri"/>.
         /// </summary>
         public Layout TenantIdentity { get; set; }
 
+        /// <summary>
+        /// Obsolete instead use <see cref="ManagedIdentityResourceId"/>
+        /// </summary>
         [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
         [Obsolete("Instead use ManagedIdentityResourceId")]
         public Layout ResourceIdentity { get => ManagedIdentityResourceId; set => ManagedIdentityResourceId = value; }
 
         /// <summary>
-        /// resourceId for <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityResourceId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/> .
+        /// ResourceId for <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityResourceId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/> .
         /// </summary>
+        /// <remarks>
+        /// Do not configure this value together with <see cref="ManagedIdentityClientId"/>
+        /// </remarks>
         public Layout ManagedIdentityResourceId { get; set; }
 
+        /// <summary>
+        /// Obsolete instead use <see cref="ManagedIdentityClientId"/>
+        /// </summary>
         [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
         [Obsolete("Instead use ManagedIdentityClientId")]
         public Layout ClientIdentity { get => ManagedIdentityClientId; set => ManagedIdentityClientId = value; }
 
         /// <summary>
-        /// Sets <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityClientId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/>.
+        /// ManagedIdentityClientId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/>.
         /// </summary>
+        /// <remarks>
+        /// If this value is configured, then <see cref="ManagedIdentityResourceId"/> should not be configured.
+        /// </remarks>
         public Layout ManagedIdentityClientId { get; set; }
 
         /// <summary>
@@ -69,12 +83,12 @@ namespace NLog.Targets
         public Layout SharedAccessSignature { get; set; }
 
         /// <summary>
-        /// accountName for <see cref="Azure.Storage.StorageSharedKeyCredential"/> authentication. Requires <see cref="ServiceUri"/> and <see cref="AccessKey"/>.
+        /// AccountName for <see cref="Azure.Storage.StorageSharedKeyCredential"/> authentication. Requires <see cref="ServiceUri"/> and <see cref="AccessKey"/>.
         /// </summary>
         public Layout AccountName { get; set; }
 
         /// <summary>
-        /// accountKey for <see cref="Azure.Storage.StorageSharedKeyCredential"/> authentication. Requires <see cref="ServiceUri"/> and <see cref="AccountName"/>.
+        /// AccountKey for <see cref="Azure.Storage.StorageSharedKeyCredential"/> authentication. Requires <see cref="ServiceUri"/> and <see cref="AccountName"/>.
         /// </summary>
         public Layout AccessKey { get; set; }
 

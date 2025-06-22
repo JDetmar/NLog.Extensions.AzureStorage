@@ -75,27 +75,47 @@ namespace NLog.Targets
         public Layout DataSchema { get; set; }
 
         /// <summary>
-        /// Input for <see cref="Azure.Identity.DefaultAzureCredential"/>
+        /// TenantId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/>.
         /// </summary>
         public Layout TenantIdentity { get; set; }
 
         /// <summary>
-        /// Input for <see cref="Azure.Identity.DefaultAzureCredential"/>
+        /// Obsolete instead use <see cref="ManagedIdentityResourceId"/>
         /// </summary>
-        public Layout ResourceIdentity { get; set; }
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+        [Obsolete("Instead use ManagedIdentityResourceId")]
+        public Layout ResourceIdentity { get => ManagedIdentityResourceId; set => ManagedIdentityResourceId = value; }
 
         /// <summary>
-        /// Input for <see cref="Azure.Identity.DefaultAzureCredential"/> with ManagedIdentityClientId / WorkloadIdentityClientId
+        /// ResourceId for <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityResourceId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/> .
         /// </summary>
-        public Layout ClientIdentity { get; set; }
+        /// <remarks>
+        /// Do not configure this value together with <see cref="ManagedIdentityClientId"/>
+        /// </remarks>
+        public Layout ManagedIdentityResourceId { get; set; }
 
         /// <summary>
-        /// Alternative to DefaultAzureCredential. Input for AzureKeyCredential for EventGridPublisherClient constructor
+        /// Obsolete instead use <see cref="ManagedIdentityClientId"/>
+        /// </summary>
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+        [Obsolete("Instead use ManagedIdentityClientId")]
+        public Layout ClientIdentity { get => ManagedIdentityClientId; set => ManagedIdentityClientId = value; }
+
+        /// <summary>
+        /// ManagedIdentityClientId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/>.
+        /// </summary>
+        /// <remarks>
+        /// If this value is configured, then <see cref="ManagedIdentityResourceId"/> should not be configured.
+        /// </remarks>
+        public Layout ManagedIdentityClientId { get; set; }
+
+        /// <summary>
+        /// AccessKey for <see cref="Azure.AzureKeyCredential"/> authentication. Requires <see cref="ServiceUri"/>.
         /// </summary>
         public Layout AccessKey { get; set; }
 
         /// <summary>
-        /// Alternative to DefaultAzureCredential. Input for AzureSasCredential for EventGridPublisherClient constructor
+        /// Access signature for <see cref="Azure.AzureSasCredential"/> authentication. Requires <see cref="ServiceUri"/>.
         /// </summary>
         public Layout SharedAccessSignature { get; set; }
 
@@ -139,8 +159,8 @@ namespace NLog.Targets
 
             string topic = string.Empty;
             string tenantIdentity = string.Empty;
-            string resourceIdentity = string.Empty;
-            string clientIdentity = string.Empty;
+            string managedIdentityResourceId = string.Empty;
+            string managedIdentityClientId = string.Empty;
             string sharedAccessSignature = string.Empty;
             string accessKey = string.Empty;
 
@@ -150,12 +170,12 @@ namespace NLog.Targets
             {
                 topic = Topic?.Render(defaultLogEvent);
                 tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
-                resourceIdentity = ResourceIdentity?.Render(defaultLogEvent);
-                clientIdentity = ClientIdentity?.Render(defaultLogEvent);
+                managedIdentityResourceId = ManagedIdentityResourceId?.Render(defaultLogEvent);
+                managedIdentityClientId = ManagedIdentityClientId?.Render(defaultLogEvent);
                 sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
                 accessKey = AccessKey?.Render(defaultLogEvent);
 
-                _eventGridService.Connect(topic, tenantIdentity, resourceIdentity, clientIdentity, sharedAccessSignature, accessKey);
+                _eventGridService.Connect(topic, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, accessKey);
                 InternalLogger.Debug("AzureEventGridTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -193,7 +213,7 @@ namespace NLog.Targets
 
             public string Topic { get; private set; }
 
-            public void Connect(string topic, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string accessKey)
+            public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey)
             {
                 Topic = topic;
 
@@ -207,7 +227,7 @@ namespace NLog.Targets
                 }
                 else
                 {
-                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
+                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(managedIdentityClientId, tenantIdentity, managedIdentityResourceId);
                     _client = new EventGridPublisherClient(new Uri(topic), tokenCredentials);
                 }
             }

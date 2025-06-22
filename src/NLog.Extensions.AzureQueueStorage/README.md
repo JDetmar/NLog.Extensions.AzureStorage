@@ -35,17 +35,17 @@ _connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage
 
 _serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from DefaultAzureCredential.
 
-_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
+_managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`
 
-_resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityResourceId.
+_managedIdentityResourceId_ - resourceId for `ManagedIdentityResourceId` on `DefaultAzureCredentialOptions`, do not use together with `ManagedIdentityClientId`. Requires `serviceUri`.
 
-_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.
+_tenantIdentity_ - tenantId for `DefaultAzureCredentialOptions`. Requires `serviceUri`.
 
-_sharedAccessSignature_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureSasCredential
+_sharedAccessSignature_ - Access signature for `AzureSasCredential` authentication. Requires `serviceUri`.
 
-_accountName_ - Alternative to ConnectionString. Used together with ServiceUri. Input for StorageSharedKeyCredential-AccountName
+_accountName_ - accountName for `StorageSharedKeyCredential` authentication. Requires `serviceUri` and `accessKey`.
 
-_accessKey_ - Alternative to ConnectionString. Used together with ServiceUri. Input for StorageSharedKeyCredential-AccessKey
+_accessKey_ - accountKey for `StorageSharedKeyCredential` authentication. Requires `serviceUri` and `accountName`.
 
 _timeToLiveSeconds_ - Default Time-To-Live (TTL) for Queue messages in seconds (Optional)
 

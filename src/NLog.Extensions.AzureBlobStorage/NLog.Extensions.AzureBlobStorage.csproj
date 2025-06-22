@@ -18,9 +18,11 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-      - Added support for authentication with a service principal using a secret. by @ssteiner
+- Added support for authentication with a service principal using a secret. by @ssteiner
+- Introduced ManagedIdentityClientId to replace ClientIdentity-option
+- Introduced ManagedIdentityResourceId to replace ResourceIdentity-option
 
-      Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureBlobStorage/README.md
+Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureBlobStorage/README.md
     </PackageReleaseNotes>
   </PropertyGroup>
 

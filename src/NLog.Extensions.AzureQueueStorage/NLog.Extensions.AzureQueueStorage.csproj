@@ -18,9 +18,10 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Assign WorkloadIdentityClientId from ClientIdentity
+- Introduced ManagedIdentityClientId to replace ClientIdentity-option
+- Introduced ManagedIdentityResourceId to replace ResourceIdentity-option
 
-      Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureQueueStorage/README.md
+Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureQueueStorage/README.md
     </PackageReleaseNotes>
   </PropertyGroup>
 

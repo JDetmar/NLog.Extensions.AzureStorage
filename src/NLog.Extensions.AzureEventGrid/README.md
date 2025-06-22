@@ -48,15 +48,15 @@ _dataFormat_ - Format of the data-payload (Binary / Json). Default Binary. `Stri
 
 _dataSchema_ - Schema version of the data-payload. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
-_clientIdentity_ - Input for DefaultAzureCredential as ManagedIdentityClientId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`.
 
-_resourceIdentity_ - Input for DefaultAzureCredential as ManagedIdentityResourceId. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_managedIdentityResourceId_ - resourceId for `ManagedIdentityResourceId` on `DefaultAzureCredentialOptions`, do not use together with `ManagedIdentityClientId`. Requires `serviceUri`.
 
-_tenantIdentity_ - Input for DefaultAzureCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_tenantIdentity_ - tenantId for `DefaultAzureCredentialOptions`. Requires `serviceUri`.
 
-_accessKey_ - Alternative to DefaultAzureCredential. Input for AzureKeyCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_sharedAccessSignature_ - Access signature for `AzureSasCredential` authentication. Requires `serviceUri`.
 
-_sharedAccessSignature_ - Alternative to DefaultAzureCredential. Input for AzureSasCredential. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_accessKey_ - Key for `AzureKeyCredential` authentication. Requires `serviceUri`.
 
 ### Retry Policy
 
