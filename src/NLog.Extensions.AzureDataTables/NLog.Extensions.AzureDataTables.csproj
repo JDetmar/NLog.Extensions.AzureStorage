@@ -4,7 +4,7 @@
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>4.4.1</Version>
+    <Version>4.5.0</Version>
 
     <Description>NLog DataTablesTarget for writing to Azure Tables in Azure storage accounts or Azure Cosmos DB table API</Description>
     <Authors>jdetmar</Authors>

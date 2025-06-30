@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>4.4.2</Version>
+    <Version>4.5.0</Version>
 
     <Description>NLog ServiceBusTarget for writing to Azure Service Bus Topic or Queue</Description>
     <Authors>jdetmar</Authors>

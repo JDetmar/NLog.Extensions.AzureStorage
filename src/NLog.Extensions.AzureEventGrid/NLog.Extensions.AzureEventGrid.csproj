@@ -4,7 +4,7 @@
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <Version>4.4.1</Version>
+    <Version>4.5.0</Version>
 
     <Description>NLog EventGridTarget for writing to Azure Event Grid</Description>
     <Authors>jdetmar</Authors>
