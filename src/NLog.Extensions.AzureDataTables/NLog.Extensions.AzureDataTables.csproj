@@ -18,10 +18,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Assign WorkloadIdentityClientId from ClientIdentity
-- Changed Layout default-value to ${message} since LogEvent is split into columns
-- Added automatic truncate when column-values has string-length above 32K
-- Skips adding column values when empty string and configured IncludeEmptyValue = false
+- Introduced ManagedIdentityClientId to replace ClientIdentity-option
+- Introduced ManagedIdentityResourceId to replace ResourceIdentity-option
       
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureDataTables/README.md
     </PackageReleaseNotes>

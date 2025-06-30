@@ -10,7 +10,7 @@ namespace NLog.Extensions.AzureStorage
     {
         string EntityPath { get; }
         TimeSpan? DefaultTimeToLive { get; }
-        void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, bool useWebSockets, string webSocketProxyAddress, string endPointAddress, TimeSpan? timeToLive);
+        void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, bool useWebSockets, string webSocketProxyAddress, string endPointAddress, TimeSpan? timeToLive);
         Task SendAsync(IEnumerable<ServiceBusMessage> messages, CancellationToken cancellationToken);
         Task CloseAsync();
     }

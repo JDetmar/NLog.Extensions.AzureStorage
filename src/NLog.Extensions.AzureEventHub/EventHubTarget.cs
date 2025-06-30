@@ -86,37 +86,60 @@ namespace NLog.Targets
         /// </summary>
         public Layout ServiceUri { get; set; }
 
+        /// <summary>
+        /// Obsolete instead use <see cref="ServiceUri"/>
+        /// </summary>
         [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
         [Obsolete("Instead use ServiceUri")]
         public Layout ServiceUrl { get => ServiceUri; set => ServiceUri = value; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
+        /// TenantId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/>.
         /// </summary>
         public Layout TenantIdentity { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/>
+        /// Obsolete instead use <see cref="ManagedIdentityResourceId"/>
         /// </summary>
-        public Layout ResourceIdentity { get; set; }
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+        [Obsolete("Instead use ManagedIdentityResourceId")]
+        public Layout ResourceIdentity { get => ManagedIdentityResourceId; set => ManagedIdentityResourceId = value; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with ManagedIdentityClientId / WorkloadIdentityClientId
+        /// ResourceId for <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityResourceId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/> .
         /// </summary>
-        public Layout ClientIdentity { get; set; }
+        /// <remarks>
+        /// Do not configure this value together with <see cref="ManagedIdentityClientId"/>
+        /// </remarks>
+        public Layout ManagedIdentityResourceId { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with AzureSasCredential
+        /// Obsolete instead use <see cref="ManagedIdentityClientId"/>
+        /// </summary>
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+        [Obsolete("Instead use ManagedIdentityClientId")]
+        public Layout ClientIdentity { get => ManagedIdentityClientId; set => ManagedIdentityClientId = value; }
+
+        /// <summary>
+        /// ManagedIdentityClientId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/>.
+        /// </summary>
+        /// <remarks>
+        /// If this value is configured, then <see cref="ManagedIdentityResourceId"/> should not be configured.
+        /// </remarks>
+        public Layout ManagedIdentityClientId { get; set; }
+
+        /// <summary>
+        /// Access signature for <see cref="Azure.AzureSasCredential"/> authentication. Requires <see cref="ServiceUri"/>.
         /// </summary>
         public Layout SharedAccessSignature { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="Azure.AzureNamedKeyCredential"/> storage account name.
+        /// AccountName for <see cref="Azure.AzureNamedKeyCredential"/> authentication. Requires <see cref="ServiceUri"/> and <see cref="AccessKey"/>.
         /// </summary>
         public Layout AccountName { get; set; }
 
         /// <summary>
-        /// Alternative to ConnectionString, when using <see cref="ServiceUri"/> with <see cref="Azure.AzureNamedKeyCredential"/> storage account access-key.
+        /// AccountKey for <see cref="Azure.AzureNamedKeyCredential"/> authentication. Requires <see cref="ServiceUri"/> and <see cref="AccountName"/>.
         /// </summary>
         public Layout AccessKey { get; set; }
 
@@ -175,8 +198,8 @@ namespace NLog.Targets
             string connectionString = string.Empty;
             string serviceUri = string.Empty;
             string tenantIdentity = string.Empty;
-            string resourceIdentifier = string.Empty;
-            string clientIdentity = string.Empty;
+            string managedIdentityResourceId = string.Empty;
+            string managedIdentityClientId = string.Empty;
             string sharedAccessSignature = string.Empty;
             string storageAccountName = string.Empty;
             string storageAccountAccessKey = string.Empty;
@@ -195,8 +218,8 @@ namespace NLog.Targets
                 {
                     serviceUri = ServiceUri?.Render(defaultLogEvent);
                     tenantIdentity = TenantIdentity?.Render(defaultLogEvent);
-                    resourceIdentifier = ResourceIdentity?.Render(defaultLogEvent);
-                    clientIdentity = ClientIdentity?.Render(defaultLogEvent);
+                    managedIdentityResourceId = ManagedIdentityResourceId?.Render(defaultLogEvent);
+                    managedIdentityClientId = ManagedIdentityClientId?.Render(defaultLogEvent);
                     sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
                     storageAccountName = AccountName?.Render(defaultLogEvent);
                     storageAccountAccessKey = AccessKey?.Render(defaultLogEvent);
@@ -210,7 +233,7 @@ namespace NLog.Targets
                 customEndPointAddress = CustomEndpointAddress?.Render(defaultLogEvent) ?? string.Empty;
                 webSocketProxyAddress = WebSocketProxyAddress?.Render(defaultLogEvent) ?? string.Empty;
 
-                _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, resourceIdentifier, clientIdentity, sharedAccessSignature, storageAccountName, storageAccountAccessKey, bool.TrueString == useWebSockets, webSocketProxyAddress, customEndPointAddress);
+                _eventHubService.Connect(connectionString, eventHubName, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, bool.TrueString == useWebSockets, webSocketProxyAddress, customEndPointAddress);
                 InternalLogger.Debug("AzureEventHubTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -498,7 +521,7 @@ namespace NLog.Targets
 
             public string EventHubName { get; private set; }
 
-            public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, bool useWebSockets, string webSocketsProxyAddress, string endPointAddress)
+            public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, bool useWebSockets, string webSocketsProxyAddress, string endPointAddress)
             {
                 EventHubName = eventHubName;
 
@@ -532,7 +555,7 @@ namespace NLog.Targets
                 }
                 else
                 {
-                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(clientIdentity, tenantIdentity, resourceIdentifier);
+                    var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(managedIdentityClientId, tenantIdentity, managedIdentityResourceId);
                     _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, tokenCredentials, options);
                 }
             }

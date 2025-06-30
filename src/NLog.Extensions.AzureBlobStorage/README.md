@@ -41,9 +41,9 @@ _connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage
 
 _serviceUri_ - Uri to reference the blob service (e.g. https://{account_name}.blob.core.windows.net). Input for `BlobServiceClient`. Required, when `connectionString` is not configured. Overrides `connectionString` when both are set.
 
-_managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`
+_managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`.
 
-_managedIdentityResourceId_ - resourceId for `ManagedIdentityResourceId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`.
+_managedIdentityResourceId_ - resourceId for `ManagedIdentityResourceId` on `DefaultAzureCredentialOptions`, do not use together with `ManagedIdentityClientId`. Requires `serviceUri`.
 
 _tenantIdentity_ - tenantId for `DefaultAzureCredentialOptions` and `ClientSecretCredential`. Requires `serviceUri`.
 

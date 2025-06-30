@@ -32,17 +32,17 @@ _connectionString_ - Azure storage connection string. [Layout](https://github.co
 
 _serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from DefaultAzureCredential.
 
-_clientIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityClientId.
+_managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`
 
-_resourceIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential as ManagedIdentityResourceId.
+_managedIdentityResourceId_ - resourceId for `ManagedIdentityResourceId` on `DefaultAzureCredentialOptions`, do not use together with `ManagedIdentityClientId`. Requires `serviceUri`.
 
-_tenantIdentity_ - Alternative to ConnectionString. Used together with ServiceUri. Input for DefaultAzureCredential.
+_tenantIdentity_ - tenantId for `DefaultAzureCredentialOptions`. Requires `serviceUri`.
 
-_sharedAccessSignature_ - Alternative to ConnectionString. Used together with ServiceUri. Input for AzureSasCredential
+_sharedAccessSignature_ - Access signature for `AzureSasCredential` authentication. Requires `serviceUri`.
 
-_accountName_ - Alternative to ConnectionString. Used together with ServiceUri. Input for TableSharedKeyCredential storage account-name.
+_accountName_ - accountName for `TableSharedKeyCredential` authentication. Requires `serviceUri` and `accessKey`.
 
-_accessKey_ - Alternative to ConnectionString. Used together with ServiceUri. Input for TableSharedKeyCredential account-access-key.
+_accessKey_ - accountKey for `TableSharedKeyCredential` authentication. Requires `serviceUri` and `accountName`.
 
 _tableName_ - Azure table name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 

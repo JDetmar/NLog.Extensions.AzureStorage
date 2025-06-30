@@ -31,7 +31,7 @@ namespace NLog.Extensions.AzureServiceBus.Test
             return null;
         }
 
-        public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string resourceIdentifier, string clientIdentity, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, bool useWebSockets, string webProxy, string endPointAddress, TimeSpan? timeToLive)
+        public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, bool useWebSockets, string webProxy, string endPointAddress, TimeSpan? timeToLive)
         {
             ConnectionString = connectionString;
             EntityPath = queueOrTopicName;
