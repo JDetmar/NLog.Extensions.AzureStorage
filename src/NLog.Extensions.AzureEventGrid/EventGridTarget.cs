@@ -243,6 +243,9 @@ namespace NLog.Targets
             }
         }
 
+#if NET6_0_OR_GREATER
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming - Allow converting option-values from config", "IL2026")]
+#endif
         private CloudEvent CreateCloudEvent(LogEventInfo logEvent)
         {
             var eventDataBody = RenderLogEvent(Layout, logEvent) ?? string.Empty;
