@@ -416,7 +416,7 @@ namespace NLog.Targets
             try
             {
                 var eventDataBody = RenderLogEvent(Layout, logEvent) ?? string.Empty;
-                var eventData = EventHubsModelFactory.EventData(new BinaryData(EncodeToUTF8(eventDataBody)), partitionKey: partitionKey);
+                var eventData = EventHubsModelFactory.EventData(new BinaryData(EncodeToUTF8(eventDataBody)), partitionKey: partitionKey, offsetString: null);
 
                 var contentType = RenderLogEvent(ContentType, logEvent) ?? string.Empty;
                 if (!string.IsNullOrWhiteSpace(contentType))
