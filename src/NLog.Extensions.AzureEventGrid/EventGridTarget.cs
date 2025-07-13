@@ -75,7 +75,7 @@ namespace NLog.Targets
         public Layout DataSchema { get; set; }
 
         /// <summary>
-        /// TenantId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="Topic"/>.
+        /// TenantId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Used with DefaultAzureCredential authentication when connecting to the Event Grid topic endpoint.
         /// </summary>
         public Layout TenantIdentity { get; set; }
 
@@ -87,7 +87,7 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get => ManagedIdentityResourceId; set => ManagedIdentityResourceId = value; }
 
         /// <summary>
-        /// ResourceId for <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityResourceId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="Topic"/> .
+        /// ResourceId for <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityResourceId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Used with managed identity authentication when connecting to the Event Grid topic endpoint.
         /// </summary>
         /// <remarks>
         /// Do not configure this value together with <see cref="ManagedIdentityClientId"/>
@@ -102,7 +102,7 @@ namespace NLog.Targets
         public Layout ClientIdentity { get => ManagedIdentityClientId; set => ManagedIdentityClientId = value; }
 
         /// <summary>
-        /// ManagedIdentityClientId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="Topic"/>.
+        /// ManagedIdentityClientId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Used with managed identity authentication when connecting to the Event Grid topic endpoint.
         /// </summary>
         /// <remarks>
         /// If this value is configured, then <see cref="ManagedIdentityResourceId"/> should not be configured.
@@ -110,12 +110,12 @@ namespace NLog.Targets
         public Layout ManagedIdentityClientId { get; set; }
 
         /// <summary>
-        /// AccessKey for <see cref="Azure.AzureKeyCredential"/> authentication. Requires <see cref="Topic"/>.
+        /// AccessKey for <see cref="Azure.AzureKeyCredential"/> authentication. Used with key-based authentication when connecting to the Event Grid topic endpoint.
         /// </summary>
         public Layout AccessKey { get; set; }
 
         /// <summary>
-        /// Access signature for <see cref="Azure.AzureSasCredential"/> authentication. Requires <see cref="Topic"/>.
+        /// Access signature for <see cref="Azure.AzureSasCredential"/> authentication. Used with SAS token authentication when connecting to the Event Grid topic endpoint.
         /// </summary>
         public Layout SharedAccessSignature { get; set; }
 
