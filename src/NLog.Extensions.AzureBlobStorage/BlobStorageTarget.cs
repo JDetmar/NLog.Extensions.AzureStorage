@@ -27,6 +27,9 @@ namespace NLog.Targets
         //Delegates for bucket sorting
         private SortHelpers.KeySelector<LogEventInfo, ContainerBlobKey> _getContainerBlobNameDelegate;
 
+        /// <summary>
+        /// Gets or sets the Azure Storage connection string. Alternative to <see cref="ServiceUri"/>.
+        /// </summary>
         public Layout ConnectionString { get; set; }
 
         /// <summary>
@@ -108,6 +111,9 @@ namespace NLog.Targets
         [RequiredParameter]
         public Layout Container { get; set; }
 
+        /// <summary>
+        /// Gets or sets the Azure Blob Storage container name.
+        /// </summary>
         [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
         [Obsolete("Instead use Container")]
         public Layout ContainerName { get => Container; set => Container = value; }
@@ -118,14 +124,27 @@ namespace NLog.Targets
         [RequiredParameter]
         public Layout BlobName { get; set; }
 
+        /// <summary>
+        /// Gets or sets the MIME content type for blob storage.
+        /// </summary>
+        /// <remarks>Default: "text/plain"</remarks>
         public string ContentType { get; set; } = "text/plain";
 
+        /// <summary>
+        /// Gets the collection of custom metadata key-value pairs to attach to the blob.
+        /// </summary>
         [ArrayParameter(typeof(TargetPropertyWithContext), "metadata")]
         public IList<TargetPropertyWithContext> BlobMetadata { get; private set; }
 
+        /// <summary>
+        /// Gets the collection of blob tags for categorization and filtering.
+        /// </summary>
         [ArrayParameter(typeof(TargetPropertyWithContext), "tag")]
         public IList<TargetPropertyWithContext> BlobTags { get; private set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BlobStorageTarget"/> class.
+        /// </summary>
         public BlobStorageTarget()
             :this(new CloudBlobService())
         {
@@ -226,6 +245,11 @@ namespace NLog.Targets
             }
         }
 
+        /// <summary>
+        /// Override this to provide async task for writing a single logevent.
+        /// </summary>
+        /// <param name="logEvent">The log event.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         protected override Task WriteAsyncTask(LogEventInfo logEvent, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
@@ -237,6 +261,7 @@ namespace NLog.Targets
         /// optimize batch writes.
         /// </summary>
         /// <param name="logEvents">Logging events to be written out.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         protected override Task WriteAsyncTask(IList<LogEventInfo> logEvents, CancellationToken cancellationToken)
         {
             //must sort into containers and then into the blobs for the container
@@ -502,6 +527,9 @@ namespace NLog.Targets
             /// Initializes the BLOB.
             /// </summary>
             /// <param name="blobName">Name of the BLOB.</param>
+            /// <param name="blobContainer">The blob container client.</param>
+            /// <param name="contentType">MIME content type for the blob.</param>
+            /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
             private async Task<AppendBlobClient> InitializeBlob(string blobName, BlobContainerClient blobContainer, string contentType, CancellationToken cancellationToken)
             {
                 InternalLogger.Debug("AzureBlobStorageTarget: Initializing blob: {0}", blobName);
@@ -530,6 +558,7 @@ namespace NLog.Targets
             /// Initializes the Azure storage container and creates it if it doesn't exist.
             /// </summary>
             /// <param name="containerName">Name of the container.</param>
+            /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
             private async Task<BlobContainerClient> InitializeContainer(string containerName, CancellationToken cancellationToken)
             {
                 if (_client == null)

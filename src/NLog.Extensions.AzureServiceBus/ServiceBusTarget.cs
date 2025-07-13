@@ -198,6 +198,9 @@ namespace NLog.Targets
         [ArrayParameter(typeof(TargetPropertyWithContext), "messageproperty")]
         public IList<TargetPropertyWithContext> MessageProperties { get => ContextProperties; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ServiceBusTarget"/> class.
+        /// </summary>
         public ServiceBusTarget()
             :this(new CloudServiceBus())
         {

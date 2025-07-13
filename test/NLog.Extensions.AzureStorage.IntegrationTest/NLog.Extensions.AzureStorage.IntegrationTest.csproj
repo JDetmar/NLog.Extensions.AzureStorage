@@ -1,84 +1,20 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{BD4E0EB2-99DB-41CB-A46B-DC573A7573CA}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>NLog.Extensions.AzureStorage.IntegrationTest</RootNamespace>
-    <AssemblyName>NLog.Extensions.AzureStorage.IntegrationTest</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
-    <TargetFrameworkProfile />
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.IO.Compression" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Transactions" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
+    <PackageReference Include="NLog" Version="5.2.5" />
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
+    <ProjectReference Include="..\..\src\NLog.Extensions.AzureBlobStorage\NLog.Extensions.AzureBlobStorage.csproj" />
+    <ProjectReference Include="..\..\src\NLog.Extensions.AzureDataTables\NLog.Extensions.AzureDataTables.csproj" />
+    <ProjectReference Include="..\..\src\NLog.Extensions.AzureEventHub\NLog.Extensions.AzureEventHub.csproj" />
+    <ProjectReference Include="..\..\src\NLog.Extensions.AzureQueueStorage\NLog.Extensions.AzureQueueStorage.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\NLog.Extensions.AzureBlobStorage\NLog.Extensions.AzureBlobStorage.csproj">
-      <Project>{21b2270d-1f45-4be0-8cce-dec8ff293704}</Project>
-      <Name>NLog.Extensions.AzureBlobStorage</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\src\NLog.Extensions.AzureDataTables\NLog.Extensions.AzureDataTables.csproj">
-      <Project>{0969c9d5-f3f1-4ab0-8887-a62f877ee68a}</Project>
-      <Name>NLog.Extensions.AzureDataTables</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\src\NLog.Extensions.AzureEventHub\NLog.Extensions.AzureEventHub.csproj">
-      <Project>{cf5e1262-d006-4c3a-9a62-98c31a3ad5f0}</Project>
-      <Name>NLog.Extensions.AzureEventHub</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\src\NLog.Extensions.AzureQueueStorage\NLog.Extensions.AzureQueueStorage.csproj">
-      <Project>{3e2ef52d-c7a3-48d4-9ab0-8d3e9efd3518}</Project>
-      <Name>NLog.Extensions.AzureQueueStorage</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="NLog">
-      <Version>5.2.5</Version>
-    </PackageReference>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
 </Project>

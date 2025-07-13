@@ -177,6 +177,9 @@ namespace NLog.Targets
         [ArrayParameter(typeof(TargetPropertyWithContext), "messageproperty")]
         public IList<TargetPropertyWithContext> MessageProperties { get => ContextProperties; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventHubTarget"/> class.
+        /// </summary>
         public EventHubTarget()
             :this(new EventHubService())
         {
@@ -191,6 +194,9 @@ namespace NLog.Targets
             _eventHubService = eventHubService;
         }
 
+        /// <summary>
+        /// Initializes the target. Can be used by inheriting classes to initialize logging.
+        /// </summary>
         protected override void InitializeTarget()
         {
             base.InitializeTarget();
@@ -246,6 +252,9 @@ namespace NLog.Targets
             }
         }
 
+        /// <summary>
+        /// Closes the target and releases any unmanaged resources.
+        /// </summary>
         protected override void CloseTarget()
         {
             var task = Task.Run(async () => await _eventHubService.CloseAsync().ConfigureAwait(false));
@@ -253,11 +262,23 @@ namespace NLog.Targets
             base.CloseTarget();
         }
 
+        /// <summary>
+        /// Override this to provide async task for writing a single logevent.
+        /// </summary>
+        /// <param name="logEvent">The log event.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         protected override Task WriteAsyncTask(LogEventInfo logEvent, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();    // Will never get here, because of IList override 
         }
 
+        /// <summary>
+        /// Writes an array of logging events to the log target. By default it iterates on all
+        /// events and passes them to "Write" method. Inheriting classes can use this method to
+        /// optimize batch writes.
+        /// </summary>
+        /// <param name="logEvents">Logging events to be written out.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         protected override Task WriteAsyncTask(IList<LogEventInfo> logEvents, CancellationToken cancellationToken)
         {
             if (_getEventHubPartitionKeyDelegate == null)
