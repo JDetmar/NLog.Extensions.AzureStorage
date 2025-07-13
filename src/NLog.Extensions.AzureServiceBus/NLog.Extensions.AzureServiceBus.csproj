@@ -18,6 +18,7 @@
 
     <PackageTags>NLog;azure;servicebus;AMQP;bus;queue;topic;log;logging</PackageTags>
     <PackageIcon>logo64.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
@@ -33,6 +34,7 @@ Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NL
 
   <ItemGroup>
     <None Include="../../logo64.png" Link="logo64.png" Pack="true" PackagePath="" Visible="false" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
