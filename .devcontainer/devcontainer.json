@@ -1,0 +1,19 @@
+{
+  "name": "NLog.Extensions.AzureStorage",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0-jammy",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.vscode-dotnet-runtime"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "src/NLog.Extensions.AzureStorage.sln"
+      }
+    }
+  },
+  "postCreateCommand": "dotnet restore src/NLog.Extensions.AzureStorage.sln"
+}

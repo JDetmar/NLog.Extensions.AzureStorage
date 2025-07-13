@@ -75,7 +75,7 @@ namespace NLog.Targets
         public Layout DataSchema { get; set; }
 
         /// <summary>
-        /// TenantId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/>.
+        /// TenantId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="Topic"/>.
         /// </summary>
         public Layout TenantIdentity { get; set; }
 
@@ -87,7 +87,7 @@ namespace NLog.Targets
         public Layout ResourceIdentity { get => ManagedIdentityResourceId; set => ManagedIdentityResourceId = value; }
 
         /// <summary>
-        /// ResourceId for <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityResourceId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/> .
+        /// ResourceId for <see cref="Azure.Identity.DefaultAzureCredentialOptions.ManagedIdentityResourceId"/> on <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="Topic"/> .
         /// </summary>
         /// <remarks>
         /// Do not configure this value together with <see cref="ManagedIdentityClientId"/>
@@ -102,7 +102,7 @@ namespace NLog.Targets
         public Layout ClientIdentity { get => ManagedIdentityClientId; set => ManagedIdentityClientId = value; }
 
         /// <summary>
-        /// ManagedIdentityClientId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="ServiceUri"/>.
+        /// ManagedIdentityClientId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Requires <see cref="Topic"/>.
         /// </summary>
         /// <remarks>
         /// If this value is configured, then <see cref="ManagedIdentityResourceId"/> should not be configured.
@@ -110,12 +110,12 @@ namespace NLog.Targets
         public Layout ManagedIdentityClientId { get; set; }
 
         /// <summary>
-        /// AccessKey for <see cref="Azure.AzureKeyCredential"/> authentication. Requires <see cref="ServiceUri"/>.
+        /// AccessKey for <see cref="Azure.AzureKeyCredential"/> authentication. Requires <see cref="Topic"/>.
         /// </summary>
         public Layout AccessKey { get; set; }
 
         /// <summary>
-        /// Access signature for <see cref="Azure.AzureSasCredential"/> authentication. Requires <see cref="ServiceUri"/>.
+        /// Access signature for <see cref="Azure.AzureSasCredential"/> authentication. Requires <see cref="Topic"/>.
         /// </summary>
         public Layout SharedAccessSignature { get; set; }
 
@@ -125,6 +125,9 @@ namespace NLog.Targets
         [ArrayParameter(typeof(TargetPropertyWithContext), "messageproperty")]
         public IList<TargetPropertyWithContext> MessageProperties { get => ContextProperties; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventGridTarget"/> class.
+        /// </summary>
         public EventGridTarget()
             : this(new EventGridService())
         {
@@ -185,6 +188,11 @@ namespace NLog.Targets
             }
         }
 
+        /// <summary>
+        /// Override this to provide async task for writing a single logevent.
+        /// </summary>
+        /// <param name="logEvent">The log event.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         protected override Task WriteAsyncTask(LogEventInfo logEvent, CancellationToken cancellationToken)
         {
             try

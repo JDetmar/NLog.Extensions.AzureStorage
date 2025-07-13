@@ -20,8 +20,14 @@ namespace NLog.Targets
         private readonly AzureStorageNameCache _containerNameCache = new AzureStorageNameCache();
         private readonly Func<string, string> _checkAndRepairQueueNameDelegate;
 
+        /// <summary>
+        /// Gets or sets the Azure Storage connection string. Alternative to <see cref="ServiceUri"/>.
+        /// </summary>
         public Layout ConnectionString { get; set; }
 
+        /// <summary>
+        /// Gets or sets the Azure Queue Storage queue name.
+        /// </summary>
         [RequiredParameter]
         public Layout QueueName { get; set; }
 
@@ -87,6 +93,9 @@ namespace NLog.Targets
         /// </summary>
         public Layout AccessKey { get; set; }
 
+        /// <summary>
+        /// Gets the collection of custom metadata key-value pairs to attach to the queue message.
+        /// </summary>
         [ArrayParameter(typeof(TargetPropertyWithContext), "metadata")]
         public IList<TargetPropertyWithContext> QueueMetadata { get; private set; }
 
@@ -108,6 +117,9 @@ namespace NLog.Targets
         /// </remarks>
         public Layout TimeToLiveDays { get; set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="QueueStorageTarget"/> class.
+        /// </summary>
         public QueueStorageTarget()
             :this(new CloudQueueService())
         {

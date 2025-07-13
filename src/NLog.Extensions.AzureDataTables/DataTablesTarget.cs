@@ -55,7 +55,13 @@ namespace NLog.Targets
             }
         }
 
+        /// <summary>
+        /// Gets or sets the connection string for Azure Table Storage or Cosmos DB Table API.
+        /// </summary>
         public Layout ConnectionString { get; set; }
+        /// <summary>
+        /// Gets or sets the name of the connection string stored in ConnectionStrings section of the config.
+        /// </summary>
         public string ConnectionStringKey { get; set; }
 
         /// <summary>
@@ -128,17 +134,32 @@ namespace NLog.Targets
         /// </summary>
         public Layout AccessKey { get; set; }
 
+        /// <summary>
+        /// Gets or sets the name of the Azure table where log entries will be stored.
+        /// </summary>
         [RequiredParameter]
         public Layout TableName { get; set; }
 
+        /// <summary>
+        /// Gets or sets the partition key for table entries. Defaults to "${logger}".
+        /// </summary>
         [RequiredParameter]
         public Layout PartitionKey { get; set; } = "${logger}";
 
+        /// <summary>
+        /// Gets or sets the row key for table entries.
+        /// </summary>
         [RequiredParameter]
         public Layout RowKey { get; set; }
 
+        /// <summary>
+        /// Gets or sets the format string for log timestamps. Defaults to "O" (ISO 8601).
+        /// </summary>
         public string LogTimeStampFormat { get; set; } = "O";
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DataTablesTarget"/> class.
+        /// </summary>
         public DataTablesTarget()
             :this(new CloudTableService())
         {
@@ -205,11 +226,21 @@ namespace NLog.Targets
             }
         }
 
+        /// <summary>
+        /// Override this to provide async task for writing a single logevent.
+        /// </summary>
+        /// <param name="logEvent">The log event.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         protected override Task WriteAsyncTask(LogEventInfo logEvent, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Override this to provide async task for writing multiple logevents in optimized batch operation.
+        /// </summary>
+        /// <param name="logEvents">The log events.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
         protected override Task WriteAsyncTask(IList<LogEventInfo> logEvents, CancellationToken cancellationToken)
         {
             //must sort into containers and then into the blobs for the container
