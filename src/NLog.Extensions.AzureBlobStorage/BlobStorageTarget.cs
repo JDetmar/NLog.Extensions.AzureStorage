@@ -111,10 +111,10 @@ namespace NLog.Targets
         /// <summary>
         /// Enables connection through a proxy server. If no <see cref="ProxyAddress"/> has been defined, the default proxy of the system will be used.
         /// </summary>
-        public Layout UseProxy { get; set; }
+        public bool UseProxy { get; set; }
 
         /// <summary>
-        /// Address of the proxy server
+        /// Address of the proxy server to use (e.g. http://proxyserver:8080). Requires <see cref="UseProxy"/>
         /// </summary>
         public Layout ProxyAddress { get; set; }
 
@@ -129,9 +129,9 @@ namespace NLog.Targets
         public Layout ProxyPassword { get; set; }
 
         /// <summary>
-        /// If this value is set to true, the default credentials for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
+        /// Uses the default credentials for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>. Requires <see cref="UseProxy"/>
         /// </summary>
-        public Layout UseDefaultCredentialsForProxy { get; set; }
+        public bool UseDefaultCredentialsForProxy { get; set; }
 
         /// <summary>
         /// Name of the Blob storage Container
@@ -231,12 +231,10 @@ namespace NLog.Targets
                     clientAuthId = ClientAuthId?.Render(defaultLogEvent);
                     clientAuthSecret = ClientAuthSecret?.Render(defaultLogEvent);
                 }
-                var useProxy = UseProxy != null && bool.TryParse(UseProxy.Render(defaultLogEvent), out var doUseProxy) && doUseProxy;
-                if (useProxy)
+                if (UseProxy)
                 {
                     proxySettings = new ProxySettings();
-                    proxySettings.UseDefaultCredentials = UseDefaultCredentialsForProxy != null
-                        && bool.TryParse(UseDefaultCredentialsForProxy.Render(defaultLogEvent), out var doUseDefaultCredentials) && doUseDefaultCredentials;
+                    proxySettings.UseDefaultCredentials = UseDefaultCredentialsForProxy;
                     proxySettings.Address = ProxyAddress?.Render(defaultLogEvent);
                     proxySettings.Login = ProxyLogin?.Render(defaultLogEvent);
                     proxySettings.Password = ProxyPassword?.Render(defaultLogEvent);
@@ -488,16 +486,7 @@ namespace NLog.Targets
             {
                 _blobMetadata = blobMetadata?.Count > 0 ? blobMetadata : null;
                 _blobTags = blobTags?.Count > 0 ? blobTags : null;
-                var options = new BlobClientOptions()
-                {
-                    Transport = new HttpClientTransport(new HttpClient(new HttpClientHandler
-                    {
-                        UseProxy = proxySettings != null,
-                        Proxy = ProxyHelper.CreateProxy(proxySettings),
-                        UseDefaultCredentials = proxySettings?.UseDefaultCredentials ?? false
-                    }))
-                };
-
+                BlobClientOptions options = CreateBlobClientOptions(proxySettings);
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
                     _client = new BlobServiceClient(connectionString, options);
@@ -520,6 +509,21 @@ namespace NLog.Targets
                     var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(managedIdentityClientId, tenantIdentity, managedIdentityResourceId);
                     _client = new BlobServiceClient(new Uri(serviceUri), tokenCredentials, options);
                 }
+            }
+
+            private static BlobClientOptions CreateBlobClientOptions(ProxySettings proxySettings)
+            {
+                if (proxySettings == null)
+                    return null;
+                return new BlobClientOptions()
+                {
+                    Transport = new HttpClientTransport(new HttpClient(new HttpClientHandler
+                    {
+                        UseProxy = true,
+                        Proxy = ProxyHelper.CreateProxy(proxySettings),
+                        UseDefaultCredentials = proxySettings?.UseDefaultCredentials ?? false
+                    }))
+                };
             }
 
             public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, CancellationToken cancellationToken)

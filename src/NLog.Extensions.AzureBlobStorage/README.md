@@ -57,6 +57,16 @@ _clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires 
 
 _clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
 
+_useProxy_ - Enables connection through a proxy server. If no `proxyAddress` has been defined, the default proxy of the system will be used.
+
+_proxyAddress_ - Address of the proxy server to use (e.g. http://proxyserver:8080). Requires `useProxy` set to true.
+
+_proxyLogin_ - Login to use for the proxy server. Requires `proxyPassword` and `useProxy`.
+
+_proxyPassword_ - Password to use for the proxy server. Requires `proxyLogin` and `useProxy`.
+
+_useDefaultCredentialsForProxy_ - Uses the default credentials for the proxy server, overriding any values that may have been set in `proxyLogin` and `proxyPassword`. Requires `useProxy`.
+
 ### Batching Policy
 
 _batchSize_ - Number of EventData items to send in a single batch (Default=100)
