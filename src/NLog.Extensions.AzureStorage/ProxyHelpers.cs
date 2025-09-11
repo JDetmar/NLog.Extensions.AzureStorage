@@ -8,6 +8,11 @@ namespace NLog.Extensions.AzureBlobStorage
     public class ProxySettings
     {
         /// <summary>
+        /// proxy server bypass
+        /// </summary>
+        public bool NoProxy { get; set; }
+
+        /// <summary>
         /// address of the proxy server (including port number)
         /// </summary>
         public string Address { get; set; }
@@ -26,6 +31,12 @@ namespace NLog.Extensions.AzureBlobStorage
         ///  If this value is set to true, the default credentials for the proxy
         /// </summary>
         public bool UseDefaultCredentials { get; set; }
+
+        /// <summary>
+        /// Determines whether a custom proxy is required for the given settings
+        /// </summary>
+        /// <returns><see langword="true"/> if a custom proxy is required; otherwise, <see langword="false"/>.</returns>
+        public bool RequiresManualProxyConfiguration => NoProxy || !string.IsNullOrEmpty(Address) || (!string.IsNullOrEmpty(Login) && !string.IsNullOrEmpty(Password)) || UseDefaultCredentials;
     }
 
     /// <summary>
@@ -40,7 +51,7 @@ namespace NLog.Extensions.AzureBlobStorage
         /// <returns></returns>
         public static IWebProxy CreateProxy(ProxySettings proxySettings)
         {
-            if (proxySettings == null)
+            if (proxySettings.NoProxy)
                 return null;
             IWebProxy proxy = WebRequest.DefaultWebProxy;
             if (!string.IsNullOrEmpty(proxySettings.Address))
