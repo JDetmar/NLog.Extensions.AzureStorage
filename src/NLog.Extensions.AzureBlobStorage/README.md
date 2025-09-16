@@ -57,15 +57,16 @@ _clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires 
 
 _clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
 
-_noProxy_ - Connect to the Azure Blob Storage bypassing any proxies.
+_proxyType_ - Type of proxy to use when connecting to Azure Blob Storage. Default is `ProxyType.Default`
 
-_proxyAddress_ - Address of the proxy server to use (e.g. http://proxyserver:8080).
+_proxyAddress_ - Address of the proxy server to use (e.g. http://proxyserver:8080). Activated automatically when having a non-empty string value, overriding `ProxyType`.
 
 _proxyLogin_ - Login to use for the proxy server. Requires `proxyPassword`.
 
 _proxyPassword_ - Password to use for the proxy server. Requires `proxyLogin`.
 
-_useDefaultCredentialsForProxy_ - Uses the default credentials for the proxy server, overriding any values that may have been set in `proxyLogin` and `proxyPassword`.
+_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server, overriding any values that may have been set in `proxyLogin` and `proxyPassword`.
+Requires `proxyType` to be different from `ProxyType.Default`
 
 ### Batching Policy
 

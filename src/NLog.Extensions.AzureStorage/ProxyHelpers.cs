@@ -8,9 +8,9 @@ namespace NLog.Extensions.AzureBlobStorage
     public class ProxySettings
     {
         /// <summary>
-        /// proxy server bypass
+        /// type of proxy to use
         /// </summary>
-        public bool NoProxy { get; set; }
+        public ProxyType ProxyType { get; set; } = ProxyType.Default;
 
         /// <summary>
         /// address of the proxy server (including port number)
@@ -36,7 +36,7 @@ namespace NLog.Extensions.AzureBlobStorage
         /// Determines whether a custom proxy is required for the given settings
         /// </summary>
         /// <returns><see langword="true"/> if a custom proxy is required; otherwise, <see langword="false"/>.</returns>
-        public bool RequiresManualProxyConfiguration => NoProxy || !string.IsNullOrEmpty(Address) || (!string.IsNullOrEmpty(Login) && !string.IsNullOrEmpty(Password)) || UseDefaultCredentials;
+        public bool RequiresManualProxyConfiguration => !string.IsNullOrEmpty(Address) || ProxyType == ProxyType.NoProxy || ProxyType == ProxyType.SystemProxy || UseDefaultCredentials;
     }
 
     /// <summary>
@@ -51,14 +51,31 @@ namespace NLog.Extensions.AzureBlobStorage
         /// <returns></returns>
         public static IWebProxy CreateProxy(ProxySettings proxySettings)
         {
-            if (proxySettings.NoProxy)
+            if (proxySettings.ProxyType == ProxyType.NoProxy || proxySettings.ProxyType == ProxyType.SystemProxy || string.IsNullOrEmpty(proxySettings.Address))
                 return null;
-            IWebProxy proxy = WebRequest.DefaultWebProxy;
-            if (!string.IsNullOrEmpty(proxySettings.Address))
-                proxy = new WebProxy(proxySettings.Address);
+            var proxy = new WebProxy(proxySettings.Address);
             if (!string.IsNullOrEmpty(proxySettings.Login) && !string.IsNullOrEmpty(proxySettings.Password))
                 proxy.Credentials = new NetworkCredential(proxySettings.Login, proxySettings.Password);
             return proxy;
         }
+    }
+
+    /// <summary>
+    /// defines which proxy type to use
+    /// </summary>
+    public enum ProxyType 
+    {
+        /// <summary>
+        /// Do not change the proxy settings (default)
+        /// </summary>
+        Default, 
+        /// <summary>
+        /// Explicitly disables proxy
+        /// </summary>
+        NoProxy,
+        /// <summary>
+        /// Use the ssystem-wide proxy settings (on Windows: Control Panel -> Internet Options)
+        /// </summary>
+        SystemProxy
     }
 }

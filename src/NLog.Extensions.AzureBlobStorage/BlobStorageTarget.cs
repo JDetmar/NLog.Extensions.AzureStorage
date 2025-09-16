@@ -109,12 +109,12 @@ namespace NLog.Targets
         public Layout ClientAuthSecret { get; set; }
 
         /// <summary>
-        /// Connect to the Azure Blob Storage bypassing any proxies
+        /// Type of proxy to use when connecting to Azure Blob Storage. Default is <see cref="ProxyType.Default"/>.
         /// </summary>
-        public bool NoProxy { get; set; }
+        public ProxyType ProxyType { get; set; } = ProxyType.Default;
 
         /// <summary>
-        /// Address of the proxy server to use (e.g. http://proxyserver:8080).
+        /// Address of the proxy server to use (e.g. http://proxyserver:8080). Activated automatically when having a non-empty string value, overriding <see cref="ProxyType"/>.
         /// </summary>
         public Layout ProxyAddress { get; set; }
 
@@ -129,7 +129,8 @@ namespace NLog.Targets
         public Layout ProxyPassword { get; set; }
 
         /// <summary>
-        /// Uses the default credentials for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
+        /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
+        /// Requires <see cref="ProxyType"/> to be different from <see cref="ProxyType.Default"/>.
         /// </summary>
         public bool UseDefaultCredentialsForProxy { get; set; }
 
@@ -233,7 +234,7 @@ namespace NLog.Targets
                 }
                 proxySettings = new ProxySettings
                 {
-                    NoProxy = NoProxy,
+                    ProxyType = ProxyType,
                     UseDefaultCredentials = UseDefaultCredentialsForProxy,
                     Address = ProxyAddress?.Render(defaultLogEvent),
                     Login = ProxyLogin?.Render(defaultLogEvent),
@@ -516,12 +517,19 @@ namespace NLog.Targets
             {
                 if (proxySettings?.RequiresManualProxyConfiguration == true)
                 {
-                    options.Transport = new HttpClientTransport(new HttpClient(new HttpClientHandler
+                    var handler = new HttpClientHandler
                     {
-                        UseProxy = proxySettings.NoProxy == false,
-                        Proxy = ProxyHelper.CreateProxy(proxySettings),
-                        UseDefaultCredentials = proxySettings.UseDefaultCredentials
-                    }));
+                        UseProxy = proxySettings.ProxyType != ProxyType.NoProxy,
+                        Proxy = ProxyHelper.CreateProxy(proxySettings)
+                    };
+                    if (handler.Proxy == null && handler.UseProxy) // using default proxy
+                    {
+                        if (proxySettings.UseDefaultCredentials)
+                            handler.DefaultProxyCredentials = System.Net.CredentialCache.DefaultCredentials;
+                        else if (!string.IsNullOrEmpty(proxySettings.Login) && !string.IsNullOrEmpty(proxySettings.Password))
+                            handler.DefaultProxyCredentials = new System.Net.NetworkCredential(proxySettings.Login, proxySettings.Password);
+                    }
+                    options.Transport = new HttpClientTransport(new HttpClient(handler));
                 }
             }
 
