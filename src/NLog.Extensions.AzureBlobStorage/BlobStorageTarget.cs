@@ -487,8 +487,7 @@ namespace NLog.Targets
             {
                 _blobMetadata = blobMetadata?.Count > 0 ? blobMetadata : null;
                 _blobTags = blobTags?.Count > 0 ? blobTags : null;
-                BlobClientOptions options = new BlobClientOptions();
-                ConfigureBlobClientOptions(options, proxySettings);
+                BlobClientOptions options = ConfigureBlobClientOptions(proxySettings);
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
                     _client = new BlobServiceClient(connectionString, options);
@@ -513,10 +512,11 @@ namespace NLog.Targets
                 }
             }
 
-            private static void ConfigureBlobClientOptions(BlobClientOptions options, ProxySettings proxySettings)
+            private static BlobClientOptions ConfigureBlobClientOptions(ProxySettings proxySettings)
             {
                 if (proxySettings?.RequiresManualProxyConfiguration == true)
                 {
+                    BlobClientOptions options = new BlobClientOptions();
                     var handler = new HttpClientHandler
                     {
                         UseProxy = proxySettings.ProxyType != ProxyType.NoProxy,
@@ -530,7 +530,9 @@ namespace NLog.Targets
                             handler.DefaultProxyCredentials = new System.Net.NetworkCredential(proxySettings.Login, proxySettings.Password);
                     }
                     options.Transport = new HttpClientTransport(new HttpClient(handler));
+                    return options;
                 }
+                return null;
             }
 
             public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, CancellationToken cancellationToken)
