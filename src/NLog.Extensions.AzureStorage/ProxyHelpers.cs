@@ -36,7 +36,7 @@ namespace NLog.Extensions.AzureBlobStorage
         /// Determines whether a custom proxy is required for the given settings
         /// </summary>
         /// <returns><see langword="true"/> if a custom proxy is required; otherwise, <see langword="false"/>.</returns>
-        public bool RequiresManualProxyConfiguration => !string.IsNullOrEmpty(Address) || ProxyType == ProxyType.NoProxy || ProxyType == ProxyType.SystemProxy || UseDefaultCredentials;
+        public bool RequiresManualProxyConfiguration => (ProxyType == ProxyType.Default && !string.IsNullOrEmpty(Address)) || ProxyType == ProxyType.NoProxy || (ProxyType == ProxyType.SystemProxy && !string.IsNullOrEmpty(Login) && !string.IsNullOrEmpty(Password)) || UseDefaultCredentials;
     }
 
     /// <summary>
@@ -51,8 +51,6 @@ namespace NLog.Extensions.AzureBlobStorage
         /// <returns></returns>
         public static IWebProxy CreateProxy(ProxySettings proxySettings)
         {
-            if (proxySettings.ProxyType == ProxyType.NoProxy || proxySettings.ProxyType == ProxyType.SystemProxy || string.IsNullOrEmpty(proxySettings.Address))
-                return null;
             var proxy = new WebProxy(proxySettings.Address);
             if (!string.IsNullOrEmpty(proxySettings.Login) && !string.IsNullOrEmpty(proxySettings.Password))
                 proxy.Credentials = new NetworkCredential(proxySettings.Login, proxySettings.Password);

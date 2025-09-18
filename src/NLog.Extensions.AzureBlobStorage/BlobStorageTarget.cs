@@ -520,7 +520,7 @@ namespace NLog.Targets
                     var handler = new HttpClientHandler
                     {
                         UseProxy = proxySettings.ProxyType != ProxyType.NoProxy,
-                        Proxy = ProxyHelper.CreateProxy(proxySettings)
+                        Proxy = proxySettings.ProxyType == ProxyType.Default && !string.IsNullOrEmpty(proxySettings.Address) ? ProxyHelper.CreateProxy(proxySettings) : null
                     };
                     if (handler.Proxy == null && handler.UseProxy) // using default proxy
                     {
