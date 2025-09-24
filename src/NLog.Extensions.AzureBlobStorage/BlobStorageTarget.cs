@@ -514,11 +514,12 @@ namespace NLog.Targets
 
             private static BlobClientOptions ConfigureBlobClientOptions(ProxySettings proxySettings)
             {
-                if (proxySettings?.RequiresManualProxyConfiguration == true)
+                var transport = proxySettings?.CreateHttpClientTransport();
+                if (transport != null)
                 {
                     return new BlobClientOptions
                     {
-                        Transport = ProxyHelper.CreateHttpPipelineTransport(proxySettings)
+                        Transport = transport
                     };
                 }
                 return null;
