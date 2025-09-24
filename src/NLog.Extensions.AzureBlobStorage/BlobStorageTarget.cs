@@ -516,21 +516,10 @@ namespace NLog.Targets
             {
                 if (proxySettings?.RequiresManualProxyConfiguration == true)
                 {
-                    BlobClientOptions options = new BlobClientOptions();
-                    var handler = new HttpClientHandler
+                    return new BlobClientOptions
                     {
-                        UseProxy = proxySettings.ProxyType != ProxyType.NoProxy,
-                        Proxy = proxySettings.ProxyType == ProxyType.Default && !string.IsNullOrEmpty(proxySettings.Address) ? ProxyHelper.CreateProxy(proxySettings) : null
+                        Transport = ProxyHelper.CreateHttpPipelineTransport(proxySettings)
                     };
-                    if (handler.Proxy == null && handler.UseProxy) // using default proxy
-                    {
-                        if (proxySettings.UseDefaultCredentials)
-                            handler.DefaultProxyCredentials = System.Net.CredentialCache.DefaultCredentials;
-                        else if (!string.IsNullOrEmpty(proxySettings.Login) && !string.IsNullOrEmpty(proxySettings.Password))
-                            handler.DefaultProxyCredentials = new System.Net.NetworkCredential(proxySettings.Login, proxySettings.Password);
-                    }
-                    options.Transport = new HttpClientTransport(new HttpClient(handler));
-                    return options;
                 }
                 return null;
             }
