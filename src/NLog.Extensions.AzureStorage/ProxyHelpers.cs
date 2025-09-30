@@ -10,9 +10,9 @@ namespace NLog.Extensions.AzureBlobStorage
     public class ProxySettings
     {
         /// <summary>
-        /// type of proxy to use
+        /// bypasses any proxy server that may have been configured
         /// </summary>
-        public ProxyType ProxyType { get; set; } = ProxyType.Default;
+        public bool NoProxy { get; set; }
 
         /// <summary>
         /// address of the proxy server (including port number)
@@ -38,7 +38,7 @@ namespace NLog.Extensions.AzureBlobStorage
         /// Determines whether a custom proxy is required for the given settings
         /// </summary>
         /// <returns><see langword="true"/> if a custom proxy is required; otherwise, <see langword="false"/>.</returns>
-        private bool RequiresManualProxyConfiguration => (ProxyType == ProxyType.Default && !string.IsNullOrEmpty(Address)) || ProxyType == ProxyType.NoProxy || (ProxyType == ProxyType.SystemProxy && !string.IsNullOrEmpty(Login) && !string.IsNullOrEmpty(Password)) || UseDefaultCredentials;
+        private bool RequiresManualProxyConfiguration => !string.IsNullOrEmpty(Address) || NoProxy || (!string.IsNullOrEmpty(Login) && !string.IsNullOrEmpty(Password)) || UseDefaultCredentials;
 
         /// <summary>
         /// creates a custom HttpPipelineTransport to be used as <see cref="Azure.Core.ClientOptions.Transport"/> for storage targets
@@ -50,15 +50,15 @@ namespace NLog.Extensions.AzureBlobStorage
             {
                 var handler = new HttpClientHandler
                 {
-                    UseProxy = ProxyType != ProxyType.NoProxy,
-                    Proxy = ProxyType == ProxyType.Default && !string.IsNullOrEmpty(Address) ? CreateProxy(this) : null
+                    UseProxy = NoProxy != true,
+                    Proxy = NoProxy != true && !string.IsNullOrEmpty(Address) ? CreateProxy(this) : null
                 };
                 if (handler.Proxy == null && handler.UseProxy) // using default proxy
                 {
                     if (UseDefaultCredentials)
-                        handler.DefaultProxyCredentials = System.Net.CredentialCache.DefaultCredentials;
+                        handler.DefaultProxyCredentials = CredentialCache.DefaultCredentials;
                     else if (!string.IsNullOrEmpty(Login) && !string.IsNullOrEmpty(Password))
-                        handler.DefaultProxyCredentials = new System.Net.NetworkCredential(Login, Password);
+                        handler.DefaultProxyCredentials = new NetworkCredential(Login, Password);
                 }
                 return new HttpClientTransport(new HttpClient(handler));
             }
@@ -73,24 +73,5 @@ namespace NLog.Extensions.AzureBlobStorage
                 proxy.Credentials = new NetworkCredential(proxySettings.Login, proxySettings.Password);
             return proxy;
         }
-    }
-
-    /// <summary>
-    /// defines which proxy type to use
-    /// </summary>
-    public enum ProxyType 
-    {
-        /// <summary>
-        /// Do not change the proxy settings (default)
-        /// </summary>
-        Default, 
-        /// <summary>
-        /// Explicitly disables proxy
-        /// </summary>
-        NoProxy,
-        /// <summary>
-        /// Use the ssystem-wide proxy settings (on Windows: Control Panel -> Internet Options)
-        /// </summary>
-        SystemProxy
     }
 }

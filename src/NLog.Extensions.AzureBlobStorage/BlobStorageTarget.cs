@@ -109,12 +109,13 @@ namespace NLog.Targets
         public Layout ClientAuthSecret { get; set; }
 
         /// <summary>
-        /// Type of proxy to use when connecting to Azure Blob Storage. Default is <see cref="ProxyType.Default"/>.
+        /// Bypasses any system proxy and proxy in <see cref="ProxyPassword"/> when set to <see langword="true"/>.
+        /// Overrides <see cref="ProxyAddress"/>.
         /// </summary>
-        public ProxyType ProxyType { get; set; } = ProxyType.Default;
+        public bool NoProxy { get; set; }
 
         /// <summary>
-        /// Address of the proxy server to use (e.g. http://proxyserver:8080). Activated automatically when having a non-empty string value, overriding <see cref="ProxyType"/>.
+        /// Address of the proxy server to use (e.g. http://proxyserver:8080).
         /// </summary>
         public Layout ProxyAddress { get; set; }
 
@@ -130,7 +131,7 @@ namespace NLog.Targets
 
         /// <summary>
         /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
-        /// Requires <see cref="ProxyType"/> to be different from <see cref="ProxyType.Default"/>.
+        /// Only applies if <see cref="NoProxy"/> to not be <see langword="true"/>.
         /// </summary>
         public bool UseDefaultCredentialsForProxy { get; set; }
 
@@ -234,7 +235,7 @@ namespace NLog.Targets
                 }
                 proxySettings = new ProxySettings
                 {
-                    ProxyType = ProxyType,
+                    NoProxy = NoProxy,
                     UseDefaultCredentials = UseDefaultCredentialsForProxy,
                     Address = ProxyAddress?.Render(defaultLogEvent),
                     Login = ProxyLogin?.Render(defaultLogEvent),
