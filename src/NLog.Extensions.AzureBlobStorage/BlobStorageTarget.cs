@@ -488,7 +488,7 @@ namespace NLog.Targets
             {
                 _blobMetadata = blobMetadata?.Count > 0 ? blobMetadata : null;
                 _blobTags = blobTags?.Count > 0 ? blobTags : null;
-                BlobClientOptions options = ConfigureBlobClientOptions(proxySettings);
+                BlobClientOptions options = ConfigureClientOptions(proxySettings);
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
                     _client = new BlobServiceClient(connectionString, options);
@@ -513,7 +513,7 @@ namespace NLog.Targets
                 }
             }
 
-            private static BlobClientOptions ConfigureBlobClientOptions(ProxySettings proxySettings)
+            private static BlobClientOptions ConfigureClientOptions(ProxySettings proxySettings)
             {
                 var transport = proxySettings?.CreateHttpClientTransport();
                 if (transport != null)

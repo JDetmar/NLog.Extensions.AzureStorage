@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Azure.Data.Tables;
 using NLog.Common;
 using NLog.Config;
+using NLog.Extensions.AzureBlobStorage;
 using NLog.Extensions.AzureStorage;
 using NLog.Layouts;
 
@@ -135,6 +136,33 @@ namespace NLog.Targets
         public Layout AccessKey { get; set; }
 
         /// <summary>
+        /// Bypasses any system proxy and proxy in <see cref="ProxyPassword"/> when set to <see langword="true"/>.
+        /// Overrides <see cref="ProxyAddress"/>.
+        /// </summary>
+        public bool NoProxy { get; set; }
+
+        /// <summary>
+        /// Address of the proxy server to use (e.g. http://proxyserver:8080).
+        /// </summary>
+        public Layout ProxyAddress { get; set; }
+
+        /// <summary>
+        /// Login to use for the proxy server. Requires <see cref="ProxyPassword"/>.
+        /// </summary>
+        public Layout ProxyLogin { get; set; }
+
+        /// <summary>
+        /// Password to use for the proxy server. Requires <see cref="ProxyLogin"/>.
+        /// </summary>
+        public Layout ProxyPassword { get; set; }
+
+        /// <summary>
+        /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
+        /// Only applies if <see cref="NoProxy"/> to not be <see langword="true"/>.
+        /// </summary>
+        public bool UseDefaultCredentialsForProxy { get; set; }
+
+        /// <summary>
         /// Gets or sets the name of the Azure table where log entries will be stored.
         /// </summary>
         [RequiredParameter]
@@ -197,6 +225,8 @@ namespace NLog.Targets
             string accountName = string.Empty;
             string accessKey = string.Empty;
 
+            ProxySettings proxySettings = null;
+
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
 
             try
@@ -212,8 +242,16 @@ namespace NLog.Targets
                     accountName = AccountName?.Render(defaultLogEvent);
                     accessKey = AccessKey?.Render(defaultLogEvent);
                 }
+                proxySettings = new ProxySettings
+                {
+                    NoProxy = NoProxy,
+                    UseDefaultCredentials = UseDefaultCredentialsForProxy,
+                    Address = ProxyAddress?.Render(defaultLogEvent),
+                    Login = ProxyLogin?.Render(defaultLogEvent),
+                    Password = ProxyPassword?.Render(defaultLogEvent)
+                };
 
-                _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, accountName, accessKey);
+                _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, accountName, accessKey, proxySettings);
                 InternalLogger.Debug("AzureDataTablesTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -438,25 +476,39 @@ namespace NLog.Targets
             private TableServiceClient _client;
             private TableClient _table;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, ProxySettings proxySettings = null)
             {
+                TableClientOptions options = ConfigureClientOptions(proxySettings);
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
-                    _client = new TableServiceClient(connectionString);
+                    _client = new TableServiceClient(connectionString, options);
                 }
                 else if (!string.IsNullOrWhiteSpace(sharedAccessSignature))
                 {
-                    _client = new TableServiceClient(new Uri(serviceUri), new Azure.AzureSasCredential(sharedAccessSignature));
+                    _client = new TableServiceClient(new Uri(serviceUri), new Azure.AzureSasCredential(sharedAccessSignature), options);
                 }
                 else if (!string.IsNullOrWhiteSpace(storageAccountName))
                 {
-                    _client = new TableServiceClient(new Uri(serviceUri), new TableSharedKeyCredential(storageAccountName, storageAccountAccessKey));
+                    _client = new TableServiceClient(new Uri(serviceUri), new TableSharedKeyCredential(storageAccountName, storageAccountAccessKey), options);
                 }
                 else
                 {
                     var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(managedIdentityClientId, tenantIdentity, managedIdentityResourceId);
-                    _client = new TableServiceClient(new Uri(serviceUri), tokenCredentials);
+                    _client = new TableServiceClient(new Uri(serviceUri), tokenCredentials, options);
                 }
+            }
+
+            private static TableClientOptions ConfigureClientOptions(ProxySettings proxySettings)
+            {
+                var transport = proxySettings?.CreateHttpClientTransport();
+                if (transport != null)
+                {
+                    return new TableClientOptions
+                    {
+                        Transport = transport
+                    };
+                }
+                return null;
             }
 
             public Task SubmitTransactionAsync(string tableName, IEnumerable<TableTransactionAction> tableTransaction, CancellationToken cancellationToken)

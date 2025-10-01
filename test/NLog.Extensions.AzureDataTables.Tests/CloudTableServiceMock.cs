@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
+using NLog.Extensions.AzureBlobStorage;
 using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureTableStorage.Tests
@@ -13,7 +14,7 @@ namespace NLog.Extensions.AzureTableStorage.Tests
         public Dictionary<string, IEnumerable<TableTransactionAction>> BatchExecuted { get; } = new Dictionary<string, IEnumerable<TableTransactionAction>>();
         public string ConnectionString { get; private set; }
 
-        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey)
+        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, ProxySettings proxySettings = null)
         {
             ConnectionString = connectionString;
         }

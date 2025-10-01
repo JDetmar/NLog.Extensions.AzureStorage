@@ -7,6 +7,7 @@ using NLog.Common;
 using NLog.Config;
 using NLog.Layouts;
 using NLog.Extensions.AzureStorage;
+using NLog.Extensions.AzureBlobStorage;
 
 namespace NLog.Targets
 {
@@ -94,6 +95,33 @@ namespace NLog.Targets
         public Layout AccessKey { get; set; }
 
         /// <summary>
+        /// Bypasses any system proxy and proxy in <see cref="ProxyPassword"/> when set to <see langword="true"/>.
+        /// Overrides <see cref="ProxyAddress"/>.
+        /// </summary>
+        public bool NoProxy { get; set; }
+
+        /// <summary>
+        /// Address of the proxy server to use (e.g. http://proxyserver:8080).
+        /// </summary>
+        public Layout ProxyAddress { get; set; }
+
+        /// <summary>
+        /// Login to use for the proxy server. Requires <see cref="ProxyPassword"/>.
+        /// </summary>
+        public Layout ProxyLogin { get; set; }
+
+        /// <summary>
+        /// Password to use for the proxy server. Requires <see cref="ProxyLogin"/>.
+        /// </summary>
+        public Layout ProxyPassword { get; set; }
+
+        /// <summary>
+        /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
+        /// Only applies if <see cref="NoProxy"/> to not be <see langword="true"/>.
+        /// </summary>
+        public bool UseDefaultCredentialsForProxy { get; set; }
+
+        /// <summary>
         /// Gets the collection of custom metadata key-value pairs to attach to the queue message.
         /// </summary>
         [ArrayParameter(typeof(TargetPropertyWithContext), "metadata")]
@@ -152,6 +180,7 @@ namespace NLog.Targets
             string storageAccountAccessKey = string.Empty;
 
             Dictionary<string, string> queueMetadata = null;
+            ProxySettings proxySettings = null;
 
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
 
@@ -168,6 +197,14 @@ namespace NLog.Targets
                     storageAccountName = AccountName?.Render(defaultLogEvent);
                     storageAccountAccessKey = AccessKey?.Render(defaultLogEvent);
                 }
+                proxySettings = new ProxySettings
+                {
+                    NoProxy = NoProxy,
+                    UseDefaultCredentials = UseDefaultCredentialsForProxy,
+                    Address = ProxyAddress?.Render(defaultLogEvent),
+                    Login = ProxyLogin?.Render(defaultLogEvent),
+                    Password = ProxyPassword?.Render(defaultLogEvent)
+                };
 
                 if (QueueMetadata?.Count > 0)
                 {
@@ -191,7 +228,7 @@ namespace NLog.Targets
                     timeToLive = default(TimeSpan?);
                 }
 
-                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, timeToLive, queueMetadata);
+                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, timeToLive, queueMetadata, proxySettings);
                 InternalLogger.Debug("AzureQueueStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -288,28 +325,41 @@ namespace NLog.Targets
             private IDictionary<string, string> _queueMetadata;
             private TimeSpan? _timeToLive;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata, ProxySettings proxySettings = null)
             {
                 _timeToLive = timeToLive;
                 _queueMetadata = queueMetadata;
-
+                QueueClientOptions options = ConfigureClientOptions(proxySettings);
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
-                    _client = new QueueServiceClient(connectionString);
+                    _client = new QueueServiceClient(connectionString, options);
                 }
                 else if (!string.IsNullOrWhiteSpace(sharedAccessSignature))
                 {
-                    _client = new QueueServiceClient(new Uri(serviceUri), new Azure.AzureSasCredential(sharedAccessSignature));
+                    _client = new QueueServiceClient(new Uri(serviceUri), new Azure.AzureSasCredential(sharedAccessSignature), options);
                 }
                 else if (!string.IsNullOrWhiteSpace(storageAccountName))
                 {
-                    _client = new QueueServiceClient(new Uri(serviceUri), new Azure.Storage.StorageSharedKeyCredential(storageAccountName, storageAccountAccessKey));
+                    _client = new QueueServiceClient(new Uri(serviceUri), new Azure.Storage.StorageSharedKeyCredential(storageAccountName, storageAccountAccessKey), options);
                 }
                 else
                 {
                     Azure.Core.TokenCredential tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(managedIdentityClientId, tenantIdentity, managedIdentityResourceId);
-                    _client = new QueueServiceClient(new Uri(serviceUri), tokenCredentials);
+                    _client = new QueueServiceClient(new Uri(serviceUri), tokenCredentials, options);
                 }
+            }
+
+            private static QueueClientOptions ConfigureClientOptions(ProxySettings proxySettings)
+            {
+                var transport = proxySettings?.CreateHttpClientTransport();
+                if (transport != null)
+                {
+                    return new QueueClientOptions
+                    {
+                        Transport = transport
+                    };
+                }
+                return null;
             }
 
             public Task AddMessageAsync(string queueName, string queueMessage, CancellationToken cancellationToken)
