@@ -47,6 +47,10 @@ _accountName_ - accountName for `StorageSharedKeyCredential` authentication. Req
 
 _accessKey_ - accountKey for `StorageSharedKeyCredential` authentication. Requires `serviceUri` and `accountName`.
 
+_clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires `serviceUri`, `tenantIdentity` and `clientAuthSecret`.
+
+_clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
+
 _timeToLiveSeconds_ - Default Time-To-Live (TTL) for Queue messages in seconds (Optional)
 
 _timeToLiveDays_ - Default Time-To-Live (TTL) for Queue messages in days (Optional)

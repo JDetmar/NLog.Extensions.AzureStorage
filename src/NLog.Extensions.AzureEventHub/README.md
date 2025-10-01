@@ -72,6 +72,10 @@ _accountName_ - accountName for `AzureNamedKeyCredential` authentication. Requir
 
 _accessKey_ - accountKey for `AzureNamedKeyCredential` authentication. Requires `serviceUri` and `accountName`.
 
+_clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires `serviceUri`, `tenantIdentity` and `clientAuthSecret`.
+
+_clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
+
 ### Batching Policy
 
 _maxBatchSizeBytes_ - Max size of a single batch in bytes [Integer](https://github.com/NLog/NLog/wiki/Data-types) (Default=1024*1024)

@@ -44,6 +44,10 @@ _accountName_ - accountName for `TableSharedKeyCredential` authentication. Requi
 
 _accessKey_ - accountKey for `TableSharedKeyCredential` authentication. Requires `serviceUri` and `accountName`.
 
+_clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires `serviceUri`, `tenantIdentity` and `clientAuthSecret`.
+
+_clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
+
 _tableName_ - Azure table name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
 _rowKey_ - Azure Table RowKey. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Default = "InverseTicks_${guid}"

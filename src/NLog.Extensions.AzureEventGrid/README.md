@@ -58,6 +58,10 @@ _sharedAccessSignature_ - Access signature for `AzureSasCredential` authenticati
 
 _accessKey_ - Key for `AzureKeyCredential` authentication. Requires `serviceUri`.
 
+_clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires `tenantIdentity` and `clientAuthSecret`.
+
+_clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `tenantIdentity` and `clientAuthId`.
+
 ### Retry Policy
 
 _taskTimeoutSeconds_ - How many seconds a Task is allowed to run before it is cancelled (Default 150 secs)

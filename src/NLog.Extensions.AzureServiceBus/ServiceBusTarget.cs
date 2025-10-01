@@ -165,6 +165,16 @@ namespace NLog.Targets
         public Layout AccessKey { get; set; }
 
         /// <summary>
+        /// clientId for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="ServiceUri"/>, <see cref="TenantIdentity"/> and <see cref="ClientAuthSecret"/>.
+        /// </summary>
+        public Layout ClientAuthId { get; set; }
+
+        /// <summary>
+        /// clientSecret for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="ServiceUri"/>, <see cref="TenantIdentity"/> and <see cref="ClientAuthId"/>.
+        /// </summary>
+        public Layout ClientAuthSecret { get; set; }
+
+        /// <summary>
         /// The connection uses the AMQP protocol over web sockets. See also <see cref="ServiceBusTransportType.AmqpWebSockets"/>
         /// </summary>
         public Layout UseWebSockets { get; set; }
@@ -228,6 +238,8 @@ namespace NLog.Targets
             string sharedAccessSignature = string.Empty;
             string storageAccountName = string.Empty;
             string storageAccountAccessKey = string.Empty;
+            string clientAuthId = string.Empty;
+            string clientAuthSecret = string.Empty;
             string queueOrTopicName = string.Empty;
             string useWebSockets = string.Empty;
             string webSocketProxyAddress = string.Empty;
@@ -255,6 +267,8 @@ namespace NLog.Targets
                     sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
                     storageAccountName = AccountName?.Render(defaultLogEvent);
                     storageAccountAccessKey = AccessKey?.Render(defaultLogEvent);
+                    clientAuthId = ClientAuthId?.Render(defaultLogEvent);
+                    clientAuthSecret = ClientAuthSecret?.Render(defaultLogEvent);
                 }
 
                 useWebSockets = UseWebSockets?.Render(defaultLogEvent) ?? string.Empty;
@@ -271,7 +285,7 @@ namespace NLog.Targets
                     timeToLive = default(TimeSpan?);
                 }
 
-                _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, bool.TrueString == useWebSockets, webSocketProxyAddress, customEndPointAddress, timeToLive);
+                _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, bool.TrueString == useWebSockets, webSocketProxyAddress, customEndPointAddress, timeToLive);
                 InternalLogger.Debug("AzureServiceBusTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -624,7 +638,7 @@ namespace NLog.Targets
 
             public string EntityPath { get; private set; }
 
-            public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, bool useWebSockets, string webSocketProxyAddress, string endPointAddress, TimeSpan? timeToLive)
+            public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, bool useWebSockets, string webSocketProxyAddress, string endPointAddress, TimeSpan? timeToLive)
             {
                 EntityPath = queueOrTopicName;
                 DefaultTimeToLive = timeToLive;
@@ -649,6 +663,11 @@ namespace NLog.Targets
                 else if (!string.IsNullOrWhiteSpace(storageAccountName))
                 {
                     _client = new ServiceBusClient(serviceUri, new Azure.AzureNamedKeyCredential(storageAccountName, storageAccountAccessKey), options);
+                }
+                else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
+                {
+                    var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
+                    _client = new ServiceBusClient(serviceUri, tokenCredentials);
                 }
                 else
                 {
