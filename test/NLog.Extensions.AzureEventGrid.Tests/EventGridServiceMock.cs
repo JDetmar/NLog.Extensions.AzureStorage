@@ -19,7 +19,7 @@ namespace NLog.Extensions.AzureEventGrid.Tests
 
         public List<CloudEvent> CloudEvents { get; } = new List<CloudEvent>();
 
-        public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, ProxySettings proxySettings = null)
+        public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
         {
             Topic = topic;
         }

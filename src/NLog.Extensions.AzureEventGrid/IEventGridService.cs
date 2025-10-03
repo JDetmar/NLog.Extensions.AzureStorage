@@ -10,7 +10,7 @@ namespace NLog.Extensions.AzureStorage
     {
         string Topic { get; }
 
-        void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, ProxySettings proxySettings = null);
+        void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null);
 
         Task SendEventAsync(EventGridEvent gridEvent, CancellationToken cancellationToken);
 

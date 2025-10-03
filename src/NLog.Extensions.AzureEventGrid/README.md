@@ -58,6 +58,10 @@ _sharedAccessSignature_ - Access signature for `AzureSasCredential` authenticati
 
 _accessKey_ - Key for `AzureKeyCredential` authentication. Requires `serviceUri`.
 
+_clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires `tenantIdentity` and `clientAuthSecret`.
+
+_clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `tenantIdentity` and `clientAuthId`.
+
 _noProxy_ - Bypasses any system proxy and proxy in `ProxyAddress` when set to `true`.
 
 _proxyAddress_ - Address of the proxy server to use (e.g. http://proxyserver:8080).

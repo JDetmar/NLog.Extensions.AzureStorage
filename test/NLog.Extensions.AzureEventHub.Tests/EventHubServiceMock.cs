@@ -23,7 +23,7 @@ namespace NLog.Extensions.AzureEventHub.Test
                 EventDataSent.Clear();
         }
 
-        public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, bool useWebSockets, string webSocketsProxyAddress, string endPointAddress)
+        public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, bool useWebSockets, string webSocketsProxyAddress, string endPointAddress)
         {
             ConnectionString = connectionString;
             EventHubName = eventHubName;

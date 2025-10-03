@@ -121,6 +121,16 @@ namespace NLog.Targets
         public Layout SharedAccessSignature { get; set; }
 
         /// <summary>
+        /// clientId for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientAuthSecret"/>.
+        /// </summary>
+        public Layout ClientAuthId { get; set; }
+
+        /// <summary>
+        /// clientSecret for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientAuthId"/>.
+        /// </summary>
+        public Layout ClientAuthSecret { get; set; }
+
+        /// <summary>
         /// Bypasses any system proxy and proxy in <see cref="ProxyPassword"/> when set to <see langword="true"/>.
         /// Overrides <see cref="ProxyAddress"/>.
         /// </summary>
@@ -194,6 +204,8 @@ namespace NLog.Targets
             string managedIdentityClientId = string.Empty;
             string sharedAccessSignature = string.Empty;
             string accessKey = string.Empty;
+            string clientAuthId = string.Empty;
+            string clientAuthSecret = string.Empty;
 
             ProxySettings proxySettings = null;
 
@@ -207,6 +219,8 @@ namespace NLog.Targets
                 managedIdentityClientId = ManagedIdentityClientId?.Render(defaultLogEvent);
                 sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
                 accessKey = AccessKey?.Render(defaultLogEvent);
+                clientAuthId = ClientAuthId?.Render(defaultLogEvent);
+                clientAuthSecret = ClientAuthSecret?.Render(defaultLogEvent);
 
                 proxySettings = new ProxySettings
                 {
@@ -217,7 +231,7 @@ namespace NLog.Targets
                     Password = ProxyPassword?.Render(defaultLogEvent)
                 };
 
-                _eventGridService.Connect(topic, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, accessKey);
+                _eventGridService.Connect(topic, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, accessKey, clientAuthId, clientAuthSecret, proxySettings);
                 InternalLogger.Debug("AzureEventGridTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -260,7 +274,7 @@ namespace NLog.Targets
 
             public string Topic { get; private set; }
 
-            public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, ProxySettings proxySettings = null)
+            public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
             {
                 Topic = topic;
                 EventGridPublisherClientOptions options = ConfigureClientOptions(proxySettings);
@@ -271,6 +285,11 @@ namespace NLog.Targets
                 else if (!string.IsNullOrWhiteSpace(accessKey))
                 {
                     _client = new EventGridPublisherClient(new Uri(topic), new AzureKeyCredential(accessKey), options);
+                }
+                else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
+                {
+                    var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
+                    _client = new EventGridPublisherClient(new Uri(topic), tokenCredentials);
                 }
                 else
                 {

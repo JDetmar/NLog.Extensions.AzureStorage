@@ -47,6 +47,10 @@ _accountName_ - accountName for `StorageSharedKeyCredential` authentication. Req
 
 _accessKey_ - accountKey for `StorageSharedKeyCredential` authentication. Requires `serviceUri` and `accountName`.
 
+_clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires `serviceUri`, `tenantIdentity` and `clientAuthSecret`.
+
+_clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
+
 _noProxy_ - Bypasses any system proxy and proxy in `ProxyAddress` when set to `true`.
 
 _proxyAddress_ - Address of the proxy server to use (e.g. http://proxyserver:8080).

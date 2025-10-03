@@ -14,7 +14,7 @@ namespace NLog.Extensions.AzureTableStorage.Tests
         public Dictionary<string, IEnumerable<TableTransactionAction>> BatchExecuted { get; } = new Dictionary<string, IEnumerable<TableTransactionAction>>();
         public string ConnectionString { get; private set; }
 
-        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, ProxySettings proxySettings = null)
+        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
         {
             ConnectionString = connectionString;
         }

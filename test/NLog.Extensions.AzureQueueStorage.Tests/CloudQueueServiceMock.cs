@@ -29,7 +29,7 @@ namespace NLog.Extensions.AzureQueueStorage.Tests
             });
         }
 
-        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata, ProxySettings proxySettings = null)
+        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata, ProxySettings proxySettings = null)
         {
             ConnectionString = connectionString;
             QueueMetadata = queueMetadata;

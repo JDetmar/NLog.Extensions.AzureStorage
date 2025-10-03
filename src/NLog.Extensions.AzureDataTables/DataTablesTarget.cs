@@ -136,6 +136,16 @@ namespace NLog.Targets
         public Layout AccessKey { get; set; }
 
         /// <summary>
+        /// clientId for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="ServiceUri"/>, <see cref="TenantIdentity"/> and <see cref="ClientAuthSecret"/>.
+        /// </summary>
+        public Layout ClientAuthId { get; set; }
+
+        /// <summary>
+        /// clientSecret for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="ServiceUri"/>, <see cref="TenantIdentity"/> and <see cref="ClientAuthId"/>.
+        /// </summary>
+        public Layout ClientAuthSecret { get; set; }
+
+        /// <summary>
         /// Bypasses any system proxy and proxy in <see cref="ProxyPassword"/> when set to <see langword="true"/>.
         /// Overrides <see cref="ProxyAddress"/>.
         /// </summary>
@@ -161,6 +171,7 @@ namespace NLog.Targets
         /// Only applies if <see cref="NoProxy"/> to not be <see langword="true"/>.
         /// </summary>
         public bool UseDefaultCredentialsForProxy { get; set; }
+
 
         /// <summary>
         /// Gets or sets the name of the Azure table where log entries will be stored.
@@ -224,6 +235,8 @@ namespace NLog.Targets
             string sharedAccessSignature = string.Empty;
             string accountName = string.Empty;
             string accessKey = string.Empty;
+            string clientAuthId = string.Empty;
+            string clientAuthSecret = string.Empty;
 
             ProxySettings proxySettings = null;
 
@@ -241,6 +254,8 @@ namespace NLog.Targets
                     sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
                     accountName = AccountName?.Render(defaultLogEvent);
                     accessKey = AccessKey?.Render(defaultLogEvent);
+                    clientAuthId = ClientAuthId?.Render(defaultLogEvent);
+                    clientAuthSecret = ClientAuthSecret?.Render(defaultLogEvent);
                 }
                 proxySettings = new ProxySettings
                 {
@@ -251,7 +266,7 @@ namespace NLog.Targets
                     Password = ProxyPassword?.Render(defaultLogEvent)
                 };
 
-                _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, accountName, accessKey, proxySettings);
+                _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, accountName, accessKey, clientAuthId, clientAuthSecret, proxySettings);
                 InternalLogger.Debug("AzureDataTablesTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -476,7 +491,7 @@ namespace NLog.Targets
             private TableServiceClient _client;
             private TableClient _table;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, ProxySettings proxySettings = null)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
             {
                 TableClientOptions options = ConfigureClientOptions(proxySettings);
                 if (string.IsNullOrWhiteSpace(serviceUri))
@@ -490,6 +505,11 @@ namespace NLog.Targets
                 else if (!string.IsNullOrWhiteSpace(storageAccountName))
                 {
                     _client = new TableServiceClient(new Uri(serviceUri), new TableSharedKeyCredential(storageAccountName, storageAccountAccessKey), options);
+                }
+                else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
+                {
+                    var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
+                    _client = new TableServiceClient(new Uri(serviceUri), tokenCredentials);
                 }
                 else
                 {
