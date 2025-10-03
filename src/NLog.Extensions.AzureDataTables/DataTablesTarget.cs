@@ -135,6 +135,16 @@ namespace NLog.Targets
         public Layout AccessKey { get; set; }
 
         /// <summary>
+        /// clientId for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="ServiceUri"/>, <see cref="TenantIdentity"/> and <see cref="ClientAuthSecret"/>.
+        /// </summary>
+        public Layout ClientAuthId { get; set; }
+
+        /// <summary>
+        /// clientSecret for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="ServiceUri"/>, <see cref="TenantIdentity"/> and <see cref="ClientAuthId"/>.
+        /// </summary>
+        public Layout ClientAuthSecret { get; set; }
+
+        /// <summary>
         /// Gets or sets the name of the Azure table where log entries will be stored.
         /// </summary>
         [RequiredParameter]
@@ -196,6 +206,8 @@ namespace NLog.Targets
             string sharedAccessSignature = string.Empty;
             string accountName = string.Empty;
             string accessKey = string.Empty;
+            string clientAuthId = string.Empty;
+            string clientAuthSecret = string.Empty;
 
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
 
@@ -211,9 +223,11 @@ namespace NLog.Targets
                     sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
                     accountName = AccountName?.Render(defaultLogEvent);
                     accessKey = AccessKey?.Render(defaultLogEvent);
+                    clientAuthId = ClientAuthId?.Render(defaultLogEvent);
+                    clientAuthSecret = ClientAuthSecret?.Render(defaultLogEvent);
                 }
 
-                _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, accountName, accessKey);
+                _cloudTableService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, accountName, accessKey, clientAuthId, clientAuthSecret);
                 InternalLogger.Debug("AzureDataTablesTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -438,7 +452,7 @@ namespace NLog.Targets
             private TableServiceClient _client;
             private TableClient _table;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret)
             {
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
@@ -451,6 +465,11 @@ namespace NLog.Targets
                 else if (!string.IsNullOrWhiteSpace(storageAccountName))
                 {
                     _client = new TableServiceClient(new Uri(serviceUri), new TableSharedKeyCredential(storageAccountName, storageAccountAccessKey));
+                }
+                else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
+                {
+                    var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
+                    _client = new TableServiceClient(new Uri(serviceUri), tokenCredentials);
                 }
                 else
                 {

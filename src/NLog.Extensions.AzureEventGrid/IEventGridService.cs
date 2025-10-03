@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Azure.Messaging;
 using Azure.Messaging.EventGrid;
-using System.Threading.Tasks;
-using Azure.Messaging;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace NLog.Extensions.AzureStorage
 {
@@ -12,7 +9,7 @@ namespace NLog.Extensions.AzureStorage
     {
         string Topic { get; }
 
-        void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey);
+        void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret);
 
         Task SendEventAsync(EventGridEvent gridEvent, CancellationToken cancellationToken);
 

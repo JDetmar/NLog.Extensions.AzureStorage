@@ -94,6 +94,16 @@ namespace NLog.Targets
         public Layout AccessKey { get; set; }
 
         /// <summary>
+        /// clientId for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="ServiceUri"/>, <see cref="TenantIdentity"/> and <see cref="ClientAuthSecret"/>.
+        /// </summary>
+        public Layout ClientAuthId { get; set; }
+
+        /// <summary>
+        /// clientSecret for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="ServiceUri"/>, <see cref="TenantIdentity"/> and <see cref="ClientAuthId"/>.
+        /// </summary>
+        public Layout ClientAuthSecret { get; set; }
+
+        /// <summary>
         /// Gets the collection of custom metadata key-value pairs to attach to the queue message.
         /// </summary>
         [ArrayParameter(typeof(TargetPropertyWithContext), "metadata")]
@@ -150,6 +160,8 @@ namespace NLog.Targets
             string sharedAccessSignature = string.Empty;
             string storageAccountName = string.Empty;
             string storageAccountAccessKey = string.Empty;
+            string clientAuthId = string.Empty;
+            string clientAuthSecret = string.Empty;
 
             Dictionary<string, string> queueMetadata = null;
 
@@ -167,6 +179,8 @@ namespace NLog.Targets
                     sharedAccessSignature = SharedAccessSignature?.Render(defaultLogEvent);
                     storageAccountName = AccountName?.Render(defaultLogEvent);
                     storageAccountAccessKey = AccessKey?.Render(defaultLogEvent);
+                    clientAuthId = ClientAuthId?.Render(defaultLogEvent);
+                    clientAuthSecret = ClientAuthSecret?.Render(defaultLogEvent);
                 }
 
                 if (QueueMetadata?.Count > 0)
@@ -191,7 +205,7 @@ namespace NLog.Targets
                     timeToLive = default(TimeSpan?);
                 }
 
-                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, timeToLive, queueMetadata);
+                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, timeToLive, queueMetadata);
                 InternalLogger.Debug("AzureQueueStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -288,7 +302,7 @@ namespace NLog.Targets
             private IDictionary<string, string> _queueMetadata;
             private TimeSpan? _timeToLive;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
             {
                 _timeToLive = timeToLive;
                 _queueMetadata = queueMetadata;
@@ -304,6 +318,11 @@ namespace NLog.Targets
                 else if (!string.IsNullOrWhiteSpace(storageAccountName))
                 {
                     _client = new QueueServiceClient(new Uri(serviceUri), new Azure.Storage.StorageSharedKeyCredential(storageAccountName, storageAccountAccessKey));
+                }
+                else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
+                {
+                    var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
+                    _client = new QueueServiceClient(new Uri(serviceUri), tokenCredentials);
                 }
                 else
                 {
