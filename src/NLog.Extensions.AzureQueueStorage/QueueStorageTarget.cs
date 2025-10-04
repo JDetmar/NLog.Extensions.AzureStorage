@@ -105,7 +105,7 @@ namespace NLog.Targets
         public Layout ClientAuthSecret { get; set; }
 
         /// <summary>
-        /// Bypasses any system proxy and proxy in <see cref="ProxyPassword"/> when set to <see langword="true"/>.
+        /// Bypasses any system proxy and proxy in <see cref="ProxyAddress"/> when set to <see langword="true"/>.
         /// Overrides <see cref="ProxyAddress"/>.
         /// </summary>
         public bool NoProxy { get; set; }
@@ -127,7 +127,6 @@ namespace NLog.Targets
 
         /// <summary>
         /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
-        /// Only applies if <see cref="NoProxy"/> to not be <see langword="true"/>.
         /// </summary>
         public bool UseDefaultCredentialsForProxy { get; set; }
 

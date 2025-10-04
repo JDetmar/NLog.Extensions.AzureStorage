@@ -66,7 +66,6 @@ _proxyLogin_ - Login to use for the proxy server. Requires `proxyPassword`.
 _proxyPassword_ - Password to use for the proxy server. Requires `proxyLogin`.
 
 _useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server, overriding any values that may have been set in `proxyLogin` and `proxyPassword`.
-Only applies if `noProxy` is not set to `true`.
 
 ### Batching Policy
 
