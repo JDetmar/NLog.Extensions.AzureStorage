@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using NLog.Extensions.AzureBlobStorage;
 using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureQueueStorage.Tests
@@ -28,7 +29,7 @@ namespace NLog.Extensions.AzureQueueStorage.Tests
             });
         }
 
-        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata)
+        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata, ProxySettings proxySettings = null)
         {
             ConnectionString = connectionString;
             QueueMetadata = queueMetadata;

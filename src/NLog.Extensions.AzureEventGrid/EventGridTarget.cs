@@ -10,6 +10,7 @@ using NLog.Common;
 using NLog.Config;
 using NLog.Layouts;
 using NLog.Extensions.AzureStorage;
+using NLog.Extensions.AzureBlobStorage;
 
 namespace NLog.Targets
 {
@@ -130,6 +131,32 @@ namespace NLog.Targets
         public Layout ClientAuthSecret { get; set; }
 
         /// <summary>
+        /// Bypasses any system proxy and proxy in <see cref="ProxyAddress"/> when set to <see langword="true"/>.
+        /// Overrides <see cref="ProxyAddress"/>.
+        /// </summary>
+        public bool NoProxy { get; set; }
+
+        /// <summary>
+        /// Address of the proxy server to use (e.g. http://proxyserver:8080).
+        /// </summary>
+        public Layout ProxyAddress { get; set; }
+
+        /// <summary>
+        /// Login to use for the proxy server. Requires <see cref="ProxyPassword"/>.
+        /// </summary>
+        public Layout ProxyLogin { get; set; }
+
+        /// <summary>
+        /// Password to use for the proxy server. Requires <see cref="ProxyLogin"/>.
+        /// </summary>
+        public Layout ProxyPassword { get; set; }
+
+        /// <summary>
+        /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
+        /// </summary>
+        public bool UseDefaultCredentialsForProxy { get; set; }
+
+        /// <summary>
         /// Gets a list of message properties aka. custom CloudEvent Extension Attributes
         /// </summary>
         [ArrayParameter(typeof(TargetPropertyWithContext), "messageproperty")]
@@ -179,6 +206,8 @@ namespace NLog.Targets
             string clientAuthId = string.Empty;
             string clientAuthSecret = string.Empty;
 
+            ProxySettings proxySettings = null;
+
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
 
             try
@@ -192,7 +221,16 @@ namespace NLog.Targets
                 clientAuthId = ClientAuthId?.Render(defaultLogEvent);
                 clientAuthSecret = ClientAuthSecret?.Render(defaultLogEvent);
 
-                _eventGridService.Connect(topic, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, accessKey, clientAuthId, clientAuthSecret);
+                proxySettings = new ProxySettings
+                {
+                    NoProxy = NoProxy,
+                    UseDefaultCredentials = UseDefaultCredentialsForProxy,
+                    Address = ProxyAddress?.Render(defaultLogEvent),
+                    Login = ProxyLogin?.Render(defaultLogEvent),
+                    Password = ProxyPassword?.Render(defaultLogEvent)
+                };
+
+                _eventGridService.Connect(topic, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, accessKey, clientAuthId, clientAuthSecret, proxySettings);
                 InternalLogger.Debug("AzureEventGridTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -235,17 +273,17 @@ namespace NLog.Targets
 
             public string Topic { get; private set; }
 
-            public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret)
+            public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
             {
                 Topic = topic;
-
+                EventGridPublisherClientOptions options = ConfigureClientOptions(proxySettings);
                 if (!string.IsNullOrWhiteSpace(sharedAccessSignature))
                 {
-                    _client = new EventGridPublisherClient(new Uri(topic), new AzureSasCredential(sharedAccessSignature));
+                    _client = new EventGridPublisherClient(new Uri(topic), new AzureSasCredential(sharedAccessSignature), options);
                 }
                 else if (!string.IsNullOrWhiteSpace(accessKey))
                 {
-                    _client = new EventGridPublisherClient(new Uri(topic), new AzureKeyCredential(accessKey));
+                    _client = new EventGridPublisherClient(new Uri(topic), new AzureKeyCredential(accessKey), options);
                 }
                 else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
                 {
@@ -255,8 +293,21 @@ namespace NLog.Targets
                 else
                 {
                     var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(managedIdentityClientId, tenantIdentity, managedIdentityResourceId);
-                    _client = new EventGridPublisherClient(new Uri(topic), tokenCredentials);
+                    _client = new EventGridPublisherClient(new Uri(topic), tokenCredentials, options);
                 }
+            }
+
+            private static EventGridPublisherClientOptions ConfigureClientOptions(ProxySettings proxySettings)
+            {
+                var transport = proxySettings?.CreateHttpClientTransport();
+                if (transport != null)
+                {
+                    return new EventGridPublisherClientOptions
+                    {
+                        Transport = transport
+                    };
+                }
+                return null;
             }
 
             public Task SendEventAsync(EventGridEvent gridEvent, CancellationToken cancellationToken)

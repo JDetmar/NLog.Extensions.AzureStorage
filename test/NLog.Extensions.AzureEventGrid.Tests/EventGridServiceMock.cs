@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging;
 using Azure.Messaging.EventGrid;
+using NLog.Extensions.AzureBlobStorage;
 using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureEventGrid.Tests
@@ -18,7 +19,7 @@ namespace NLog.Extensions.AzureEventGrid.Tests
 
         public List<CloudEvent> CloudEvents { get; } = new List<CloudEvent>();
 
-        public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret)
+        public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
         {
             Topic = topic;
         }

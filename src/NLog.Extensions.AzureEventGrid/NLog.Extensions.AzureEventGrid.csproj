@@ -34,6 +34,7 @@ Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NL
 
   <ItemGroup>
     <Compile Include="..\NLog.Extensions.AzureStorage\AzureCredentialHelper.cs" Link="AzureCredentialHelper.cs" />
+    <Compile Include="..\NLog.Extensions.AzureStorage\ProxyHelpers.cs" Link="ProxyHelpers.cs" />
   </ItemGroup>
 
   <ItemGroup>
