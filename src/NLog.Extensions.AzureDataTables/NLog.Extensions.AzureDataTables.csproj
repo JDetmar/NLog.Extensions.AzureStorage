@@ -40,6 +40,7 @@ Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NL
   <ItemGroup>
     <Compile Include="..\NLog.Extensions.AzureStorage\AzureCredentialHelper.cs" Link="AzureCredentialHelper.cs" />
     <Compile Include="..\NLog.Extensions.AzureStorage\AzureStorageNameCache.cs" Link="AzureStorageNameCache.cs" />
+    <Compile Include="..\NLog.Extensions.AzureStorage\ProxyHelpers.cs" Link="ProxyHelpers.cs" />
     <Compile Include="..\NLog.Extensions.AzureStorage\SortHelpers.cs" Link="SortHelpers.cs" />
   </ItemGroup>
 

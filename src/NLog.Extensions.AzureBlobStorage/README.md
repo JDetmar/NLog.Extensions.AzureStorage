@@ -57,6 +57,16 @@ _clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires 
 
 _clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
 
+_noProxy_ - Bypasses any system proxy and proxy in `ProxyAddress` when set to `true`.
+
+_proxyAddress_ - Address of the proxy server to use (e.g. http://proxyserver:8080).
+
+_proxyLogin_ - Login to use for the proxy server. Requires `proxyPassword`.
+
+_proxyPassword_ - Password to use for the proxy server. Requires `proxyLogin`.
+
+_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server, overriding any values that may have been set in `proxyLogin` and `proxyPassword`.
+
 ### Batching Policy
 
 _batchSize_ - Number of EventData items to send in a single batch (Default=100)

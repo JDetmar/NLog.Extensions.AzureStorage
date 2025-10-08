@@ -1,5 +1,6 @@
 ﻿using Azure.Messaging;
 using Azure.Messaging.EventGrid;
+using NLog.Extensions.AzureBlobStorage;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,7 +10,7 @@ namespace NLog.Extensions.AzureStorage
     {
         string Topic { get; }
 
-        void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret);
+        void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null);
 
         Task SendEventAsync(EventGridEvent gridEvent, CancellationToken cancellationToken);
 

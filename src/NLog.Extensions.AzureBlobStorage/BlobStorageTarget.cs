@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core.Pipeline;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
 using NLog.Common;
 using NLog.Config;
+using NLog.Extensions.AzureBlobStorage;
 using NLog.Extensions.AzureStorage;
 using NLog.Layouts;
 
@@ -106,6 +109,32 @@ namespace NLog.Targets
         public Layout ClientAuthSecret { get; set; }
 
         /// <summary>
+        /// Bypasses any system proxy and proxy in <see cref="ProxyAddress"/> when set to <see langword="true"/>.
+        /// Overrides <see cref="ProxyAddress"/>.
+        /// </summary>
+        public bool NoProxy { get; set; }
+
+        /// <summary>
+        /// Address of the proxy server to use (e.g. http://proxyserver:8080).
+        /// </summary>
+        public Layout ProxyAddress { get; set; }
+
+        /// <summary>
+        /// Login to use for the proxy server. Requires <see cref="ProxyPassword"/>.
+        /// </summary>
+        public Layout ProxyLogin { get; set; }
+
+        /// <summary>
+        /// Password to use for the proxy server. Requires <see cref="ProxyLogin"/>.
+        /// </summary>
+        public Layout ProxyPassword { get; set; }
+
+        /// <summary>
+        /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
+        /// </summary>
+        public bool UseDefaultCredentialsForProxy { get; set; }
+
+        /// <summary>
         /// Name of the Blob storage Container
         /// </summary>
         [RequiredParameter]
@@ -184,6 +213,7 @@ namespace NLog.Targets
 
             Dictionary<string, string> blobMetadata = null;
             Dictionary<string, string> blobTags = null;
+            ProxySettings proxySettings = null;
 
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
 
@@ -202,6 +232,14 @@ namespace NLog.Targets
                     clientAuthId = ClientAuthId?.Render(defaultLogEvent);
                     clientAuthSecret = ClientAuthSecret?.Render(defaultLogEvent);
                 }
+                proxySettings = new ProxySettings
+                {
+                    NoProxy = NoProxy,
+                    UseDefaultCredentials = UseDefaultCredentialsForProxy,
+                    Address = ProxyAddress?.Render(defaultLogEvent),
+                    Login = ProxyLogin?.Render(defaultLogEvent),
+                    Password = ProxyPassword?.Render(defaultLogEvent)
+                };
 
                 if (BlobMetadata?.Count > 0)
                 {
@@ -232,7 +270,7 @@ namespace NLog.Targets
                     }
                 }
 
-                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, blobMetadata, blobTags);
+                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, blobMetadata, blobTags, proxySettings);
                 InternalLogger.Debug("AzureBlobStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -445,33 +483,46 @@ namespace NLog.Targets
             private AppendBlobClient _appendBlob;
             private BlobContainerClient _container;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags, ProxySettings proxySettings = null)
             {
                 _blobMetadata = blobMetadata?.Count > 0 ? blobMetadata : null;
                 _blobTags = blobTags?.Count > 0 ? blobTags : null;
-
+                BlobClientOptions options = ConfigureClientOptions(proxySettings);
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
-                    _client = new BlobServiceClient(connectionString);
+                    _client = new BlobServiceClient(connectionString, options);
                 }
                 else if (!string.IsNullOrEmpty(sharedAccessSignature))
                 {
-                    _client = new BlobServiceClient(new Uri(serviceUri), new Azure.AzureSasCredential(sharedAccessSignature));
+                    _client = new BlobServiceClient(new Uri(serviceUri), new Azure.AzureSasCredential(sharedAccessSignature), options);
                 }
                 else if (!string.IsNullOrWhiteSpace(storageAccountName))
                 {
-                    _client = new BlobServiceClient(new Uri(serviceUri), new Azure.Storage.StorageSharedKeyCredential(storageAccountName, storageAccountAccessKey));
+                    _client = new BlobServiceClient(new Uri(serviceUri), new Azure.Storage.StorageSharedKeyCredential(storageAccountName, storageAccountAccessKey), options);
                 }
                 else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
                 {
                     var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
-                    _client = new BlobServiceClient(new Uri(serviceUri), tokenCredentials);
+                    _client = new BlobServiceClient(new Uri(serviceUri), tokenCredentials, options);
                 }
                 else
                 {
                     var tokenCredentials = AzureCredentialHelpers.CreateTokenCredentials(managedIdentityClientId, tenantIdentity, managedIdentityResourceId);
-                    _client = new BlobServiceClient(new Uri(serviceUri), tokenCredentials);
+                    _client = new BlobServiceClient(new Uri(serviceUri), tokenCredentials, options);
                 }
+            }
+
+            private static BlobClientOptions ConfigureClientOptions(ProxySettings proxySettings)
+            {
+                var transport = proxySettings?.CreateHttpClientTransport();
+                if (transport != null)
+                {
+                    return new BlobClientOptions
+                    {
+                        Transport = transport
+                    };
+                }
+                return null;
             }
 
             public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, CancellationToken cancellationToken)
