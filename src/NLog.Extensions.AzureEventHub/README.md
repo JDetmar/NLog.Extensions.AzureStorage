@@ -34,7 +34,7 @@
 </targets>
 ```
 
-### Parameters
+### General Options
 
 _name_ - Name of the target.
 
@@ -54,11 +54,13 @@ _correlationId_ - EventData Correlationid. [Layout](https://github.com/NLog/NLog
 
 _useWebSockets_ - Enable AmqpWebSockets. Ex. true/false (optional)
 
-_webSocketProxyAddress_ - Custom WebProxy address for WebSockets (optional)
-
 _customEndpointAddress_ - Custom endpoint address that can be used when establishing the connection (optional)
 
 _serviceUri_ - Alternative to ConnectionString, where Managed Identiy is applied from DefaultAzureCredential.
+
+_eventProducerIdentifier_ - A unique name used to identify the event producer. If null or empty, a GUID will be used as the identifier (optional)
+
+### Authentication Options
 
 _managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`
 
@@ -75,6 +77,18 @@ _accessKey_ - accountKey for `AzureNamedKeyCredential` authentication. Requires 
 _clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires `serviceUri`, `tenantIdentity` and `clientAuthSecret`.
 
 _clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
+
+### Proxy Options
+
+_noProxy_ - Bypasses any system proxy and proxy in `ProxyAddress` when set to `true`. Requires `useWebSockets = true`.
+
+_proxyAddress_ - Address of the proxy server to use (e.g. http://proxyserver:8080). Requires `useWebSockets = true`.
+
+_proxyLogin_ - Login to use for the proxy server. Requires `proxyPassword`. Requires `useWebSockets = true`.
+
+_proxyPassword_ - Password to use for the proxy server. Requires `proxyLogin`. Requires `useWebSockets = true`.
+
+_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server. Requires `useWebSockets = true`.
 
 ### Batching Policy
 

@@ -28,7 +28,7 @@
 </targets>
 ```
 
-### Parameters
+### General Options
 
 _name_ - Name of the target.
 
@@ -48,6 +48,8 @@ _dataFormat_ - Format of the data-payload (Binary / Json). Default Binary. `Stri
 
 _dataSchema_ - Schema version of the data-payload. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
 
+### Authentication Options
+
 _managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`.
 
 _managedIdentityResourceId_ - resourceId for `ManagedIdentityResourceId` on `DefaultAzureCredentialOptions`, do not use together with `ManagedIdentityClientId`. Requires `serviceUri`.
@@ -62,6 +64,8 @@ _clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires 
 
 _clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `tenantIdentity` and `clientAuthId`.
 
+### Proxy Options
+
 _noProxy_ - Bypasses any system proxy and proxy in `ProxyAddress` when set to `true`.
 
 _proxyAddress_ - Address of the proxy server to use (e.g. http://proxyserver:8080).
@@ -70,8 +74,7 @@ _proxyLogin_ - Login to use for the proxy server. Requires `proxyPassword`.
 
 _proxyPassword_ - Password to use for the proxy server. Requires `proxyLogin`.
 
-_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server, overriding any values that may have been set in `proxyLogin` and `proxyPassword`.
-Only applies if `noProxy` is not set to `true`.
+_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server.
 
 ### Retry Policy
 

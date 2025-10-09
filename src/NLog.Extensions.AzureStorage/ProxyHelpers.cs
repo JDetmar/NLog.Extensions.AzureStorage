@@ -38,7 +38,7 @@ namespace NLog.Extensions.AzureBlobStorage
         /// Determines whether a custom proxy is required for the given settings
         /// </summary>
         /// <returns><see langword="true"/> if a custom proxy is required; otherwise, <see langword="false"/>.</returns>
-        private bool RequiresManualProxyConfiguration => !string.IsNullOrEmpty(Address) || NoProxy || (!string.IsNullOrEmpty(Login) && !string.IsNullOrEmpty(Password)) || UseDefaultCredentials;
+        public bool RequiresManualProxyConfiguration => !string.IsNullOrEmpty(Address) || NoProxy || (!string.IsNullOrEmpty(Login) && !string.IsNullOrEmpty(Password)) || UseDefaultCredentials;
 
         /// <summary>
         /// creates a custom HttpPipelineTransport to be used as <see cref="Azure.Core.ClientOptions.Transport"/> for storage targets
@@ -50,27 +50,46 @@ namespace NLog.Extensions.AzureBlobStorage
             {
                 var handler = new HttpClientHandler
                 {
-                    UseProxy = NoProxy != true,
-                    Proxy = NoProxy != true && !string.IsNullOrEmpty(Address) ? CreateProxy(this) : null
+                    UseProxy = !NoProxy,
                 };
-                if (handler.Proxy == null && handler.UseProxy) // using default proxy
+
+                if (NoProxy)
+                {
+                    handler.Proxy = null;
+                }
+                else if (!string.IsNullOrEmpty(Address))
+                {
+                    handler.Proxy = CreateWebProxy();
+                }
+                else
                 {
                     if (UseDefaultCredentials)
                         handler.DefaultProxyCredentials = CredentialCache.DefaultCredentials;
                     else if (!string.IsNullOrEmpty(Login) && !string.IsNullOrEmpty(Password))
                         handler.DefaultProxyCredentials = new NetworkCredential(Login, Password);
                 }
+
                 return new HttpClientTransport(new HttpClient(handler));
             }
 
             return null;
         }
 
-        private static WebProxy CreateProxy(ProxySettings proxySettings)
+        /// <summary>
+        /// Creates new WebProxy-object based on the configured proxy-options.
+        /// </summary>
+        public IWebProxy CreateWebProxy(IWebProxy defaultProxy = null)
         {
-            var proxy = new WebProxy(proxySettings.Address);
-            if (!string.IsNullOrEmpty(proxySettings.Login) && !string.IsNullOrEmpty(proxySettings.Password))
-                proxy.Credentials = new NetworkCredential(proxySettings.Login, proxySettings.Password);
+            if (NoProxy)
+                return null;
+            if (string.IsNullOrEmpty(Address))
+                return defaultProxy;
+
+            var proxy = new WebProxy(Address, BypassOnLocal: true);
+            if (UseDefaultCredentials)
+                proxy.Credentials = CredentialCache.DefaultCredentials;
+            else if (!string.IsNullOrEmpty(Login) && !string.IsNullOrEmpty(Password))
+                proxy.Credentials = new NetworkCredential(Login, Password);
             return proxy;
         }
     }

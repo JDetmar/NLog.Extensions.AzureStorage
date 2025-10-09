@@ -25,7 +25,7 @@
 </targets>
 ```
 
-### Parameters
+### General Options
 
 _name_ - Name of the target.
 
@@ -37,9 +37,11 @@ _container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/w
 
 _contentType_ - Azure blob ContentType (Default = text/plain)
 
-_connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage=true;`
+_connectionString_ - Azure Blob Storage connection string from your storage account. Required unless using `ServiceUri`.
 
-_serviceUri_ - Uri to reference the blob service (e.g. https://{account_name}.blob.core.windows.net). Input for `BlobServiceClient`. Required, when `connectionString` is not configured. Overrides `connectionString` when both are set.
+_serviceUri_ - Uri to reference the blob service (e.g. https://{account_name}.blob.core.windows.net). Alternative to ConnectionString, where Managed Identiy is applied from DefaultAzureCredential.
+
+### Authentication Options
 
 _managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`.
 
@@ -57,6 +59,8 @@ _clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires 
 
 _clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
 
+### Proxy Options
+
 _noProxy_ - Bypasses any system proxy and proxy in `ProxyAddress` when set to `true`.
 
 _proxyAddress_ - Address of the proxy server to use (e.g. http://proxyserver:8080).
@@ -65,7 +69,7 @@ _proxyLogin_ - Login to use for the proxy server. Requires `proxyPassword`.
 
 _proxyPassword_ - Password to use for the proxy server. Requires `proxyLogin`.
 
-_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server, overriding any values that may have been set in `proxyLogin` and `proxyPassword`.
+_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server.
 
 ### Batching Policy
 

@@ -23,7 +23,7 @@
 </targets>
 ```
 
-### Parameters
+### General Options
 
 _name_ - Name of the target.
 
@@ -31,9 +31,15 @@ _layout_ - Queue Message Text to be rendered. [Layout](https://github.com/NLog/N
 
 _queueName_ - QueueName. [Layout](https://github.com/NLog/NLog/wiki/Layouts)  
 
-_connectionString_ - Azure storage connection string. Ex. `UseDevelopmentStorage=true;`
+_connectionString_ - Azure Queue Storage connection string from your storage account. Required unless using `serviceUri`.
 
 _serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from DefaultAzureCredential.
+
+_timeToLiveSeconds_ - Default Time-To-Live (TTL) for Queue messages in seconds (Optional)
+
+_timeToLiveDays_ - Default Time-To-Live (TTL) for Queue messages in days (Optional)
+
+### Authentication Options
 
 _managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`
 
@@ -51,6 +57,8 @@ _clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires 
 
 _clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
 
+### Proxy Options
+
 _noProxy_ - Bypasses any system proxy and proxy in `ProxyAddress` when set to `true`.
 
 _proxyAddress_ - Address of the proxy server to use (e.g. http://proxyserver:8080).
@@ -59,11 +67,7 @@ _proxyLogin_ - Login to use for the proxy server. Requires `proxyPassword`.
 
 _proxyPassword_ - Password to use for the proxy server. Requires `proxyLogin`.
 
-_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server, overriding any values that may have been set in `proxyLogin` and `proxyPassword`.
-
-_timeToLiveSeconds_ - Default Time-To-Live (TTL) for Queue messages in seconds (Optional)
-
-_timeToLiveDays_ - Default Time-To-Live (TTL) for Queue messages in days (Optional)
+_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server.
 
 ### Batching Policy
 
