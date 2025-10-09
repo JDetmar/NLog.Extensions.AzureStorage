@@ -23,9 +23,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Updated Azure.Identity ver. 1.14.2 to fix security issue
-- Updated NLog ver. 5.2.5 to support build-triming
-- Updated Azure.Storage.Queues ver. 12.22.0
+- Added support for Proxy-options: ProxyAddress, ProxyLogin, ProxyPassword, NoProxy, UseDefaultCredentialsForProxy
+- Added support for Authentication-options: ClientAuthId + ClientAuthSecret
 
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureQueueStorage/README.md
     </PackageReleaseNotes>

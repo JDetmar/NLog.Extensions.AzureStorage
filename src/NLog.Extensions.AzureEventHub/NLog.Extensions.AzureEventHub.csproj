@@ -24,9 +24,9 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Updated Azure.Identity ver. 1.14.2 to fix security issue
-- Updated NLog ver. 5.2.5 to support build-triming
-- Updated Azure.Messaging.EventHubs ver. 5.12.2
+- Added support for Proxy-options: ProxyAddress, ProxyLogin, ProxyPassword, NoProxy, UseDefaultCredentialsForProxy
+- Added support for Authentication-options: ClientAuthId + ClientAuthSecret
+- Added support for EventProducerIdentifier-option
       
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureEventHub/README.md
     </PackageReleaseNotes>
@@ -39,6 +39,7 @@ Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NL
 
   <ItemGroup>
     <Compile Include="..\NLog.Extensions.AzureStorage\AzureCredentialHelper.cs" Link="AzureCredentialHelper.cs" />
+    <Compile Include="..\NLog.Extensions.AzureStorage\ProxyHelpers.cs" Link="ProxyHelpers.cs" />
     <Compile Include="..\NLog.Extensions.AzureStorage\SortHelpers.cs" Link="SortHelpers.cs" />
   </ItemGroup>
 

@@ -356,7 +356,7 @@ namespace NLog.Targets
                 }
             }
 
-            return Task.WhenAll(multipleTasks ?? new Task[0]);
+            return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
         }
 
         private async Task WriteMultipleBatchesAsync(IEnumerable<IEnumerable<TableTransactionAction>> batchCollection, string tableName, CancellationToken cancellationToken)
@@ -485,7 +485,7 @@ namespace NLog.Targets
             }
         }
 
-        class CloudTableService : ICloudTableService
+        private sealed class CloudTableService : ICloudTableService
         {
             private TableServiceClient _client;
             private TableClient _table;

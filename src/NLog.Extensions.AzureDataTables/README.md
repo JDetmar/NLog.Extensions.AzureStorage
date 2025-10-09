@@ -22,15 +22,25 @@ Supports both Azure Storage Tables and CosmosDB Tables.
           logTimeStampFormat="O" />
 </targets>
 ```
-### Parameters
+### General Options
 
 _name_ - Name of the target.
 
 _layout_ - Text to be rendered. [Layout](https://github.com/NLog/NLog/wiki/Layouts) Required. 
 
-_connectionString_ - Azure storage connection string. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+_connectionString_ - Azure storage connection string. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Required unless using `serviceUri`.
 
 _serviceUri_ - Alternative to ConnectionString, where Managed Identiy is acquired from DefaultAzureCredential.
+
+_tableName_ - Azure table name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
+
+_rowKey_ - Azure Table RowKey. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Default = "InverseTicks_${guid}"
+
+_partitionKey_ - Azure PartitionKey. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Default = `${logger}`
+
+_logTimeStampFormat_ - Default Log TimeStamp is set to 'O' for [Round-trip](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings#the-round-trip-o-o-format-specifier) format if not specified.
+
+## Authentication Options
 
 _managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`
 
@@ -48,6 +58,8 @@ _clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires 
 
 _clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
 
+## Proxy Options
+
 _noProxy_ - Bypasses any system proxy and proxy in `ProxyAddress` when set to `true`.
 
 _proxyAddress_ - Address of the proxy server to use (e.g. http://proxyserver:8080).
@@ -56,15 +68,7 @@ _proxyLogin_ - Login to use for the proxy server. Requires `proxyPassword`.
 
 _proxyPassword_ - Password to use for the proxy server. Requires `proxyLogin`.
 
-_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server, overriding any values that may have been set in `proxyLogin` and `proxyPassword`.
-
-_tableName_ - Azure table name. [Layout](https://github.com/NLog/NLog/wiki/Layouts)
-
-_rowKey_ - Azure Table RowKey. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Default = "InverseTicks_${guid}"
-
-_partitionKey_ - Azure PartitionKey. [Layout](https://github.com/NLog/NLog/wiki/Layouts). Default = `${logger}`
-
-_logTimeStampFormat_ - Default Log TimeStamp is set to 'O' for [Round-trip](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings#the-round-trip-o-o-format-specifier) format if not specified.
+_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server.
 
 ### Dynamic TableEntity
 Instead of using the predefined NLogEntity-properties, then one can specify wanted properties:
