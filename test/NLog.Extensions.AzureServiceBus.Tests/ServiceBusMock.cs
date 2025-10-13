@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
+using NLog.Extensions.AzureBlobStorage;
 using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureServiceBus.Test
@@ -31,7 +32,7 @@ namespace NLog.Extensions.AzureServiceBus.Test
             return null;
         }
 
-        public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, bool useWebSockets, string webProxy, string endPointAddress, TimeSpan? timeToLive)
+        public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, string eventProducerIdentifier, bool useWebSockets, string endPointAddress, TimeSpan? timeToLive, ProxySettings proxySettings)
         {
             ConnectionString = connectionString;
             EntityPath = queueOrTopicName;

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using NLog.Common;
 using NLog.Config;
+using NLog.Extensions.AzureBlobStorage;
 using NLog.Extensions.AzureStorage;
 using NLog.Layouts;
 
@@ -182,12 +183,49 @@ namespace NLog.Targets
         /// <summary>
         /// The proxy to use for communication over web sockets.
         /// </summary>
-        public Layout WebSocketProxyAddress { get; set; }
+        [Obsolete("Replaced by ProxyAddress to align with other NLog Targets for Azure")]
+        public Layout WebSocketProxyAddress { get => ProxyAddress; set => ProxyAddress = value; }
 
         /// <summary>
         /// Custom endpoint address that can be used when establishing the connection.
         /// </summary>
         public Layout CustomEndpointAddress { get; set; }
+
+        /// <summary>
+        /// A unique name used to identify the producer. If <c>null</c> or empty, a GUID will be used as the identifier.
+        /// </summary>
+        public Layout EventProducerIdentifier { get; set; }
+
+        /// <summary>
+        /// Bypasses any system proxy and proxy in <see cref="ProxyAddress"/> when set to <see langword="true"/>.
+        /// Overrides <see cref="ProxyAddress"/>.
+        /// </summary>
+        /// <remarks>Only applies when <see cref="UseWebSockets"/> = <see langword="true"/></remarks>
+        public bool NoProxy { get; set; }
+
+        /// <summary>
+        /// Address of the proxy server to use (e.g. http://proxyserver:8080).
+        /// </summary>
+        /// <remarks>Only applies when <see cref="UseWebSockets"/> = <see langword="true"/></remarks>
+        public Layout ProxyAddress { get; set; }
+
+        /// <summary>
+        /// Login to use for the proxy server. Requires <see cref="ProxyPassword"/>.
+        /// </summary>
+        /// <remarks>Only applies when <see cref="UseWebSockets"/> = <see langword="true"/></remarks>
+        public Layout ProxyLogin { get; set; }
+
+        /// <summary>
+        /// Password to use for the proxy server. Requires <see cref="ProxyLogin"/>.
+        /// </summary>
+        /// <remarks>Only applies when <see cref="UseWebSockets"/> = <see langword="true"/></remarks>
+        public Layout ProxyPassword { get; set; }
+
+        /// <summary>
+        /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
+        /// </summary>
+        /// <remarks>Only applies when <see cref="UseWebSockets"/> = <see langword="true"/></remarks>
+        public bool UseDefaultCredentialsForProxy { get; set; }
 
         /// <summary>
         /// Gets a list of user properties (aka custom application properties) to add to the AMQP message
@@ -244,6 +282,7 @@ namespace NLog.Targets
             string useWebSockets = string.Empty;
             string webSocketProxyAddress = string.Empty;
             string customEndPointAddress = string.Empty;
+            string eventProducerIdentifier = string.Empty;
 
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
 
@@ -271,13 +310,7 @@ namespace NLog.Targets
                     clientAuthSecret = ClientAuthSecret?.Render(defaultLogEvent);
                 }
 
-                useWebSockets = UseWebSockets?.Render(defaultLogEvent) ?? string.Empty;
-                if (!string.IsNullOrEmpty(useWebSockets) && (string.Equals(useWebSockets.Trim(), bool.TrueString, StringComparison.OrdinalIgnoreCase) || string.Equals(useWebSockets.Trim(), "1", StringComparison.OrdinalIgnoreCase)))
-                {
-                    useWebSockets = bool.TrueString;
-                }
-                webSocketProxyAddress = WebSocketProxyAddress?.Render(defaultLogEvent) ?? string.Empty;
-                customEndPointAddress = CustomEndpointAddress?.Render(defaultLogEvent) ?? string.Empty;
+                eventProducerIdentifier = EventProducerIdentifier?.Render(defaultLogEvent) ?? string.Empty;
 
                 var timeToLive = RenderDefaultTimeToLive();
                 if (timeToLive <= TimeSpan.Zero)
@@ -285,7 +318,24 @@ namespace NLog.Targets
                     timeToLive = default(TimeSpan?);
                 }
 
-                _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, bool.TrueString == useWebSockets, webSocketProxyAddress, customEndPointAddress, timeToLive);
+                useWebSockets = UseWebSockets?.Render(defaultLogEvent) ?? string.Empty;
+                if (!string.IsNullOrEmpty(useWebSockets) && (string.Equals(useWebSockets.Trim(), bool.TrueString, StringComparison.OrdinalIgnoreCase) || string.Equals(useWebSockets.Trim(), "1", StringComparison.OrdinalIgnoreCase)))
+                {
+                    useWebSockets = bool.TrueString;
+                }
+                customEndPointAddress = CustomEndpointAddress?.Render(defaultLogEvent) ?? string.Empty;
+
+                var proxySettings = new ProxySettings
+                {
+                    NoProxy = NoProxy,
+                    UseDefaultCredentials = UseDefaultCredentialsForProxy,
+                    Address = ProxyAddress?.Render(defaultLogEvent),
+                    Login = ProxyLogin?.Render(defaultLogEvent),
+                    Password = ProxyPassword?.Render(defaultLogEvent)
+                };
+                proxySettings = proxySettings.RequiresManualProxyConfiguration ? proxySettings : null;
+
+                _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, eventProducerIdentifier, bool.TrueString == useWebSockets, customEndPointAddress, timeToLive, proxySettings);
                 InternalLogger.Debug("AzureServiceBusTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -638,18 +688,22 @@ namespace NLog.Targets
 
             public string EntityPath { get; private set; }
 
-            public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, bool useWebSockets, string webSocketProxyAddress, string endPointAddress, TimeSpan? timeToLive)
+            public void Connect(string connectionString, string queueOrTopicName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, string eventProducerIdentifier, bool useWebSockets, string endPointAddress, TimeSpan? timeToLive, ProxySettings proxySettings)
             {
                 EntityPath = queueOrTopicName;
                 DefaultTimeToLive = timeToLive;
 
                 Azure.Messaging.ServiceBus.ServiceBusClientOptions options = default;
-                if (useWebSockets || !string.IsNullOrEmpty(webSocketProxyAddress) || !string.IsNullOrEmpty(endPointAddress))
+                if (useWebSockets || !string.IsNullOrEmpty(endPointAddress) || !string.IsNullOrEmpty(eventProducerIdentifier))
                 {
                     options = new Azure.Messaging.ServiceBus.ServiceBusClientOptions();
                     options.TransportType = useWebSockets ? ServiceBusTransportType.AmqpWebSockets : options.TransportType;
-                    options.WebProxy = !string.IsNullOrEmpty(webSocketProxyAddress) ? new System.Net.WebProxy(webSocketProxyAddress, true) : options.WebProxy;
-                    options.CustomEndpointAddress = !string.IsNullOrEmpty(endPointAddress) ? new Uri(endPointAddress) : options.CustomEndpointAddress;
+                    if (useWebSockets && proxySettings != null)
+                        options.WebProxy = proxySettings.CreateWebProxy(options.WebProxy);
+                    if (!string.IsNullOrEmpty(endPointAddress))
+                        options.CustomEndpointAddress = new Uri(endPointAddress);
+                    if (!string.IsNullOrEmpty(eventProducerIdentifier))
+                        options.Identifier = eventProducerIdentifier;
                 }
 
                 if (string.IsNullOrEmpty(serviceUri))
