@@ -1,4 +1,5 @@
 ﻿using Azure.Messaging.EventHubs;
+using NLog.Extensions.AzureBlobStorage;
 using NLog.Extensions.AzureStorage;
 using System;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ namespace NLog.Extensions.AzureEventHub.Test
                 EventDataSent.Clear();
         }
 
-        public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, bool useWebSockets, string webSocketsProxyAddress, string endPointAddress)
+        public void Connect(string connectionString, string eventHubName, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, string eventProducerIdentifier, bool useWebSockets, string endPointAddress, ProxySettings proxySettings)
         {
             ConnectionString = connectionString;
             EventHubName = eventHubName;

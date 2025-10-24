@@ -348,7 +348,7 @@ namespace NLog.Targets
                 }
             }
 
-            return Task.WhenAll(multipleTasks ?? new Task[0]);
+            return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
         }
 
         private byte[] CreateBlobPayload(IList<LogEventInfo> logEvents)
@@ -474,7 +474,7 @@ namespace NLog.Targets
             }
         }
 
-        class CloudBlobService : ICloudBlobService
+        private sealed class CloudBlobService : ICloudBlobService
         {
             private IDictionary<string, string> _blobMetadata;
             private IDictionary<string, string> _blobTags;
