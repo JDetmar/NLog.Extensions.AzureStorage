@@ -130,8 +130,9 @@ namespace NLog.Targets
         public Layout ProxyPassword { get; set; }
 
         /// <summary>
-        /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
+        /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server.
         /// </summary>
+        /// <remarks>Take precedence over <see cref = "ProxyLogin" /> and <see cref="ProxyPassword"/> when set to <see langword="true"/>.</remarks>
         public bool UseDefaultCredentialsForProxy { get; set; }
 
         /// <summary>

@@ -88,7 +88,7 @@ _proxyLogin_ - Login to use for the proxy server. Requires `proxyPassword`. Requ
 
 _proxyPassword_ - Password to use for the proxy server. Requires `proxyLogin`. Requires `useWebSockets = true`.
 
-_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server. Requires `useWebSockets = true`.
+_useDefaultCredentialsForProxy_ - Uses the default credentials (`System.Net.CredentialCache.DefaultCredentials`) for the proxy server. Take precedence over `proxyLogin` and `proxyPassword` when set to `true`. Requires `useWebSockets = true`.
 
 ### Batching Policy
 

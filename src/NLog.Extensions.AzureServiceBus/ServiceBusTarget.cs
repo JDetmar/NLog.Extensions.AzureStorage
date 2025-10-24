@@ -222,9 +222,9 @@ namespace NLog.Targets
         public Layout ProxyPassword { get; set; }
 
         /// <summary>
-        /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server, overriding any values that may have been set in <see cref="ProxyLogin"/> and <see cref="ProxyPassword"/>.
+        /// Uses the default credentials (<see cref="System.Net.CredentialCache.DefaultCredentials"/>) for the proxy server.
         /// </summary>
-        /// <remarks>Only applies when <see cref="UseWebSockets"/> = <see langword="true"/></remarks>
+        /// <remarks>Only applies when <see cref="UseWebSockets"/> = <see langword="true"/>. Take precedence over <see cref = "ProxyLogin" /> and <see cref="ProxyPassword"/> when set to <see langword="true"/>.</remarks>
         public bool UseDefaultCredentialsForProxy { get; set; }
 
         /// <summary>
@@ -280,7 +280,6 @@ namespace NLog.Targets
             string clientAuthSecret = string.Empty;
             string queueOrTopicName = string.Empty;
             string useWebSockets = string.Empty;
-            string webSocketProxyAddress = string.Empty;
             string customEndPointAddress = string.Empty;
             string eventProducerIdentifier = string.Empty;
 
@@ -319,7 +318,7 @@ namespace NLog.Targets
                 }
 
                 useWebSockets = UseWebSockets?.Render(defaultLogEvent) ?? string.Empty;
-                if (!string.IsNullOrEmpty(useWebSockets) && (string.Equals(useWebSockets.Trim(), bool.TrueString, StringComparison.OrdinalIgnoreCase) || string.Equals(useWebSockets.Trim(), "1", StringComparison.OrdinalIgnoreCase)))
+                if (string.Equals(useWebSockets.Trim(), bool.TrueString, StringComparison.OrdinalIgnoreCase) || string.Equals(useWebSockets.Trim(), "1", StringComparison.OrdinalIgnoreCase))
                 {
                     useWebSockets = bool.TrueString;
                 }
@@ -333,7 +332,6 @@ namespace NLog.Targets
                     Login = ProxyLogin?.Render(defaultLogEvent),
                     Password = ProxyPassword?.Render(defaultLogEvent)
                 };
-                proxySettings = proxySettings.RequiresManualProxyConfiguration ? proxySettings : null;
 
                 _cloudServiceBus.Connect(connectionString, queueOrTopicName, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, eventProducerIdentifier, bool.TrueString == useWebSockets, customEndPointAddress, timeToLive, proxySettings);
                 InternalLogger.Debug("AzureServiceBusTarget(Name={0}): Initialized", Name);
@@ -698,7 +696,7 @@ namespace NLog.Targets
                 {
                     options = new Azure.Messaging.ServiceBus.ServiceBusClientOptions();
                     options.TransportType = useWebSockets ? ServiceBusTransportType.AmqpWebSockets : options.TransportType;
-                    if (useWebSockets && proxySettings != null)
+                    if (useWebSockets && proxySettings?.RequiresManualProxyConfiguration == true)
                         options.WebProxy = proxySettings.CreateWebProxy(options.WebProxy);
                     if (!string.IsNullOrEmpty(endPointAddress))
                         options.CustomEndpointAddress = new Uri(endPointAddress);
