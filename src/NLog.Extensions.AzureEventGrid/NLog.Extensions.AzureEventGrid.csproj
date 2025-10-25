@@ -26,6 +26,7 @@
     <PackageReleaseNotes>
 - Added support for Proxy-options: ProxyAddress, ProxyLogin, ProxyPassword, NoProxy, UseDefaultCredentialsForProxy
 - Added support for Authentication-options: ClientAuthId + ClientAuthSecret
+- Updated Azure.Identity to ver 1.16.0 (Bug fixes)
 
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureEventGrid/README.md
     </PackageReleaseNotes>
@@ -43,7 +44,7 @@ Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NL
 
   <ItemGroup>
     <PackageReference Include="Azure.Messaging.EventGrid" Version="5.0.0" />
-    <PackageReference Include="Azure.Identity" Version="1.14.2" />
+    <PackageReference Include="Azure.Identity" Version="1.16.0" />
     <PackageReference Include="NLog" Version="5.2.5" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
