@@ -9,7 +9,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-    <Version>4.6.0</Version>
+    <Version>4.7.0</Version>
 
     <Description>NLog EventGridTarget for writing to Azure Event Grid</Description>
     <Authors>jdetmar</Authors>
@@ -27,6 +27,8 @@
 - Added support for Proxy-options: ProxyAddress, ProxyLogin, ProxyPassword, NoProxy, UseDefaultCredentialsForProxy
 - Added support for Authentication-options: ClientAuthId + ClientAuthSecret
 - Updated Azure.Identity to ver 1.16.0 (Bug fixes)
+- Enabled XML documentation file generation
+- Added README.md to nuget-package
 
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureEventGrid/README.md
     </PackageReleaseNotes>

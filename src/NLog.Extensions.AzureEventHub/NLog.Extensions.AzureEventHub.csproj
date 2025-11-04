@@ -9,7 +9,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-    <Version>4.6.0</Version>
+    <Version>4.7.0</Version>
 
     <Description>NLog EventHubTarget for writing to Azure Event Hubs datastreams</Description>
     <Authors>jdetmar</Authors>
@@ -28,6 +28,8 @@
 - Added support for Authentication-options: ClientAuthId + ClientAuthSecret
 - Added support for EventProducerIdentifier-option
 - Updated Azure.Identity to ver 1.16.0 (Bug fixes)
+- Enabled XML documentation file generation
+- Added README.md to nuget-package
       
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureEventHub/README.md
     </PackageReleaseNotes>
