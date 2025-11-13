@@ -9,7 +9,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-    <Version>4.6.0</Version>
+    <Version>4.7.0</Version>
 
     <Description>NLog BlobStorageTarget for writing to Azure Cloud Blob Storage</Description>
     <Authors>jdetmar</Authors>
@@ -26,6 +26,8 @@
     <PackageReleaseNotes>
 - Added support for Proxy-options: ProxyAddress, ProxyLogin, ProxyPassword, NoProxy, UseDefaultCredentialsForProxy
 - Updated Azure.Identity to ver 1.16.0 (Bug fixes)
+- Enabled XML documentation file generation
+- Added README.md to nuget-package
 
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureBlobStorage/README.md
     </PackageReleaseNotes>
