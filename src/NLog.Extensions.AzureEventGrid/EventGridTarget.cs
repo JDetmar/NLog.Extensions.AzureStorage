@@ -121,12 +121,12 @@ namespace NLog.Targets
         public Layout SharedAccessSignature { get; set; }
 
         /// <summary>
-        /// clientId for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientAuthSecret"/>.
+        /// clientId for <see cref="Azure.Identity.ClientSecretCredential"/> OAuth2 authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientAuthSecret"/>.
         /// </summary>
         public Layout ClientAuthId { get; set; }
 
         /// <summary>
-        /// clientSecret for <see cref="Azure.Identity.ClientSecretCredential"/> authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientAuthId"/>.
+        /// clientSecret for <see cref="Azure.Identity.ClientSecretCredential"/> OAuth2 authentication. Requires <see cref="TenantIdentity"/> and <see cref="ClientAuthId"/>.
         /// </summary>
         public Layout ClientAuthSecret { get; set; }
 
