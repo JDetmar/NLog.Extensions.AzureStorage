@@ -42,7 +42,7 @@ _logTimeStampFormat_ - Default Log TimeStamp is set to 'O' for [Round-trip](http
 
 ## Authentication Options
 
-_managedIdentityClientId_ - Sets `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`
+_managedIdentityClientId_ - clientId for `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`
 
 _managedIdentityResourceId_ - resourceId for `ManagedIdentityResourceId` on `DefaultAzureCredentialOptions`, do not use together with `ManagedIdentityClientId`. Requires `serviceUri`.
 
@@ -54,9 +54,15 @@ _accountName_ - accountName for `TableSharedKeyCredential` authentication. Requi
 
 _accessKey_ - accountKey for `TableSharedKeyCredential` authentication. Requires `serviceUri` and `accountName`.
 
-_clientAuthId_ - clientId for `ClientSecretCredential` authentication. Requires `serviceUri`, `tenantIdentity` and `clientAuthSecret`.
+_clientAuthId_ - clientId for `ClientSecretCredential` OAuth2 authentication. Requires `serviceUri`, `tenantIdentity` and `clientAuthSecret`.
 
-_clientAuthSecret_ - clientSecret for `ClientSecretCredential` authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
+_clientAuthSecret_ - clientSecret for `ClientSecretCredential` OAuth2 authentication. Requires `serviceUri`,`tenantIdentity` and `clientAuthId`.
+
+When using `ServiceUri` (Instead of ConnectionString) with `DefaultAzureCredential`, then Azure Identity can also resolve from environment variables:
+- `AZURE_CLIENT_ID` - For ManagedIdentityClientId / WorkloadIdentityClientId
+- `AZURE_TENANT_ID` - For TenantId
+
+See also: [Set up Your Environment for Authentication](https://github.com/Azure/azure-sdk-for-go/wiki/Set-up-Your-Environment-for-Authentication)
 
 ## Proxy Options
 
@@ -113,13 +119,6 @@ _taskTimeoutSeconds_ - How many seconds a Task is allowed to run before it is ca
 _retryDelayMilliseconds_ - How many milliseconds to wait before next retry (Default 500ms, and will be doubled on each retry).
 
 _retryCount_ - How many attempts to retry the same Task, before it is aborted (Default 0)
-
-## Azure Identity Environment
-When using `ServiceUri` (Instead of ConnectionString), then `DefaultAzureCredential` is used for Azure Identity which supports environment variables:
-- `AZURE_CLIENT_ID` - For ManagedIdentityClientId / WorkloadIdentityClientId
-- `AZURE_TENANT_ID` - For TenantId
-
-See also: [Set up Your Environment for Authentication](https://github.com/Azure/azure-sdk-for-go/wiki/Set-up-Your-Environment-for-Authentication)
 
 ## Azure Table Service Size Limits
 
