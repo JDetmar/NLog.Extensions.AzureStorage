@@ -9,7 +9,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-    <Version>4.7.0</Version>
+    <Version>4.7.1</Version>
 
     <Description>NLog DataTablesTarget for writing to Azure Tables in Azure storage accounts or Azure Cosmos DB table API</Description>
     <Authors>jdetmar</Authors>
@@ -24,12 +24,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Added support for Proxy-options: ProxyAddress, ProxyLogin, ProxyPassword, NoProxy, UseDefaultCredentialsForProxy
-- Added support for Authentication-options: ClientAuthId + ClientAuthSecret
-- Updated Azure.Identity to ver 1.16.0 (Bug fixes)
-- Enabled XML documentation file generation
-- Added README.md to nuget-package
-      
+- Updated Azure.Identity to ver 1.17.1 (Security fix)
+
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureDataTables/README.md
     </PackageReleaseNotes>
   </PropertyGroup>
@@ -48,7 +44,7 @@ Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NL
 
   <ItemGroup>
     <PackageReference Include="Azure.Data.Tables" Version="12.11.0" />
-    <PackageReference Include="Azure.Identity" Version="1.16.0" />
+    <PackageReference Include="Azure.Identity" Version="1.17.1" />
     <PackageReference Include="NLog" Version="5.2.5" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
