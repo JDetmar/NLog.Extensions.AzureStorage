@@ -17,7 +17,7 @@ namespace NLog.Targets
     /// Azure Event Hubs NLog Target
     /// </summary>
     [Target("AzureEventHub")]
-    public class EventHubTarget : AsyncTaskTarget
+    public sealed class EventHubTarget : AsyncTaskTarget
     {
         private readonly IEventHubService _eventHubService;
         private SortHelpers.KeySelector<LogEventInfo, string> _getEventHubPartitionKeyDelegate;

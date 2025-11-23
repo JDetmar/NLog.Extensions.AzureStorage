@@ -18,7 +18,7 @@ namespace NLog.Targets
     /// Azure Event Grid NLog Target
     /// </summary>
     [Target("AzureEventGrid")]
-    public class EventGridTarget : AsyncTaskTarget
+    public sealed class EventGridTarget : AsyncTaskTarget
     {
         private readonly IEventGridService _eventGridService;
         private readonly char[] _reusableEncodingBuffer = new char[32 * 1024];  // Avoid large-object-heap

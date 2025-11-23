@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+# Cancel in-progress runs for the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Minimal permissions - security best practice
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET 10.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Setup .NET 8.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    # Cache NuGet packages to speed up builds
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Display .NET version
+      run: dotnet --version
+
+    - name: Restore and Build
+      run: dotnet build src\NLog.Extensions.AzureStorage.sln -c Release --verbosity minimal
+
+    - name: Upload build artifacts for matrix jobs
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-output
+        path: |
+          src\**\bin\Release\**
+          src\**\obj\**
+          test\**\bin\Release\**
+          test\**\obj\**
+        retention-days: 1
+
+  pack:
+    needs: build
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        project:
+          - NLog.Extensions.AzureBlobStorage
+          - NLog.Extensions.AzureDataTables
+          - NLog.Extensions.AzureQueueStorage
+          - NLog.Extensions.AzureEventGrid
+          - NLog.Extensions.AzureEventHub
+          - NLog.Extensions.AzureServiceBus
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          8.0.x
+          10.0.x
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-output
+
+    - name: Pack ${{ matrix.project }}
+      run: dotnet pack src\${{ matrix.project }} -c Release --no-build -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg -p:ContinuousIntegrationBuild=true -p:EmbedUntrackedSources=true -p:PublishRepositoryUrl=true --verbosity minimal
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-${{ matrix.project }}
+        path: |
+          src\${{ matrix.project }}\bin\Release\*.nupkg
+          src\${{ matrix.project }}\bin\Release\*.snupkg
+        retention-days: 90
+
+  test:
+    needs: build
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        project:
+          - NLog.Extensions.AzureBlobStorage.Tests
+          - NLog.Extensions.AzureDataTables.Tests
+          - NLog.Extensions.AzureQueueStorage.Tests
+          - NLog.Extensions.AzureEventGrid.Tests
+          - NLog.Extensions.AzureEventHub.Tests
+          - NLog.Extensions.AzureServiceBus.Tests
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          8.0.x
+          10.0.x
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-output
+
+    - name: Test ${{ matrix.project }}
+      run: dotnet test test\${{ matrix.project }} /p:Configuration=Release --verbosity minimal --no-build
