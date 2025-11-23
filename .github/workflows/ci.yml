@@ -45,7 +45,7 @@ jobs:
       run: dotnet --version
 
     - name: Restore and Build
-      run: msbuild /t:Restore,Build src\NLog.Extensions.AzureStorage.sln /p:Configuration=Release /maxcpucount /verbosity:minimal
+      run: dotnet build src\NLog.Extensions.AzureStorage.sln -c Release --verbosity minimal
 
     - name: Upload build artifacts for matrix jobs
       uses: actions/upload-artifact@v4
@@ -88,7 +88,7 @@ jobs:
         name: build-output
 
     - name: Pack ${{ matrix.project }}
-      run: msbuild /t:Pack src\${{ matrix.project }} /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /p:NoBuild=true /verbosity:minimal
+      run: dotnet pack src\${{ matrix.project }} -c Release --no-build -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg -p:ContinuousIntegrationBuild=true -p:EmbedUntrackedSources=true -p:PublishRepositoryUrl=true --verbosity minimal
 
     - name: Upload package
       uses: actions/upload-artifact@v4
