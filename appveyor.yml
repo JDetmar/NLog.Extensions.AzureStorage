@@ -2,6 +2,14 @@ version: 1.0.{build}
 image: Visual Studio 2022
 configuration: Release
 
+install:
+  - ps: |
+      Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -UseBasicParsing -OutFile "$env:temp\dotnet-install.ps1"
+      & $env:temp\dotnet-install.ps1 -Architecture x64 -Version '10.0.100' -InstallDir "$env:ProgramFiles\dotnet"
+
+before_build:
+  - cmd: dotnet --version
+
 build_script:
 - cmd: msbuild /t:Restore src\NLog.Extensions.AzureStorage.sln /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
 - cmd: msbuild /t:Pack src\NLog.Extensions.AzureBlobStorage /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PublishRepositoryUrl=true /verbosity:minimal
