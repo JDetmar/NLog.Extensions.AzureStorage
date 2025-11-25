@@ -1,0 +1,49 @@
+name: 'Manage stale issues and PRs'
+
+on:
+  schedule:
+    - cron: '0 0 * * MON'  # Run weekly on Mondays at midnight UTC
+  workflow_dispatch:  # Allow manual triggering
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Issue settings
+          stale-issue-message: >
+            This issue has been inactive for 90 days and has been marked as stale.
+            If you're still experiencing this with the latest version, please comment
+            and we'll reopen it. Otherwise, this will be closed in 14 days.
+            Thank you for your contribution!
+          close-issue-message: >
+            This issue was closed due to inactivity. If this is still relevant,
+            please feel free to create a new issue with updated information.
+          days-before-stale: 90
+          days-before-close: 14
+          stale-issue-label: 'stale'
+          close-issue-label: 'closed-stale'
+          exempt-issue-labels: 'enhancement'
+
+          # PR settings (more aggressive timeline)
+          stale-pr-message: >
+            This pull request has been inactive for 60 days and has been marked as stale.
+            Please update if you're still working on this. This will be closed in 14 days
+            if there's no further activity.
+          close-pr-message: >
+            This pull request was closed due to inactivity. Feel free to reopen
+            if you'd like to continue working on this.
+          days-before-pr-stale: 60
+          days-before-pr-close: 14
+          stale-pr-label: 'stale'
+          close-pr-label: 'closed-stale'
+
+          # Performance settings
+          operations-per-run: 30
+          remove-stale-when-updated: true
+          ascending: true  # Process oldest first
