@@ -42,6 +42,7 @@ jobs:
           days-before-pr-close: 14
           stale-pr-label: 'stale'
           close-pr-label: 'closed-stale'
+          exempt-pr-labels: 'enhancement,work-in-progress'
 
           # Performance settings
           operations-per-run: 30
