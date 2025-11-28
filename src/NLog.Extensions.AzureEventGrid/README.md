@@ -21,8 +21,7 @@
           gridEventSubject="Layout"
           eventType="Layout"
           contentType="Layout"
-          dataSchema="Layout"
-          accessKey="Layout">
+          dataSchema="Layout">
             <metadata name="mymeta" layout="mymetavalue" />   <!-- Multiple allowed -->
   </target>
 </targets>

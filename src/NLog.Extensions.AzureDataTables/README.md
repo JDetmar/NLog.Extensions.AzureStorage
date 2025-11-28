@@ -19,6 +19,7 @@ Supports both Azure Storage Tables and CosmosDB Tables.
           layout="Layout"
           connectionString="String"
           tableName="Layout"
+          partitionKey="${logger}"
           logTimeStampFormat="O" />
 </targets>
 ```
