@@ -35,8 +35,8 @@ namespace NLog.Targets
 
             public TablePartitionKey(string tableName, string partitionKey)
             {
-                TableName = tableName;
-                PartitionKey = partitionKey;
+                TableName = tableName ?? string.Empty;
+                PartitionKey = partitionKey ?? string.Empty;
             }
 
             public bool Equals(TablePartitionKey other)
