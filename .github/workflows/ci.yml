@@ -94,9 +94,6 @@ jobs:
       with:
         name: build-output
 
-    - name: Restore ${{ matrix.project }}
-      run: dotnet restore src\${{ matrix.project }}
-
     - name: Pack ${{ matrix.project }}
       run: dotnet pack src\${{ matrix.project }} -c Release --no-build -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg -p:ContinuousIntegrationBuild=true -p:EmbedUntrackedSources=true -p:PublishRepositoryUrl=true --verbosity minimal
 
