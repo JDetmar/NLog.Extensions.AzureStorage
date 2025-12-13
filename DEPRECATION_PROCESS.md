@@ -46,7 +46,7 @@ Practical steps to deprecate and remove a package (while keeping history) withou
 
 This package was removed from the default branch because it is deprecated and contains known vulnerabilities. It is unmaintained and should not be used. See <AlternativePackage> instead.
 
-Last code version is available at tag: archive/<package>-YYYY-MM-DD.
+Last code version is preserved at tag: archive/<package>-YYYY-MM-DD.
 ```
 
 **Release notes snippet for the final/last package version:**
