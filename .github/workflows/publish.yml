@@ -1,0 +1,155 @@
+name: Publish to NuGet
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to publish'
+        required: true
+        type: choice
+        options:
+          - All
+          - NLog.Extensions.AzureBlobStorage
+          - NLog.Extensions.AzureDataTables
+          - NLog.Extensions.AzureQueueStorage
+          - NLog.Extensions.AzureEventGrid
+          - NLog.Extensions.AzureEventHub
+          - NLog.Extensions.AzureServiceBus
+      run_id:
+        description: 'CI workflow run ID to publish from (leave empty for latest successful run on master)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Dry run (skip actual publish)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read    # Required to download artifacts from other workflows
+  id-token: write  # Required for Trusted Publishing OIDC token
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Get CI run ID
+      id: get-run-id
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        if [ -n "${{ inputs.run_id }}" ]; then
+          echo "run_id=${{ inputs.run_id }}" >> $GITHUB_OUTPUT
+          echo "Using provided run ID: ${{ inputs.run_id }}"
+        else
+          # Get latest successful CI run on master
+          RUN_ID=$(gh api repos/${{ github.repository }}/actions/workflows/ci.yml/runs --jq '[.workflow_runs[] | select(.conclusion == "success" and .head_branch == "master")] | .[0].id')
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "ERROR: No successful CI runs found on master branch." >&2
+            exit 1
+          fi
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+          echo "Using latest successful CI run: $RUN_ID"
+        fi
+
+    - name: Download NLog.Extensions.AzureBlobStorage
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureBlobStorage'
+      uses: actions/download-artifact@v4
+      with:
+        name: package-NLog.Extensions.AzureBlobStorage
+        path: packages
+        github-token: ${{ github.token }}
+        run-id: ${{ steps.get-run-id.outputs.run_id }}
+
+    - name: Download NLog.Extensions.AzureDataTables
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureDataTables'
+      uses: actions/download-artifact@v4
+      with:
+        name: package-NLog.Extensions.AzureDataTables
+        path: packages
+        github-token: ${{ github.token }}
+        run-id: ${{ steps.get-run-id.outputs.run_id }}
+
+    - name: Download NLog.Extensions.AzureQueueStorage
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureQueueStorage'
+      uses: actions/download-artifact@v4
+      with:
+        name: package-NLog.Extensions.AzureQueueStorage
+        path: packages
+        github-token: ${{ github.token }}
+        run-id: ${{ steps.get-run-id.outputs.run_id }}
+
+    - name: Download NLog.Extensions.AzureEventGrid
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureEventGrid'
+      uses: actions/download-artifact@v4
+      with:
+        name: package-NLog.Extensions.AzureEventGrid
+        path: packages
+        github-token: ${{ github.token }}
+        run-id: ${{ steps.get-run-id.outputs.run_id }}
+
+    - name: Download NLog.Extensions.AzureEventHub
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureEventHub'
+      uses: actions/download-artifact@v4
+      with:
+        name: package-NLog.Extensions.AzureEventHub
+        path: packages
+        github-token: ${{ github.token }}
+        run-id: ${{ steps.get-run-id.outputs.run_id }}
+
+    - name: Download NLog.Extensions.AzureServiceBus
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureServiceBus'
+      uses: actions/download-artifact@v4
+      with:
+        name: package-NLog.Extensions.AzureServiceBus
+        path: packages
+        github-token: ${{ github.token }}
+        run-id: ${{ steps.get-run-id.outputs.run_id }}
+    - name: List packages to publish
+      run: |
+        echo "Packages to publish:"
+        if [ ! -d "packages" ]; then
+          echo "ERROR: packages directory does not exist. Artifact download may have failed." >&2
+          exit 1
+        fi
+        PACKAGES=$(find packages -name "*.nupkg" -type f)
+        if [ -z "$PACKAGES" ]; then
+          echo "ERROR: No .nupkg files found in packages directory. Check that artifacts were downloaded correctly." >&2
+          exit 1
+        fi
+        echo "$PACKAGES" | while read f; do echo "  - $(basename $f)"; done
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    # Trusted Publishing - no long-lived API key needed!
+    # Uses OIDC to get a temporary token. Requires one-time setup on nuget.org.
+    - name: Authenticate with NuGet (Trusted Publishing)
+      if: inputs.dry_run == false
+      id: nuget-login
+      uses: nuget/login@v1
+      with:
+        user: ${{ secrets.NUGET_USER }}
+
+    - name: Push to NuGet
+      if: inputs.dry_run == false
+      run: dotnet nuget push 'packages/*.nupkg' --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+    - name: Dry run summary
+      if: inputs.dry_run == true
+      run: |
+        echo "DRY RUN - Would push the following packages to NuGet.org:"
+        if [ ! -d "packages" ]; then
+          echo "ERROR: packages directory does not exist. Artifact download may have failed." >&2
+          exit 1
+        fi
+        PACKAGES=$(find packages -name "*.nupkg" -type f)
+        if [ -z "$PACKAGES" ]; then
+          echo "ERROR: No .nupkg files found in packages directory. Check that artifacts were downloaded correctly." >&2
+          exit 1
+        fi
+        echo "$PACKAGES" | while read f; do echo "  - $(basename $f)"; done
