@@ -145,8 +145,5 @@ jobs:
       with:
         name: build-output
 
-    - name: Restore ${{ matrix.project }}
-      run: dotnet restore test\${{ matrix.project }}
-
     - name: Test ${{ matrix.project }}
       run: dotnet test test\${{ matrix.project }} /p:Configuration=Release --verbosity minimal --no-build
