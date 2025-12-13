@@ -22,24 +22,59 @@ namespace NLog.Extensions.AzureStorage
         /// <param name="inputs">The inputs.</param>
         /// <param name="keySelector">The key selector.</param>
         /// <returns></returns>
-        internal static Dictionary<TKey, IList<TValue>> BucketSort<TValue, TKey>(IList<TValue> inputs, KeySelector<TValue, TKey> keySelector) where TKey : IEquatable<TKey>
+        internal static ICollection<KeyValuePair<TKey, IList<TValue>>> BucketSort<TValue, TKey>(IList<TValue> inputs, KeySelector<TValue, TKey> keySelector) where TKey : IEquatable<TKey>
         {
-            var retVal = new Dictionary<TKey, IList<TValue>>();
+            if (inputs.Count == 0)
+                return Array.Empty<KeyValuePair<TKey, IList<TValue>>>();
 
-            for (int i = 0; i < inputs.Count; ++i)
+            Dictionary<TKey, IList<TValue>> buckets = null;
+            TKey firstBucketKey = keySelector(inputs[0]);
+            for (int i = 1; i < inputs.Count; ++i)
             {
-                var input = inputs[i];
-                var keyValue = keySelector(input);
-                if (!retVal.TryGetValue(keyValue, out var eventsInBucket))
+                TKey keyValue = keySelector(inputs[i]);
+                if (buckets is null)
                 {
-                    eventsInBucket = new List<TValue>(inputs.Count - i);
-                    retVal.Add(keyValue, eventsInBucket);
+                    if (!firstBucketKey.Equals(keyValue))
+                    {
+                        // Multiple buckets needed, allocate full dictionary
+                        buckets = CreateBucketDictionaryWithValue(inputs, i, firstBucketKey, keyValue);
+                    }
                 }
-
-                eventsInBucket.Add(input);
+                else
+                {
+                    if (!buckets.TryGetValue(keyValue, out var eventsInBucket))
+                    {
+                        eventsInBucket = new List<TValue>();
+                        buckets.Add(keyValue, eventsInBucket);
+                    }
+                    eventsInBucket.Add(inputs[i]);
+                }
             }
 
-            return retVal;
+            if (buckets is null)
+            {
+                // All inputs belong to the same bucket
+                return new[] { new KeyValuePair<TKey, IList<TValue>>(firstBucketKey, inputs) };
+            }
+            else
+            {
+                return buckets;
+            }
+        }
+
+        private static Dictionary<TKey, IList<TValue>> CreateBucketDictionaryWithValue<TValue, TKey>(IList<TValue> inputs, int currentIndex, TKey firstBucketKey, TKey nextBucketKey)
+        {
+            var buckets = new Dictionary<TKey, IList<TValue>>();
+            var firstBucket = new List<TValue>(Math.Max(currentIndex + 2, 4));
+            for (int i = 0; i < currentIndex; i++)
+            {
+                firstBucket.Add(inputs[i]);
+            }
+            buckets[firstBucketKey] = firstBucket;
+
+            var nextBucket = new List<TValue> { inputs[currentIndex] };
+            buckets[nextBucketKey] = nextBucket;
+            return buckets;
         }
     }
 }

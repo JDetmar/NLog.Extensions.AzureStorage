@@ -425,7 +425,7 @@ namespace NLog.Targets
                 }
             }
 
-            var partitionBuckets = (SessionId != null || PartitionKey != null) ? SortHelpers.BucketSort(logEvents, _getMessagePartitionKeyDelegate) : new Dictionary<string, IList<LogEventInfo>>() { { string.Empty, logEvents } };
+            var partitionBuckets = (SessionId != null || PartitionKey != null) ? SortHelpers.BucketSort(logEvents, _getMessagePartitionKeyDelegate) : new [] { new KeyValuePair<string, IList<LogEventInfo>>(string.Empty, logEvents) };
             IList<Task> multipleTasks = partitionBuckets.Count > 1 ? new List<Task>(partitionBuckets.Count) : null;
             foreach (var partitionBucket in partitionBuckets)
             {
