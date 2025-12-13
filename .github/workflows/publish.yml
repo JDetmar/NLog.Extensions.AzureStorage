@@ -54,23 +54,59 @@ jobs:
           echo "Using latest successful CI run: $RUN_ID"
         fi
 
-    - name: Download package artifact
-      if: inputs.package == 'All' || inputs.package == matrix.package
+    - name: Download NLog.Extensions.AzureBlobStorage
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureBlobStorage'
       uses: actions/download-artifact@v4
       with:
-        name: package-${{ matrix.package }}
+        name: package-NLog.Extensions.AzureBlobStorage
         path: packages
         github-token: ${{ github.token }}
         run-id: ${{ steps.get-run-id.outputs.run_id }}
-      strategy:
-        matrix:
-          package:
-            - NLog.Extensions.AzureBlobStorage
-            - NLog.Extensions.AzureDataTables
-            - NLog.Extensions.AzureQueueStorage
-            - NLog.Extensions.AzureEventGrid
-            - NLog.Extensions.AzureEventHub
-            - NLog.Extensions.AzureServiceBus
+
+    - name: Download NLog.Extensions.AzureDataTables
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureDataTables'
+      uses: actions/download-artifact@v4
+      with:
+        name: package-NLog.Extensions.AzureDataTables
+        path: packages
+        github-token: ${{ github.token }}
+        run-id: ${{ steps.get-run-id.outputs.run_id }}
+
+    - name: Download NLog.Extensions.AzureQueueStorage
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureQueueStorage'
+      uses: actions/download-artifact@v4
+      with:
+        name: package-NLog.Extensions.AzureQueueStorage
+        path: packages
+        github-token: ${{ github.token }}
+        run-id: ${{ steps.get-run-id.outputs.run_id }}
+
+    - name: Download NLog.Extensions.AzureEventGrid
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureEventGrid'
+      uses: actions/download-artifact@v4
+      with:
+        name: package-NLog.Extensions.AzureEventGrid
+        path: packages
+        github-token: ${{ github.token }}
+        run-id: ${{ steps.get-run-id.outputs.run_id }}
+
+    - name: Download NLog.Extensions.AzureEventHub
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureEventHub'
+      uses: actions/download-artifact@v4
+      with:
+        name: package-NLog.Extensions.AzureEventHub
+        path: packages
+        github-token: ${{ github.token }}
+        run-id: ${{ steps.get-run-id.outputs.run_id }}
+
+    - name: Download NLog.Extensions.AzureServiceBus
+      if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureServiceBus'
+      uses: actions/download-artifact@v4
+      with:
+        name: package-NLog.Extensions.AzureServiceBus
+        path: packages
+        github-token: ${{ github.token }}
+        run-id: ${{ steps.get-run-id.outputs.run_id }}
     - name: List packages to publish
       run: |
         echo "Packages to publish:"
