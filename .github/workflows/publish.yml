@@ -74,7 +74,16 @@ jobs:
     - name: List packages to publish
       run: |
         echo "Packages to publish:"
-        find packages -name "*.nupkg" -type f | while read f; do echo "  - $(basename $f)"; done
+        if [ ! -d "packages" ]; then
+          echo "ERROR: packages directory does not exist. Artifact download may have failed." >&2
+          exit 1
+        fi
+        PACKAGES=$(find packages -name "*.nupkg" -type f)
+        if [ -z "$PACKAGES" ]; then
+          echo "ERROR: No .nupkg files found in packages directory. Check that artifacts were downloaded correctly." >&2
+          exit 1
+        fi
+        echo "$PACKAGES" | while read f; do echo "  - $(basename $f)"; done
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -98,4 +107,13 @@ jobs:
       if: inputs.dry_run == true
       run: |
         echo "DRY RUN - Would push the following packages to NuGet.org:"
-        find packages -name "*.nupkg" -type f | while read f; do echo "  - $(basename $f)"; done
+        if [ ! -d "packages" ]; then
+          echo "ERROR: packages directory does not exist. Artifact download may have failed." >&2
+          exit 1
+        fi
+        PACKAGES=$(find packages -name "*.nupkg" -type f)
+        if [ -z "$PACKAGES" ]; then
+          echo "ERROR: No .nupkg files found in packages directory. Check that artifacts were downloaded correctly." >&2
+          exit 1
+        fi
+        echo "$PACKAGES" | while read f; do echo "  - $(basename $f)"; done
