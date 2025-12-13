@@ -13,7 +13,7 @@
 - Maintenance: stopped
 - Security: known vulnerabilities, will not be fixed
 - NuGet: marked deprecated; recommend unlisting any remaining versions
-- Last code commit containing this package: f1c345b490a7353c5fd00d1dde42364d162173ce (Jan 29, 2022 — see tag `archive/azure-cosmos-table-2022-01-29`)
+- Last code commit containing this package: f1c345b490a7353c5fd00d1dde42364d162173ce (2022-01-29 — see tag `archive/azure-cosmos-table-2022-01-29`)
 
 ## Deprecated package: NLog.Extensions.AzureStorage (bundle)
 
