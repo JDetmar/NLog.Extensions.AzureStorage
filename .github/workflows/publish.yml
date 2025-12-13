@@ -84,7 +84,7 @@ jobs:
       id: nuget-login
       uses: nuget/login@v1
       with:
-        user: JDetmar
+        user: ${{ secrets.NUGET_USER }}
 
     - name: Push to NuGet
       if: inputs.dry_run == false
