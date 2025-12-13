@@ -137,7 +137,8 @@ jobs:
 
     - name: Push to NuGet
       if: inputs.dry_run == false
-      run: dotnet nuget push 'packages/*.nupkg' --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+      working-directory: packages
+      run: dotnet nuget push '*.nupkg' --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
     - name: Dry run summary
       if: inputs.dry_run == true
