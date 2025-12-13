@@ -46,6 +46,10 @@ jobs:
         else
           # Get latest successful CI run on master
           RUN_ID=$(gh api repos/${{ github.repository }}/actions/workflows/ci.yml/runs --jq '[.workflow_runs[] | select(.conclusion == "success" and .head_branch == "master")] | .[0].id')
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "ERROR: No successful CI runs found on master branch." >&2
+            exit 1
+          fi
           echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
           echo "Using latest successful CI run: $RUN_ID"
         fi
