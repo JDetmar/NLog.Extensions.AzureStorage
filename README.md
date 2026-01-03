@@ -29,7 +29,7 @@ and so [NLog.Extensions.AzureCosmosTable](https://www.nuget.org/packages/NLog.Ex
   <add assembly="NLog.Extensions.AzureServiceBus" /> 
 </extensions>
 
-<targets
+<targets>
     <target type="AzureBlobStorage"
             name="Azure"
             layout="${longdate:universalTime=true} ${level:uppercase=true} - ${logger}: ${message} ${exception:format=tostring}"
