@@ -434,7 +434,7 @@ namespace NLog.Targets
             return _eventHubService.SendAsync(eventDataBatch, partitionKey, cancellationToken);
         }
 
-        private int CalculateBatchSize(IList<EventData> eventDataBatch, int eventDataSize)
+        internal int CalculateBatchSize(IList<EventData> eventDataBatch, int eventDataSize)
         {
             if (eventDataSize < MaxBatchSizeBytes)
                 return Math.Min(eventDataBatch.Count, 100);
@@ -485,13 +485,20 @@ namespace NLog.Targets
                 }
             }
 
-            eventDataSize = EstimateEventDataSize(eventDataSize) * logEventList.Count;
+            eventDataSize = EstimateBatchSizeBytes(eventDataSize, logEventList.Count);
             return eventDataBatch;
         }
 
-        private static int EstimateEventDataSize(int eventDataSize)
+        internal static int EstimateEventDataSize(int eventDataSize)
         {
             return (eventDataSize + 128) * 3 + 128;
+        }
+
+        internal static int EstimateBatchSizeBytes(int maxBodySize, int messageCount)
+        {
+            // Use long and cap so a large flush cannot overflow int to a negative size, which would
+            // make CalculateBatchSize treat a huge payload as a "small total" and send oversized batches.
+            return (int)Math.Min((long)EstimateEventDataSize(maxBodySize) * messageCount, int.MaxValue);
         }
 
         private EventData CreateEventData(string partitionKey, LogEventInfo logEvent, bool allowThrow)

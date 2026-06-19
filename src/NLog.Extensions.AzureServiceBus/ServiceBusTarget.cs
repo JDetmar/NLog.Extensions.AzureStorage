@@ -497,7 +497,7 @@ namespace NLog.Targets
             return _cloudServiceBus.SendAsync(messageBatch, cancellationToken);
         }
 
-        private int CalculateBatchSize(IList<ServiceBusMessage> messageBatch, int messageBatchSize)
+        internal int CalculateBatchSize(IList<ServiceBusMessage> messageBatch, int messageBatchSize)
         {
             if (messageBatchSize < MaxBatchSizeBytes)
                 return Math.Min(messageBatch.Count, 100);
@@ -545,13 +545,20 @@ namespace NLog.Targets
                 }
             }
 
-            messageBatchSize = EstimateEventDataSize(messageBatchSize) * logEventList.Count;
+            messageBatchSize = EstimateBatchSizeBytes(messageBatchSize, logEventList.Count);
             return messageBatch;
         }
 
-        private static int EstimateEventDataSize(int eventDataSize)
+        internal static int EstimateEventDataSize(int eventDataSize)
         {
             return (eventDataSize + 128) * 3 + 128;
+        }
+
+        internal static int EstimateBatchSizeBytes(int maxBodySize, int messageCount)
+        {
+            // Use long and cap so a large flush cannot overflow int to a negative size, which would
+            // make CalculateBatchSize treat a huge payload as a "small total" and send oversized batches.
+            return (int)Math.Min((long)EstimateEventDataSize(maxBodySize) * messageCount, int.MaxValue);
         }
 
         private ServiceBusMessage CreateMessageData(LogEventInfo logEvent, string partitionKey, bool allowThrow)
