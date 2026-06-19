@@ -99,6 +99,24 @@ namespace NLog.Extensions.AzureAccessToken.Tests
             Assert.True(count <= 2, $"Expected no refresh storm for a default expiry, but the provider was called {count} times in ~2s");
         }
 
+        [Fact]
+        public void FailedAcquisition_DoesNotCauseRetryStorm()
+        {
+            // When token acquisition fails, the renderer must not re-fire the timer every
+            // 500ms (hammering the identity endpoint); it should back off to a sane retry.
+            AccessTokenLayoutRenderer.AccessTokenProviders.Clear();
+            var provider = new ThrowingTokenProviderMock();
+            var layout = new AccessTokenLayoutRenderer((connectionString, azureAdInstance) => provider) { ResourceName = "RetryStormResource" };
+
+            layout.Render(LogEventInfo.CreateNullEvent());  // initial acquire fails + schedules retry
+            System.Threading.Thread.Sleep(2000);
+            var count = provider.CallCount;
+            layout.ResetTokenRefresher();
+
+            // With the bug: failure -> nextRefresh stays 0 -> clamps to 500ms -> ~4-5 calls in ~2s.
+            Assert.True(count <= 2, $"Expected no retry storm after acquisition failure, but the provider was called {count} times in ~2s");
+        }
+
         private static AccessTokenLayoutRenderer CreateAccessTokenLayoutRenderer(string resourceName = "TestResource", string accessToken = null, TimeSpan? refreshInterval = null)
         {
             NLog.LogManager.ThrowConfigExceptions = true;
