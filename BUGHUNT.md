@@ -21,6 +21,16 @@ Each fix below was reproduced with a failing test, fixed, and re-verified.
   Commit `96f02d2`.
 - ✅ **AccessToken refresh storm** — no-expiry → 55-min fallback (`a48cf0b`); failed
   acquisition → 30s backoff (`37afb88`).
+- ✅ **S2 name-cache race** — `ConcurrentDictionary`; the .NET runtime's own corruption
+  exception was reproduced under concurrent load. Commit `905d82e`.
+- ✅ **Batch-size int-overflow (S3, minimal)** — ServiceBus/EventHub size estimate uses
+  `long` + cap so it can't overflow to a negative size (which sent oversized batches).
+  Commit `c3ca8d0`.
+- ✅ **Table key sanitization** — strip `/ \ # ?`/control chars from PartitionKey/RowKey;
+  whole-transaction loss from a forbidden key was proven against Azurite. Commit `3511c87`.
+
+Each Azure-rule assumption (#1 name validity, #3 size limit, key forbidden-chars) is
+backed by an Azurite characterization test, so the fixes rest on observed real behavior.
 
 Test-environment notes: test projects target `net8.0` (most) / `net6.0` (AccessToken) but
 only net9/net10 runtimes are installed → run with `DOTNET_ROLL_FORWARD=Major`. The
@@ -28,8 +38,9 @@ AccessToken project additionally fails to build under `TreatWarningsAsErrors` du
 pre-existing missing XML docs (CS1591) — unrelated to these fixes; verified with
 `-p:TreatWarningsAsErrors=false`.
 
-Still open: S3 batch-size math + oversize-drop, S2 cache races, S4 encoding lock, S5
-disposal, key sanitization, EventGrid batching.
+Still open: S3 over-/under-splitting + `MessageSizeExceeded` swallow (the full
+`MessageBatch.TryAdd` redesign), S4 encoding-lock contention, S5 disposal leaks,
+EventGrid no-batching, and the pre-existing AccessToken doc-build (CS1591) blocker.
 
 ## Legend
 
