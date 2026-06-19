@@ -43,6 +43,34 @@ namespace NLog.Extensions.AzureTableStorage.Tests
         }
 
         [Fact]
+        public void Azure_ForbiddenKeyCharInBatch_RejectsWholeTransaction_LosingGoodEntitiesToo()
+        {
+            if (!AzuriteTablesAvailable()) return;
+            var svc = new TableServiceClient(DevStorage);
+            var tableName = "k" + Guid.NewGuid().ToString("n");
+            svc.CreateTable(tableName);
+            try
+            {
+                var table = svc.GetTableClient(tableName);
+                var actions = new[]
+                {
+                    new TableTransactionAction(TableTransactionActionType.Add, new TableEntity("pk", "good-row")),
+                    new TableTransactionAction(TableTransactionActionType.Add, new TableEntity("pk", "bad/row")), // '/' is forbidden in keys
+                };
+
+                // The whole transaction is rejected because of the one forbidden RowKey.
+                Assert.NotNull(Record.Exception(() => table.SubmitTransaction(actions)));
+
+                // ...and the VALID log entry in the same batch was lost too (never committed).
+                Assert.NotNull(Record.Exception(() => table.GetEntity<TableEntity>("pk", "good-row")));
+            }
+            finally
+            {
+                svc.DeleteTable(tableName);
+            }
+        }
+
+        [Fact]
         public void Azure_Accepts32768CharStringProperty()
         {
             if (!AzuriteTablesAvailable()) return;

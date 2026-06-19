@@ -389,9 +389,30 @@ namespace NLog.Targets
             return _cloudTableService.SubmitTransactionAsync(tableName, tableTransaction, cancellationToken);
         }
 
+        // Azure Table keys may not contain '/', '\', '#', '?' or control chars; such a key makes
+        // Azure reject the whole transaction (losing the entire batch). Replace them with '_'.
+        private static string SanitizeKey(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+                return key;
+
+            char[] buffer = null;
+            for (int i = 0; i < key.Length; ++i)
+            {
+                char c = key[i];
+                if (c == '/' || c == '\\' || c == '#' || c == '?' || c < 0x20 || (c >= 0x7F && c <= 0x9F))
+                {
+                    buffer = buffer ?? key.ToCharArray();
+                    buffer[i] = '_';
+                }
+            }
+            return buffer == null ? key : new string(buffer);
+        }
+
         private ITableEntity CreateTableEntity(LogEventInfo logEvent, string partitionKey)
         {
-            var rowKey = RenderLogEvent(RowKey, logEvent);
+            partitionKey = SanitizeKey(partitionKey);
+            var rowKey = SanitizeKey(RenderLogEvent(RowKey, logEvent));
 
             if (ContextProperties.Count > 0)
             {
