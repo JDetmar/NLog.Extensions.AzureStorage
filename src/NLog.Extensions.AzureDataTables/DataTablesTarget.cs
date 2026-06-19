@@ -485,7 +485,7 @@ namespace NLog.Targets
             }
         }
 
-        private sealed class CloudTableService : ICloudTableService
+        internal sealed class CloudTableService : ICloudTableService
         {
             private TableServiceClient _client;
             private TableClient _table;
@@ -530,17 +530,15 @@ namespace NLog.Targets
                 return null;
             }
 
-            public Task SubmitTransactionAsync(string tableName, IEnumerable<TableTransactionAction> tableTransaction, CancellationToken cancellationToken)
+            public async Task SubmitTransactionAsync(string tableName, IEnumerable<TableTransactionAction> tableTransaction, CancellationToken cancellationToken)
             {
                 var table = _table;
                 if (string.IsNullOrEmpty(tableName) || table?.Name != tableName)
                 {
-                    return InitializeAndCacheTableAsync(tableName, cancellationToken).ContinueWith(async (t, operation) => await t.Result.SubmitTransactionAsync((IEnumerable<TableTransactionAction>)operation).ConfigureAwait(false), tableTransaction, cancellationToken);
+                    table = await InitializeAndCacheTableAsync(tableName, cancellationToken).ConfigureAwait(false);
                 }
-                else
-                {
-                    return table.SubmitTransactionAsync(tableTransaction, cancellationToken);
-                }
+
+                await table.SubmitTransactionAsync(tableTransaction, cancellationToken).ConfigureAwait(false);
             }
 
             async Task<TableClient> InitializeAndCacheTableAsync(string tableName, CancellationToken cancellationToken)

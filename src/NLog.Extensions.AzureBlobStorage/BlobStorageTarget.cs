@@ -475,7 +475,7 @@ namespace NLog.Targets
             }
         }
 
-        private sealed class CloudBlobService : ICloudBlobService
+        internal sealed class CloudBlobService : ICloudBlobService
         {
             private IDictionary<string, string> _blobMetadata;
             private IDictionary<string, string> _blobTags;
@@ -526,7 +526,7 @@ namespace NLog.Targets
                 return null;
             }
 
-            public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, CancellationToken cancellationToken)
+            public async Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, CancellationToken cancellationToken)
             {
                 var stream = new System.IO.MemoryStream(buffer);
 
@@ -534,12 +534,10 @@ namespace NLog.Targets
                 var container = _container;
                 if (string.IsNullOrEmpty(containerName) || container?.Name != containerName || string.IsNullOrEmpty(blobName) || blob?.Name != blobName)
                 {
-                    return InitializeAndCacheBlobAsync(containerName, blobName, contentType, cancellationToken).ContinueWith(async (t, s) => await t.Result.AppendBlockAsync((System.IO.Stream)s, null).ConfigureAwait(false), stream, cancellationToken);
+                    blob = await InitializeAndCacheBlobAsync(containerName, blobName, contentType, cancellationToken).ConfigureAwait(false);
                 }
-                else
-                {
-                    return blob.AppendBlockAsync(stream, cancellationToken: cancellationToken);
-                }
+
+                await blob.AppendBlockAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
 
             async Task<AppendBlobClient> InitializeAndCacheBlobAsync(string containerName, string blobName, string contentType, CancellationToken cancellationToken)
