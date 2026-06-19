@@ -81,6 +81,24 @@ namespace NLog.Extensions.AzureAccessToken.Tests
             Assert.True(WaitForTokenTimersStoppedAndGarbageCollected());
         }
 
+        [Fact]
+        public void DefaultExpiry_DoesNotCauseRefreshStorm()
+        {
+            // When the provider returns no expiry (default DateTimeOffset), the renderer
+            // must not schedule the refresh timer to re-fire every 500ms forever.
+            AccessTokenLayoutRenderer.AccessTokenProviders.Clear();
+            var provider = new CountingTokenProviderMock(default(DateTimeOffset));
+            var layout = new AccessTokenLayoutRenderer((connectionString, azureAdInstance) => provider) { ResourceName = "RefreshStormResource" };
+
+            layout.Render(LogEventInfo.CreateNullEvent());  // initial acquire + schedules next refresh
+            System.Threading.Thread.Sleep(2000);
+            var count = provider.CallCount;
+            layout.ResetTokenRefresher();
+
+            // With the bug: default expiry -> nextRefresh clamps to 500ms -> ~4-5 calls in ~2s.
+            Assert.True(count <= 2, $"Expected no refresh storm for a default expiry, but the provider was called {count} times in ~2s");
+        }
+
         private static AccessTokenLayoutRenderer CreateAccessTokenLayoutRenderer(string resourceName = "TestResource", string accessToken = null, TimeSpan? refreshInterval = null)
         {
             NLog.LogManager.ThrowConfigExceptions = true;

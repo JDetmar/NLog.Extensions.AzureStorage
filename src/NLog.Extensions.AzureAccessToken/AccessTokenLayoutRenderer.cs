@@ -229,8 +229,12 @@ namespace NLog.Extensions.AzureAccessToken
                             _accessTokenRefreshed?.Invoke(this, EventArgs.Empty);
                     }
 
-                    // Renew the token 5 minutes before it expires.
-                    nextRefresh = (authResult.Value - DateTimeOffset.UtcNow) - TimeSpan.FromMinutes(5);
+                    // Renew the token 5 minutes before it expires. When the provider returns
+                    // no expiry (default DateTimeOffset), fall back to a sane interval instead of
+                    // treating the token as expired in year 0001 (which re-fires every 500ms).
+                    nextRefresh = authResult.Value == default(DateTimeOffset)
+                        ? TimeSpan.FromMinutes(55)
+                        : (authResult.Value - DateTimeOffset.UtcNow) - TimeSpan.FromMinutes(5);
                 }
                 catch (Exception ex)
                 {
