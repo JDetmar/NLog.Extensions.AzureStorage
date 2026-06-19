@@ -8,6 +8,29 @@ fixing.
 **Scope:** the 8 active packages (~4,400 LOC).
 `NLog.Extensions.AzureCosmosTable` is deprecated (README only) and was not audited.
 
+## Fix progress (branch `bughunt/verify-and-fix`)
+
+Each fix below was reproduced with a failing test, fixed, and re-verified.
+
+- ✅ **S1 silent log loss** (Blob/Queue/Tables) — un-unwrapped `Task<Task>` rewritten as
+  proper async; dropped `CancellationToken`s restored. Integration tests via Azurite +
+  dead-endpoint fault. Commit `3a0360d`.
+- ✅ **Table-name repair** (`CheckAndRepairTableNamingRules`) — returns the cleaned name,
+  strips non-alphanumerics, null-guarded. Commit `3120cef`.
+- ✅ **Truncation off-by-one** (3 sites) — caps Azure Table strings at exactly 32768.
+  Commit `96f02d2`.
+- ✅ **AccessToken refresh storm** — no-expiry → 55-min fallback (`a48cf0b`); failed
+  acquisition → 30s backoff (`37afb88`).
+
+Test-environment notes: test projects target `net8.0` (most) / `net6.0` (AccessToken) but
+only net9/net10 runtimes are installed → run with `DOTNET_ROLL_FORWARD=Major`. The
+AccessToken project additionally fails to build under `TreatWarningsAsErrors` due to
+pre-existing missing XML docs (CS1591) — unrelated to these fixes; verified with
+`-p:TreatWarningsAsErrors=false`.
+
+Still open: S3 batch-size math + oversize-drop, S2 cache races, S4 encoding lock, S5
+disposal, key sanitization, EventGrid batching.
+
 ## Legend
 
 **Status**
