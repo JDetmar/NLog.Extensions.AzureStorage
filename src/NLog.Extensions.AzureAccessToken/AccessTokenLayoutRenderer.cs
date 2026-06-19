@@ -239,6 +239,7 @@ namespace NLog.Extensions.AzureAccessToken
                 catch (Exception ex)
                 {
                     InternalLogger.Error(ex, "AccessToken LayoutRenderer - Failed getting AccessToken from AzureServiceTokenProvider");
+                    nextRefresh = TimeSpan.FromSeconds(30);  // Back off after a failure instead of retrying every 500ms
                 }
                 finally
                 {
