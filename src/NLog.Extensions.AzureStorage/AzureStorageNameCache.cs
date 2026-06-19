@@ -119,8 +119,9 @@ namespace NLog.Extensions.AzureStorage
                 return simpleValidName;
 
             const string trimLeadingPattern = "^.*?(?=[a-zA-Z])";
-            const string trimFobiddenCharactersPattern = "[^a-zA-Z0-9-]";
+            const string trimFobiddenCharactersPattern = "[^a-zA-Z0-9]"; // Table names may contain only alphanumeric characters
 
+            tableName = tableName ?? string.Empty;
             var pass1 = Regex.Replace(tableName, trimFobiddenCharactersPattern, String.Empty, RegexOptions.ExplicitCapture);
             var cleanedTableName = Regex.Replace(pass1, trimLeadingPattern, String.Empty, RegexOptions.ExplicitCapture);
             if (String.IsNullOrWhiteSpace(cleanedTableName) || cleanedTableName.Length > 63 || cleanedTableName.Length < 3)
@@ -128,7 +129,7 @@ namespace NLog.Extensions.AzureStorage
                 var tableDefault = "Logs";
                 return tableDefault;
             }
-            return tableName;
+            return cleanedTableName;
         }
     }
 }
