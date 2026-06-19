@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
 namespace NLog.Extensions.AzureStorage
 {
     internal sealed class AzureStorageNameCache
     {
-        private readonly Dictionary<string, string> _storageNameCache = new Dictionary<string, string>();
+        private readonly ConcurrentDictionary<string, string> _storageNameCache = new ConcurrentDictionary<string, string>();
 
         public string LookupStorageName(string requestedName, Func<string, string> checkAndRepairName)
         {
