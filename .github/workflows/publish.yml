@@ -167,7 +167,8 @@ jobs:
             continue
           fi
           id_lower=$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')
-          http=$(curl -sS -o "$RUNNER_TEMP/versions.json" -w '%{http_code}' \
+          http=$(curl -sS --retry 3 --retry-delay 2 --retry-all-errors --connect-timeout 10 --max-time 30 \
+            -o "$RUNNER_TEMP/versions.json" -w '%{http_code}' \
             "https://api.nuget.org/v3-flatcontainer/${id_lower}/index.json") || http="000"
           if [ "$http" = "200" ] && jq -e --arg v "$version" '.versions | index($v) != null' "$RUNNER_TEMP/versions.json" >/dev/null 2>&1; then
             skip+=("$id $version")
@@ -221,8 +222,8 @@ jobs:
           base=$(basename "$f" .nupkg)
           # Split "<PackageId>.<Version>" at the first dot that starts the version (a dot
           # followed by a digit). Package ids here are alphabetic segments, so this is safe.
-          id=$(printf '%s' "$base" | grep -oP '^.*?(?=\.\d)')
-          version=$(printf '%s' "$base" | grep -oP '^.*?\.\K\d.*')
+          id=$(printf '%s' "$base" | grep -oP '^.*?(?=\.\d)' || true)
+          version=$(printf '%s' "$base" | grep -oP '^.*?\.\K\d.*' || true)
           if [ -z "$id" ] || [ -z "$version" ]; then
             echo "WARNING: could not parse id/version from '$f' — skipping." >&2
             continue
@@ -286,7 +287,8 @@ jobs:
             continue
           fi
           id_lower=$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')
-          http=$(curl -sS -o "$RUNNER_TEMP/versions.json" -w '%{http_code}' \
+          http=$(curl -sS --retry 3 --retry-delay 2 --retry-all-errors --connect-timeout 10 --max-time 30 \
+            -o "$RUNNER_TEMP/versions.json" -w '%{http_code}' \
             "https://api.nuget.org/v3-flatcontainer/${id_lower}/index.json") || http="000"
           if [ "$http" = "200" ] && jq -e --arg v "$version" '.versions | index($v) != null' "$RUNNER_TEMP/versions.json" >/dev/null 2>&1; then
             skip+=("$id $version")
