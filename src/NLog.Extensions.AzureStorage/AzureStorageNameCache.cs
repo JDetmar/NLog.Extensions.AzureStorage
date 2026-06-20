@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
 namespace NLog.Extensions.AzureStorage
 {
     internal sealed class AzureStorageNameCache
     {
-        private readonly Dictionary<string, string> _storageNameCache = new Dictionary<string, string>();
+        private readonly ConcurrentDictionary<string, string> _storageNameCache = new ConcurrentDictionary<string, string>();
 
         public string LookupStorageName(string requestedName, Func<string, string> checkAndRepairName)
         {
@@ -118,9 +118,13 @@ namespace NLog.Extensions.AzureStorage
             if (simpleValidName?.Length >= 3)
                 return simpleValidName;
 
-            const string trimLeadingPattern = "^.*?(?=[a-zA-Z])";
-            const string trimFobiddenCharactersPattern = "[^a-zA-Z0-9-]";
+            // Strip a leading run of non-letters (e.g. digits). This trims whether or not a
+            // letter follows, so an all-digit input such as "123" collapses to empty and falls
+            // back to the default below (table names cannot begin with a numeric character).
+            const string trimLeadingPattern = "^[^a-zA-Z]+";
+            const string trimFobiddenCharactersPattern = "[^a-zA-Z0-9]"; // Table names may contain only alphanumeric characters
 
+            tableName = tableName ?? string.Empty;
             var pass1 = Regex.Replace(tableName, trimFobiddenCharactersPattern, String.Empty, RegexOptions.ExplicitCapture);
             var cleanedTableName = Regex.Replace(pass1, trimLeadingPattern, String.Empty, RegexOptions.ExplicitCapture);
             if (String.IsNullOrWhiteSpace(cleanedTableName) || cleanedTableName.Length > 63 || cleanedTableName.Length < 3)
@@ -128,7 +132,7 @@ namespace NLog.Extensions.AzureStorage
                 var tableDefault = "Logs";
                 return tableDefault;
             }
-            return tableName;
+            return cleanedTableName;
         }
     }
 }
