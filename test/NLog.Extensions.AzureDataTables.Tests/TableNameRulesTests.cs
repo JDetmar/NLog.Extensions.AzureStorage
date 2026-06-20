@@ -17,16 +17,18 @@ namespace NLog.Extensions.AzureTableStorage.Tests
             try
             {
                 using var c = new TcpClient();
-                var r = c.BeginConnect("127.0.0.1", 10002, null, null);
-                return r.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(500)) && c.Connected;
+                // ConnectAsync + bounded Wait disposes the socket cleanly via the using and
+                // avoids the APM BeginConnect/AsyncWaitHandle pattern, which leaks a wait handle.
+                c.ConnectAsync("127.0.0.1", 10002).Wait(TimeSpan.FromMilliseconds(500));
+                return c.Connected;
             }
             catch { return false; }
         }
 
-        [Fact]
+        [SkippableFact]
         public void Azure_RejectsTableNameStartingWithDigit_ButAcceptsRepairedName()
         {
-            if (!AzuriteTablesAvailable()) return;
+            Skip.IfNot(AzuriteTablesAvailable(), "Azurite Table service is not running on 127.0.0.1:10002");
             var svc = new TableServiceClient(DevStorage);
 
             // "123logs" is exactly what the buggy CheckAndRepairTableNamingRules returned.

@@ -29,6 +29,18 @@ namespace NLog.Extensions.AzureTableStorage.Tests
         }
 
         [Fact]
+        public void CheckAndRepairTableNamingRules_AllDigits_FallsBackToDefault()
+        {
+            // "123" contains no letters and table names cannot begin with a digit.
+            // After repair there is nothing usable, so it must fall back to the
+            // documented "Logs" default -- NOT return the original "123".
+            var result = AzureStorageNameCache.CheckAndRepairTableNamingRules("123");
+
+            Assert.Equal("Logs", result);
+            Assert.False(char.IsDigit(result[0]), "repaired table name must not start with a digit");
+        }
+
+        [Fact]
         public void CheckAndRepairTableNamingRules_ForbiddenCharacters_AreRemoved()
         {
             // Dashes/dots/etc are not allowed in table names (alphanumeric only).

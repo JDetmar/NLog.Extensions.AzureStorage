@@ -118,7 +118,10 @@ namespace NLog.Extensions.AzureStorage
             if (simpleValidName?.Length >= 3)
                 return simpleValidName;
 
-            const string trimLeadingPattern = "^.*?(?=[a-zA-Z])";
+            // Strip a leading run of non-letters (e.g. digits). This trims whether or not a
+            // letter follows, so an all-digit input such as "123" collapses to empty and falls
+            // back to the default below (table names cannot begin with a numeric character).
+            const string trimLeadingPattern = "^[^a-zA-Z]+";
             const string trimFobiddenCharactersPattern = "[^a-zA-Z0-9]"; // Table names may contain only alphanumeric characters
 
             tableName = tableName ?? string.Empty;
