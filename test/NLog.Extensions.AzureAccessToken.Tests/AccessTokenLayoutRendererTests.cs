@@ -96,6 +96,8 @@ namespace NLog.Extensions.AzureAccessToken.Tests
             layout.ResetTokenRefresher();
 
             // With the bug: default expiry -> nextRefresh clamps to 500ms -> ~4-5 calls in ~2s.
+            // Lower bound guards against a false pass if the timer never exercised the refresh path.
+            Assert.True(count >= 1, $"Expected the provider to be called at least once, but it was called {count} times in ~2s");
             Assert.True(count <= 2, $"Expected no refresh storm for a default expiry, but the provider was called {count} times in ~2s");
         }
 
@@ -114,6 +116,8 @@ namespace NLog.Extensions.AzureAccessToken.Tests
             layout.ResetTokenRefresher();
 
             // With the bug: failure -> nextRefresh stays 0 -> clamps to 500ms -> ~4-5 calls in ~2s.
+            // Lower bound guards against a false pass if the provider was never invoked.
+            Assert.True(count >= 1, $"Expected the provider to be called at least once, but it was called {count} times in ~2s");
             Assert.True(count <= 2, $"Expected no retry storm after acquisition failure, but the provider was called {count} times in ~2s");
         }
 

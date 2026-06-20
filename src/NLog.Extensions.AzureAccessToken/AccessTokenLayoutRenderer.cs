@@ -232,9 +232,12 @@ namespace NLog.Extensions.AzureAccessToken
                     // Renew the token 5 minutes before it expires. When the provider returns
                     // no expiry (default DateTimeOffset), fall back to a sane interval instead of
                     // treating the token as expired in year 0001 (which re-fires every 500ms).
-                    nextRefresh = authResult.Value == default(DateTimeOffset)
-                        ? TimeSpan.FromMinutes(55)
-                        : (authResult.Value - DateTimeOffset.UtcNow) - TimeSpan.FromMinutes(5);
+                    if (string.IsNullOrEmpty(authResult.Key))
+                        nextRefresh = TimeSpan.FromSeconds(30);  // Empty token is a failed acquisition - back off and retry instead of waiting ~55 minutes
+                    else if (authResult.Value == default(DateTimeOffset))
+                        nextRefresh = TimeSpan.FromMinutes(55);
+                    else
+                        nextRefresh = (authResult.Value - DateTimeOffset.UtcNow) - TimeSpan.FromMinutes(5);
                 }
                 catch (Exception ex)
                 {
