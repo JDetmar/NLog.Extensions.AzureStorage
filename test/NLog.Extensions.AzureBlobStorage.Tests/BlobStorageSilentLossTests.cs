@@ -21,13 +21,14 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             service.Connect(connectionString, null, null, null, null, null, null, null, null, null, null, null);
         }
 
-        private static bool AzuriteAvailable(int port = 10000)
+        private static async Task<bool> AzuriteAvailableAsync(int port = 10000)
         {
             try
             {
                 using var client = new TcpClient();
-                var result = client.BeginConnect("127.0.0.1", port, null, null);
-                return result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(500)) && client.Connected;
+                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+                await client.ConnectAsync("127.0.0.1", port, cts.Token).ConfigureAwait(false);
+                return client.Connected;
             }
             catch
             {
@@ -54,11 +55,11 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
                     Encoding.UTF8.GetBytes("hello"), CancellationToken.None));
         }
 
-        [Fact]
+        [SkippableFact]
         public async Task HappyPath_AppendWritesBlobContent()
         {
-            if (!AzuriteAvailable())
-                return; // integration test: requires Azurite on 127.0.0.1:10000
+            // integration test: requires Azurite on 127.0.0.1:10000 -> report as skipped, not passed, when absent
+            Skip.IfNot(await AzuriteAvailableAsync(), "Azurite not reachable on 127.0.0.1:10000");
 
             const string devStorage = "UseDevelopmentStorage=true";
             var container = "nlog" + Guid.NewGuid().ToString("n"); // unique -> no cross-run accumulation

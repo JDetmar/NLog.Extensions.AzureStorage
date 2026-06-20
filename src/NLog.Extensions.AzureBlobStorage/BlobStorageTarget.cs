@@ -528,16 +528,17 @@ namespace NLog.Targets
 
             public async Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, CancellationToken cancellationToken)
             {
-                var stream = new System.IO.MemoryStream(buffer);
-
-                var blob = _appendBlob;
-                var container = _container;
-                if (string.IsNullOrEmpty(containerName) || container?.Name != containerName || string.IsNullOrEmpty(blobName) || blob?.Name != blobName)
+                using (var stream = new System.IO.MemoryStream(buffer))
                 {
-                    blob = await InitializeAndCacheBlobAsync(containerName, blobName, contentType, cancellationToken).ConfigureAwait(false);
-                }
+                    var blob = _appendBlob;
+                    var container = _container;
+                    if (string.IsNullOrEmpty(containerName) || container?.Name != containerName || string.IsNullOrEmpty(blobName) || blob?.Name != blobName)
+                    {
+                        blob = await InitializeAndCacheBlobAsync(containerName, blobName, contentType, cancellationToken).ConfigureAwait(false);
+                    }
 
-                await blob.AppendBlockAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    await blob.AppendBlockAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
             }
 
             async Task<AppendBlobClient> InitializeAndCacheBlobAsync(string containerName, string blobName, string contentType, CancellationToken cancellationToken)
