@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace NLog.Extensions.AzureAccessToken.Tests
@@ -82,7 +83,7 @@ namespace NLog.Extensions.AzureAccessToken.Tests
         }
 
         [Fact]
-        public void DefaultExpiry_DoesNotCauseRefreshStorm()
+        public async Task DefaultExpiry_DoesNotCauseRefreshStorm()
         {
             // When the provider returns no expiry (default DateTimeOffset), the renderer
             // must not schedule the refresh timer to re-fire every 500ms forever.
@@ -91,7 +92,7 @@ namespace NLog.Extensions.AzureAccessToken.Tests
             var layout = new AccessTokenLayoutRenderer((connectionString, azureAdInstance) => provider) { ResourceName = "RefreshStormResource" };
 
             layout.Render(LogEventInfo.CreateNullEvent());  // initial acquire + schedules next refresh
-            System.Threading.Thread.Sleep(2000);
+            await Task.Delay(2000);
             var count = provider.CallCount;
             layout.ResetTokenRefresher();
 
@@ -102,7 +103,7 @@ namespace NLog.Extensions.AzureAccessToken.Tests
         }
 
         [Fact]
-        public void FailedAcquisition_DoesNotCauseRetryStorm()
+        public async Task FailedAcquisition_DoesNotCauseRetryStorm()
         {
             // When token acquisition fails, the renderer must not re-fire the timer every
             // 500ms (hammering the identity endpoint); it should back off to a sane retry.
@@ -111,7 +112,7 @@ namespace NLog.Extensions.AzureAccessToken.Tests
             var layout = new AccessTokenLayoutRenderer((connectionString, azureAdInstance) => provider) { ResourceName = "RetryStormResource" };
 
             layout.Render(LogEventInfo.CreateNullEvent());  // initial acquire fails + schedules retry
-            System.Threading.Thread.Sleep(2000);
+            await Task.Delay(2000);
             var count = provider.CallCount;
             layout.ResetTokenRefresher();
 
