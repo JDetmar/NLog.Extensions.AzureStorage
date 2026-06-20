@@ -539,8 +539,9 @@ namespace NLog.Targets
                 var messageData = CreateMessageData(logEventList[i], partitionKey, messageBatch.Count == 0 && i == logEventList.Count - 1);
                 if (messageData != null)
                 {
-                    if (messageData.Body.ToMemory().Length > maxBodySize)
-                        maxBodySize = messageData.Body.ToMemory().Length;
+                    int bodySize = messageData.Body.ToMemory().Length;
+                    if (bodySize > maxBodySize)
+                        maxBodySize = bodySize;
                     messageBatch.Add(messageData);
                 }
             }
