@@ -332,7 +332,7 @@ namespace NLog.Targets
             return validQueueName;
         }
 
-        private sealed class CloudQueueService : ICloudQueueService
+        internal sealed class CloudQueueService : ICloudQueueService
         {
             private QueueServiceClient _client;
             private QueueClient _queue;
@@ -381,17 +381,15 @@ namespace NLog.Targets
                 return null;
             }
 
-            public Task AddMessageAsync(string queueName, string queueMessage, CancellationToken cancellationToken)
+            public async Task AddMessageAsync(string queueName, string queueMessage, CancellationToken cancellationToken)
             {
                 var queue = _queue;
                 if (string.IsNullOrEmpty(queueName) || queue?.Name != queueName)
                 {
-                    return InitializeAndCacheQueueAsync(queueName, cancellationToken).ContinueWith(async (t, m) => await t.Result.SendMessageAsync((string)m, null, _timeToLive, cancellationToken).ConfigureAwait(false), queueMessage, cancellationToken);
+                    queue = await InitializeAndCacheQueueAsync(queueName, cancellationToken).ConfigureAwait(false);
                 }
-                else
-                {
-                    return queue.SendMessageAsync(queueMessage, null, _timeToLive, cancellationToken);
-                }
+
+                await queue.SendMessageAsync(queueMessage, null, _timeToLive, cancellationToken).ConfigureAwait(false);
             }
 
             private async Task<QueueClient> InitializeAndCacheQueueAsync(string queueName, CancellationToken cancellationToken)
