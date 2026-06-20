@@ -13,7 +13,7 @@ namespace NLog.Extensions.AzureEventHub.Test
         private const int MaxBatch = 1024 * 1024; // EventHubTarget.MaxBatchSizeBytes default
 
         [Fact]
-        public void LargeFlush_SizeEstimate_DoesNotOverflowToNegative()
+        public void LargeFlushSizeEstimateDoesNotOverflow()
         {
             const int maxBodyBytes = 200_000;
             const int count = 20_000;
@@ -21,19 +21,20 @@ namespace NLog.Extensions.AzureEventHub.Test
             long trueTotal = (long)EventHubTarget.EstimateEventDataSize(maxBodyBytes) * count;
             Assert.True(trueTotal > MaxBatch, "sanity: this flush genuinely needs many batches");
 
-            int estimate = EventHubTarget.EstimateBatchSizeBytes(maxBodyBytes, count);
+            long estimate = EventHubTarget.EstimateBatchSizeBytes(maxBodyBytes, count);
             Assert.True(estimate > 0, $"size estimate overflowed to {estimate} (negative) for a large flush");
+            Assert.Equal(trueTotal, estimate); // long arithmetic must keep the full magnitude (no overflow, no cap)
         }
 
         [Fact]
-        public void LargeFlush_IsSplitIntoSmallBatches_NotPackedIntoOversizedOnes()
+        public void LargeFlushIsSplitIntoSmallBatches()
         {
             const int maxBodyBytes = 200_000;
             const int count = 20_000;
 
             var target = new EventHubTarget { MaxBatchSizeBytes = MaxBatch };
             var events = new EventData[count]; // CalculateBatchSize only reads .Count
-            int estimate = EventHubTarget.EstimateBatchSizeBytes(maxBodyBytes, count);
+            long estimate = EventHubTarget.EstimateBatchSizeBytes(maxBodyBytes, count);
 
             int perBatch = target.CalculateBatchSize(events, estimate);
 

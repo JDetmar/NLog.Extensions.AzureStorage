@@ -13,7 +13,7 @@ namespace NLog.Extensions.AzureServiceBus.Test
         private const int MaxBatch = 256 * 1024; // ServiceBusTarget.MaxBatchSizeBytes default
 
         [Fact]
-        public void LargeFlush_SizeEstimate_DoesNotOverflowToNegative()
+        public void LargeFlushSizeEstimateDoesNotOverflow()
         {
             const int maxBodyBytes = 200_000; // ~200KB messages (each individually under the 256KB limit)
             const int count = 20_000;         // a large flush
@@ -22,19 +22,20 @@ namespace NLog.Extensions.AzureServiceBus.Test
             long trueTotal = (long)ServiceBusTarget.EstimateEventDataSize(maxBodyBytes) * count;
             Assert.True(trueTotal > MaxBatch, "sanity: this flush genuinely needs many batches");
 
-            int estimate = ServiceBusTarget.EstimateBatchSizeBytes(maxBodyBytes, count);
+            long estimate = ServiceBusTarget.EstimateBatchSizeBytes(maxBodyBytes, count);
             Assert.True(estimate > 0, $"size estimate overflowed to {estimate} (negative) for a large flush");
+            Assert.Equal(trueTotal, estimate); // long arithmetic must keep the full magnitude (no overflow, no cap)
         }
 
         [Fact]
-        public void LargeFlush_IsSplitIntoSmallBatches_NotPackedIntoOversizedOnes()
+        public void LargeFlushIsSplitIntoSmallBatches()
         {
             const int maxBodyBytes = 200_000;
             const int count = 20_000;
 
             var target = new ServiceBusTarget { MaxBatchSizeBytes = MaxBatch };
             var messages = new ServiceBusMessage[count]; // CalculateBatchSize only reads .Count
-            int estimate = ServiceBusTarget.EstimateBatchSizeBytes(maxBodyBytes, count);
+            long estimate = ServiceBusTarget.EstimateBatchSizeBytes(maxBodyBytes, count);
 
             int perBatch = target.CalculateBatchSize(messages, estimate);
 

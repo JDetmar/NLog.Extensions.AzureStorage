@@ -390,7 +390,7 @@ namespace NLog.Targets
             return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
         }
 
-        private Task WritePartitionBucketAsync(IList<EventData> eventDataList, int eventDataSize, string partitionKey, CancellationToken cancellationToken)
+        private Task WritePartitionBucketAsync(IList<EventData> eventDataList, long eventDataSize, string partitionKey, CancellationToken cancellationToken)
         {
             int maxBatchSize = CalculateBatchSize(eventDataList, eventDataSize);
             if (eventDataList.Count <= maxBatchSize)
@@ -434,22 +434,22 @@ namespace NLog.Targets
             return _eventHubService.SendAsync(eventDataBatch, partitionKey, cancellationToken);
         }
 
-        internal int CalculateBatchSize(IList<EventData> eventDataBatch, int eventDataSize)
+        internal int CalculateBatchSize(IList<EventData> eventDataBatch, long eventDataSize)
         {
             if (eventDataSize < MaxBatchSizeBytes)
                 return Math.Min(eventDataBatch.Count, 100);
 
             if (eventDataBatch.Count > 10)
             {
-                int numberOfBatches = Math.Max(eventDataSize / MaxBatchSizeBytes, 10);
-                int batchSize = Math.Max(eventDataBatch.Count / numberOfBatches - 1, 1);
+                long numberOfBatches = Math.Max(eventDataSize / MaxBatchSizeBytes, 10);
+                int batchSize = (int)Math.Max(eventDataBatch.Count / numberOfBatches - 1, 1);
                 return Math.Min(batchSize, 100);
             }
 
             return 1;
         }
 
-        private IList<EventData> CreateEventDataBatch(IList<LogEventInfo> logEventList, string partitionKey, out int eventDataSize)
+        private IList<EventData> CreateEventDataBatch(IList<LogEventInfo> logEventList, string partitionKey, out long eventDataSize)
         {
             if (logEventList.Count == 0)
             {
@@ -472,20 +472,20 @@ namespace NLog.Targets
                 return new[] { eventData };
             }
 
-            eventDataSize = 0;
+            int maxBodySize = 0;
             List<EventData> eventDataBatch = new List<EventData>(logEventList.Count);
             for (int i = 0; i < logEventList.Count; ++i)
             {
                 var eventData = CreateEventData(partitionKey, logEventList[i], eventDataBatch.Count == 0 && i == logEventList.Count - 1);
                 if (eventData != null)
                 {
-                    if (eventData.Body.Length > eventDataSize)
-                        eventDataSize = eventData.Body.Length;
+                    if (eventData.Body.Length > maxBodySize)
+                        maxBodySize = eventData.Body.Length;
                     eventDataBatch.Add(eventData);
                 }
             }
 
-            eventDataSize = EstimateBatchSizeBytes(eventDataSize, logEventList.Count);
+            eventDataSize = EstimateBatchSizeBytes(maxBodySize, logEventList.Count);
             return eventDataBatch;
         }
 
@@ -494,11 +494,13 @@ namespace NLog.Targets
             return (eventDataSize + 128) * 3 + 128;
         }
 
-        internal static int EstimateBatchSizeBytes(int maxBodySize, int messageCount)
+        internal static long EstimateBatchSizeBytes(int maxBodySize, int messageCount)
         {
-            // Use long and cap so a large flush cannot overflow int to a negative size, which would
-            // make CalculateBatchSize treat a huge payload as a "small total" and send oversized batches.
-            return (int)Math.Min((long)EstimateEventDataSize(maxBodySize) * messageCount, int.MaxValue);
+            // Use long so a large flush cannot overflow int to a negative size, which would make
+            // CalculateBatchSize treat a huge payload as a "small total" and send oversized batches.
+            // Keeping the full magnitude (instead of capping at int.MaxValue) lets the splitting
+            // heuristic scale beyond 2GB totals without saturating numberOfBatches.
+            return (long)EstimateEventDataSize(maxBodySize) * messageCount;
         }
 
         private EventData CreateEventData(string partitionKey, LogEventInfo logEvent, bool allowThrow)
