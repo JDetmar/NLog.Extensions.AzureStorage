@@ -453,7 +453,7 @@ namespace NLog.Targets
             return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
         }
 
-        private Task WritePartitionBucketAsync(IList<ServiceBusMessage> messageBatch, int messageBatchSize, CancellationToken cancellationToken)
+        private Task WritePartitionBucketAsync(IList<ServiceBusMessage> messageBatch, long messageBatchSize, CancellationToken cancellationToken)
         {
             int maxBatchSize = CalculateBatchSize(messageBatch, messageBatchSize);
             if (messageBatch.Count <= maxBatchSize)
@@ -497,22 +497,22 @@ namespace NLog.Targets
             return _cloudServiceBus.SendAsync(messageBatch, cancellationToken);
         }
 
-        private int CalculateBatchSize(IList<ServiceBusMessage> messageBatch, int messageBatchSize)
+        internal int CalculateBatchSize(IList<ServiceBusMessage> messageBatch, long messageBatchSize)
         {
             if (messageBatchSize < MaxBatchSizeBytes)
                 return Math.Min(messageBatch.Count, 100);
 
             if (messageBatch.Count > 10)
             {
-                int numberOfBatches = Math.Max(messageBatchSize / MaxBatchSizeBytes, 10);
-                int batchSize = Math.Max(messageBatch.Count / numberOfBatches - 1, 1);
+                long numberOfBatches = Math.Max(messageBatchSize / MaxBatchSizeBytes, 10);
+                int batchSize = (int)Math.Max(messageBatch.Count / numberOfBatches - 1, 1);
                 return Math.Min(batchSize, 100);
             }
 
             return 1;
         }
 
-        private IList<ServiceBusMessage> CreateMessageBatch(IList<LogEventInfo> logEventList, string partitionKey, out int messageBatchSize)
+        private IList<ServiceBusMessage> CreateMessageBatch(IList<LogEventInfo> logEventList, string partitionKey, out long messageBatchSize)
         {
             if (logEventList.Count == 0)
             {
@@ -532,26 +532,36 @@ namespace NLog.Targets
                 return new[] { messageData };
             }
 
-            messageBatchSize = 0;
+            int maxBodySize = 0;
             List<ServiceBusMessage> messageBatch = new List<ServiceBusMessage>(logEventList.Count);
             for (int i = 0; i < logEventList.Count; ++i)
             {
                 var messageData = CreateMessageData(logEventList[i], partitionKey, messageBatch.Count == 0 && i == logEventList.Count - 1);
                 if (messageData != null)
                 {
-                    if (messageData.Body.ToMemory().Length > messageBatchSize)
-                        messageBatchSize = messageData.Body.ToMemory().Length;
+                    int bodySize = messageData.Body.ToMemory().Length;
+                    if (bodySize > maxBodySize)
+                        maxBodySize = bodySize;
                     messageBatch.Add(messageData);
                 }
             }
 
-            messageBatchSize = EstimateEventDataSize(messageBatchSize) * logEventList.Count;
+            messageBatchSize = EstimateBatchSizeBytes(maxBodySize, logEventList.Count);
             return messageBatch;
         }
 
-        private static int EstimateEventDataSize(int eventDataSize)
+        internal static int EstimateEventDataSize(int eventDataSize)
         {
             return (eventDataSize + 128) * 3 + 128;
+        }
+
+        internal static long EstimateBatchSizeBytes(int maxBodySize, int messageCount)
+        {
+            // Use long so a large flush cannot overflow int to a negative size, which would make
+            // CalculateBatchSize treat a huge payload as a "small total" and send oversized batches.
+            // Keeping the full magnitude (instead of capping at int.MaxValue) lets the splitting
+            // heuristic scale beyond 2GB totals without saturating numberOfBatches.
+            return (long)EstimateEventDataSize(maxBodySize) * messageCount;
         }
 
         private ServiceBusMessage CreateMessageData(LogEventInfo logEvent, string partitionKey, bool allowThrow)
