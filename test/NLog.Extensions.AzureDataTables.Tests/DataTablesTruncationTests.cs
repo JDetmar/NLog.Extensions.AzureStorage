@@ -77,5 +77,26 @@ namespace NLog.Extensions.AzureTableStorage.Tests
             var entity = cloudTableService.PeekLastAdded("Test").Cast<NLogEntity>().First();
             Assert.Equal(MaxSize, entity.FullMessage.Length);
         }
+
+        [Fact]
+        public void Message_AboveMaxSize_IsCappedAtMax()
+        {
+            var logFactory = new LogFactory();
+            var logConfig = new Config.LoggingConfiguration(logFactory);
+            logConfig.Variables["ConnectionString"] = nameof(DataTablesTruncationTests);
+            var cloudTableService = new CloudTableServiceMock();
+            var target = new DataTablesTarget(cloudTableService); // no context properties -> NLogEntity path
+            target.ConnectionString = "${var:ConnectionString}";
+            target.TableName = "${logger}";
+            target.Layout = "${message}";
+            logConfig.AddRuleForAllLevels(target);
+            logFactory.Configuration = logConfig;
+
+            logFactory.GetLogger("Test").Info(new string('y', MaxSize + 5000));
+            logFactory.Flush();
+
+            var entity = cloudTableService.PeekLastAdded("Test").Cast<NLogEntity>().First();
+            Assert.Equal(MaxSize, entity.FullMessage.Length);
+        }
     }
 }

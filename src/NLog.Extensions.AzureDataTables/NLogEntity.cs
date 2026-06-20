@@ -119,7 +119,7 @@ namespace NLog.Extensions.AzureStorage
 
         private static string TruncateWhenTooBig(string stringValue)
         {
-             return stringValue?.Length > Targets.DataTablesTarget.ColumnStringValueMaxSize ?
+            return stringValue?.Length > Targets.DataTablesTarget.ColumnStringValueMaxSize ?
                 stringValue.Substring(0, Targets.DataTablesTarget.ColumnStringValueMaxSize) : stringValue;
         }
 

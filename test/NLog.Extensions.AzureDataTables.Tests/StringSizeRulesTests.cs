@@ -18,15 +18,21 @@ namespace NLog.Extensions.AzureTableStorage.Tests
             {
                 using var c = new TcpClient();
                 var r = c.BeginConnect("127.0.0.1", 10002, null, null);
-                return r.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(500)) && c.Connected;
+                using (r.AsyncWaitHandle)
+                {
+                    if (!r.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(500)))
+                        return false;
+                    c.EndConnect(r); // surfaces socket errors instead of hiding them
+                    return c.Connected;
+                }
             }
             catch { return false; }
         }
 
-        [Fact]
+        [SkippableFact]
         public void Azure_Accepts32768CharStringProperty()
         {
-            if (!AzuriteTablesAvailable()) return;
+            Skip.IfNot(AzuriteTablesAvailable(), "Azurite Tables emulator not reachable on 127.0.0.1:10002");
             var svc = new TableServiceClient(DevStorage);
             var tableName = "v" + Guid.NewGuid().ToString("n");
             svc.CreateTable(tableName);
