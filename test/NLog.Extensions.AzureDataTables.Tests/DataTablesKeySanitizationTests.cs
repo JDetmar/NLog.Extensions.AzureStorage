@@ -6,7 +6,7 @@ namespace NLog.Extensions.AzureTableStorage.Tests
 {
     // Azure rejects an entire table transaction if any PartitionKey/RowKey contains a
     // forbidden character (/ \ # ?) or a control char -- losing every (valid) log entry
-    // in that batch (proven in AzureRulesValidationTests against Azurite). The target must
+    // in that batch (proven in KeyCharacterRulesTests against Azurite). The target must
     // therefore sanitize rendered keys before building the entity.
     public class DataTablesKeySanitizationTests
     {
