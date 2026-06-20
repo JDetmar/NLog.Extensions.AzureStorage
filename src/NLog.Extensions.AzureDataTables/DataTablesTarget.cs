@@ -296,13 +296,17 @@ namespace NLog.Targets
         protected override Task WriteAsyncTask(IList<LogEventInfo> logEvents, CancellationToken cancellationToken)
         {
             //must sort into containers and then into the blobs for the container
+            // Sanitize the PartitionKey at render time (not just when building the entity) so events
+            // whose keys differ only by a forbidden char (e.g. "a/b" vs "a#b") bucket together into a
+            // single transaction, instead of splitting across batches that all target the same
+            // sanitized partition.
             if (_getTablePartitionNameDelegate == null)
-                _getTablePartitionNameDelegate = logEvent => new TablePartitionKey(RenderLogEvent(TableName, logEvent), RenderLogEvent(PartitionKey, logEvent));
+                _getTablePartitionNameDelegate = logEvent => new TablePartitionKey(RenderLogEvent(TableName, logEvent), SanitizeKey(RenderLogEvent(PartitionKey, logEvent)));
 
             if (logEvents.Count == 1)
             {
                 var tableName = RenderLogEvent(TableName, logEvents[0]);
-                var partitionKey = RenderLogEvent(PartitionKey, logEvents[0]);
+                var partitionKey = SanitizeKey(RenderLogEvent(PartitionKey, logEvents[0]));
 
                 try
                 {
@@ -411,7 +415,14 @@ namespace NLog.Targets
 
         private ITableEntity CreateTableEntity(LogEventInfo logEvent, string partitionKey)
         {
-            partitionKey = SanitizeKey(partitionKey);
+            // partitionKey is already sanitized by the caller, so the partition bucket key matches the
+            // written entity key. Only the rowKey is rendered (and sanitized) here.
+            //
+            // Residual: SanitizeKey is lossy, so two distinct rowKeys within one batch can collapse to
+            // the same value (e.g. "id/1" and "id#1" both -> "id_1"). Azure rejects a transaction that
+            // contains duplicate row keys, so that batch is still lost. This is far narrower than the
+            // pre-fix behavior (ANY forbidden char failed the whole batch) and only occurs with custom
+            // RowKey layouts that emit forbidden chars -- the default GUID-based RowKey never collides.
             var rowKey = SanitizeKey(RenderLogEvent(RowKey, logEvent));
 
             if (ContextProperties.Count > 0)
