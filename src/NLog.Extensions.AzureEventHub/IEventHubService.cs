@@ -35,5 +35,8 @@ namespace NLog.Extensions.AzureStorage
 
         /// <summary>Sends the events accumulated in this batch.</summary>
         Task SendAsync(CancellationToken cancellationToken);
+
+        /// <summary>The authoritative maximum batch size in bytes enforced by the SDK (the negotiated namespace maximum when no explicit cap was requested).</summary>
+        long MaximumSizeInBytes { get; }
     }
 }

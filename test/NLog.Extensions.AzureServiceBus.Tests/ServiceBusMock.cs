@@ -75,6 +75,8 @@ namespace NLog.Extensions.AzureServiceBus.Test
 
             public int Count => _messages.Count;
 
+            public long MaximumSizeInBytes => _maxSizeBytes;
+
             public bool TryAddMessage(ServiceBusMessage message)
             {
                 int messageSize = message.Body.ToMemory().Length;

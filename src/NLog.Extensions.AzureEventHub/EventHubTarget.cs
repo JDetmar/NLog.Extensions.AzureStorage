@@ -351,7 +351,7 @@ namespace NLog.Targets
 
                 try
                 {
-                    var eventDataList = CreateEventDataList(logEvents, partitionKey);
+                    var eventDataList = CreateEventDataList(logEvents);
                     return WriteEventDataAsync(eventDataList, partitionKey, cancellationToken);
                 }
                 catch (Exception ex)
@@ -370,7 +370,7 @@ namespace NLog.Targets
 
                 try
                 {
-                    var eventDataList = CreateEventDataList(partitionBucket.Value, partitionKey);
+                    var eventDataList = CreateEventDataList(partitionBucket.Value);
 
                     Task sendTask = WriteEventDataAsync(eventDataList, partitionKey, cancellationToken);
                     if (multipleTasks == null)
@@ -396,6 +396,7 @@ namespace NLog.Targets
 
             int index = 0;
             int droppedCount = 0;
+            long effectiveMaxSizeBytes = MaxBatchSizeBytes;
 
             // Build batches with the SDK's native EventDataBatch: TryAdd enforces the authoritative
             // size limit (real per-event AMQP overhead + the namespace max), so a full batch is sealed
@@ -413,6 +414,7 @@ namespace NLog.Targets
 
                     if (eventDataBatch.Count == 0)
                     {
+                        effectiveMaxSizeBytes = eventDataBatch.MaximumSizeInBytes;
                         ++droppedCount;
                         ++index;    // Skip the single oversized event so the remaining events still send
                         continue;
@@ -427,10 +429,10 @@ namespace NLog.Targets
             }
 
             if (droppedCount > 0)
-                InternalLogger.Error("AzureEventHubTarget(Name={0}): Dropped {1} logevents exceeding the max batch size of {2} bytes for EntityPath={3} with PartitionKey={4}", Name, droppedCount, MaxBatchSizeBytes, _eventHubService?.EventHubName, partitionKey);
+                InternalLogger.Error("AzureEventHubTarget(Name={0}): Dropped {1} logevents exceeding the max batch size of {2} bytes for EntityPath={3} with PartitionKey={4}", Name, droppedCount, effectiveMaxSizeBytes, _eventHubService?.EventHubName, partitionKey);
         }
 
-        private IList<EventData> CreateEventDataList(IList<LogEventInfo> logEventList, string partitionKey)
+        private IList<EventData> CreateEventDataList(IList<LogEventInfo> logEventList)
         {
             if (logEventList.Count == 0)
                 return Array.Empty<EventData>();
@@ -659,6 +661,8 @@ namespace NLog.Targets
                 }
 
                 public int Count => _batch.Count;
+
+                public long MaximumSizeInBytes => _batch.MaximumSizeInBytes;
 
                 public bool TryAddEvent(EventData eventData) => _batch.TryAdd(eventData);
 

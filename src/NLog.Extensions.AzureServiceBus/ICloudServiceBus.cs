@@ -25,6 +25,9 @@ namespace NLog.Extensions.AzureStorage
         /// <summary>Number of messages accepted into the batch so far.</summary>
         int Count { get; }
 
+        /// <summary>The authoritative maximum batch size in bytes enforced by the SDK (the negotiated namespace maximum when no explicit cap was requested).</summary>
+        long MaximumSizeInBytes { get; }
+
         /// <summary>
         /// Attempts to add a message to the batch. Returns <see langword="false"/> when the
         /// message does not fit: either the batch is full (seal and send it, then retry on a

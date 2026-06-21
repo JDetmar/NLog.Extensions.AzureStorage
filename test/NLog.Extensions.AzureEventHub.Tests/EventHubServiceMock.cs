@@ -92,6 +92,8 @@ namespace NLog.Extensions.AzureEventHub.Test
 
             public int Count => _events.Count;
 
+            public long MaximumSizeInBytes => _maxSizeBytes;
+
             public bool TryAddEvent(EventData eventData)
             {
                 int eventSize = eventData.Body.Length;

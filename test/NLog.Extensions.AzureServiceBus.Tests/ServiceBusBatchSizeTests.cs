@@ -20,6 +20,12 @@ namespace NLog.Extensions.AzureServiceBus.Test
     //      sane batch count (no int-overflow, no oversized batch);
     //   3. an oversize message is NOT silently swallowed as a whole chunk: its siblings are
     //      still sent, only the single undeliverable message is dropped, and that drop is logged.
+    // Isolated from the assembly's parallel runs because OversizeMessage_IsDroppedAndLogged_SiblingsStillSent
+    // mutates the global InternalLogger.LogWriter/LogLevel.
+    [CollectionDefinition("InternalLogger isolation", DisableParallelization = true)]
+    public class InternalLoggerIsolationCollection { }
+
+    [Collection("InternalLogger isolation")]
     public class ServiceBusBatchSizeTests
     {
         private static ServiceBusMock CreateTarget(int maxBatchSizeBytes, out LogFactory logFactory, out Logger logger)

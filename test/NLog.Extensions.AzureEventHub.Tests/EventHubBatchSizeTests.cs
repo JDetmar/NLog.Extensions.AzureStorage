@@ -20,6 +20,10 @@ namespace NLog.Extensions.AzureEventHub.Test
     //      batch count (no int-overflow, no oversized batch);
     //   3. an oversize event is NOT silently swallowed as a whole chunk: its siblings are still
     //      sent, only the single undeliverable event is dropped, and that drop is logged.
+    [CollectionDefinition("InternalLogger isolation", DisableParallelization = true)]
+    public class InternalLoggerIsolationCollection { }
+
+    [Collection("InternalLogger isolation")]
     public class EventHubBatchSizeTests
     {
         private static EventHubServiceMock CreateTarget(int maxBatchSizeBytes, out LogFactory logFactory, out Logger logger)

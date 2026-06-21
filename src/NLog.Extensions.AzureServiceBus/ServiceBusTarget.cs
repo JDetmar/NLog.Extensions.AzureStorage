@@ -459,6 +459,7 @@ namespace NLog.Targets
 
             int index = 0;
             int droppedCount = 0;
+            long effectiveMaxSizeBytes = MaxBatchSizeBytes;     // Captured from the batch on drop, so the log reports the SDK's real max (authoritative when MaxBatchSizeBytes <= 0)
 
             // Build batches with the SDK's native ServiceBusMessageBatch: TryAddMessage enforces the
             // authoritative size limit (real per-message AMQP overhead + the namespace max), so a full
@@ -476,6 +477,7 @@ namespace NLog.Targets
 
                     if (messageBatch.Count == 0)
                     {
+                        effectiveMaxSizeBytes = messageBatch.MaximumSizeInBytes;
                         ++droppedCount;
                         ++index;    // Skip the single oversized message so the remaining messages still send
                         continue;
@@ -490,7 +492,7 @@ namespace NLog.Targets
             }
 
             if (droppedCount > 0)
-                InternalLogger.Error("AzureServiceBusTarget(Name={0}): Dropped {1} logevents exceeding the max batch size of {2} bytes for EntityPath={3} with PartitionKey={4}", Name, droppedCount, MaxBatchSizeBytes, _cloudServiceBus?.EntityPath, partitionKey);
+                InternalLogger.Error("AzureServiceBusTarget(Name={0}): Dropped {1} logevents exceeding the max batch size of {2} bytes for EntityPath={3} with PartitionKey={4}", Name, droppedCount, effectiveMaxSizeBytes, _cloudServiceBus?.EntityPath, partitionKey);
         }
 
         private IList<ServiceBusMessage> CreateMessages(IList<LogEventInfo> logEventList, string partitionKey)
@@ -734,6 +736,8 @@ namespace NLog.Targets
                 }
 
                 public int Count => _batch.Count;
+
+                public long MaximumSizeInBytes => _batch.MaxSizeInBytes;
 
                 public bool TryAddMessage(ServiceBusMessage message) => _batch.TryAddMessage(message);
 
