@@ -242,6 +242,16 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Closes the target, disposing the proxy <see cref="System.Net.Http.HttpClient"/>/transport (if any
+        /// was created) so it does not leak across NLog reconfigurations.
+        /// </summary>
+        protected override void CloseTarget()
+        {
+            (_eventGridService as IDisposable)?.Dispose();
+            base.CloseTarget();
+        }
+
+        /// <summary>
         /// Override this to provide async task for writing a single logevent.
         /// </summary>
         /// <param name="logEvent">The log event.</param>
@@ -268,9 +278,10 @@ namespace NLog.Targets
             }
         }
 
-        private sealed class EventGridService : IEventGridService
+        internal sealed class EventGridService : IEventGridService, IDisposable
         {
             EventGridPublisherClient _client;
+            private IDisposable _proxyTransport;
 
             public string Topic { get; private set; }
 
@@ -289,7 +300,7 @@ namespace NLog.Targets
                 else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
                 {
                     var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
-                    _client = new EventGridPublisherClient(new Uri(topic), tokenCredentials);
+                    _client = new EventGridPublisherClient(new Uri(topic), tokenCredentials, options);
                 }
                 else
                 {
@@ -298,9 +309,11 @@ namespace NLog.Targets
                 }
             }
 
-            private static EventGridPublisherClientOptions ConfigureClientOptions(ProxySettings proxySettings)
+            private EventGridPublisherClientOptions ConfigureClientOptions(ProxySettings proxySettings)
             {
                 var transport = proxySettings?.CreateHttpClientTransport();
+                _proxyTransport?.Dispose();   // dispose any transport from a previous Connect (client replaced)
+                _proxyTransport = transport;
                 if (transport != null)
                 {
                     return new EventGridPublisherClientOptions
@@ -309,6 +322,12 @@ namespace NLog.Targets
                     };
                 }
                 return null;
+            }
+
+            public void Dispose()
+            {
+                _proxyTransport?.Dispose();   // dispose the HttpClient/handler owned by the proxy transport
+                _proxyTransport = null;
             }
 
             public Task SendEventAsync(EventGridEvent gridEvent, CancellationToken cancellationToken)

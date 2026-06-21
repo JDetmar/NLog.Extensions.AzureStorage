@@ -41,6 +41,14 @@ namespace NLog.Extensions.AzureBlobStorage
         public bool RequiresManualProxyConfiguration => !string.IsNullOrEmpty(Address) || NoProxy || (!string.IsNullOrEmpty(Login) && !string.IsNullOrEmpty(Password)) || UseDefaultCredentials;
 
         /// <summary>
+        /// Test-seam (internal): when assigned, <see cref="CreateHttpClientTransport"/> wraps an
+        /// <see cref="HttpClient"/> built from this handler instead of a default <see cref="HttpClientHandler"/>.
+        /// This lets unit tests observe that the transport (and the <see cref="HttpClient"/>/handler it owns)
+        /// is disposed when the owning target is closed. Always <see langword="null"/> in production.
+        /// </summary>
+        internal HttpMessageHandler ProxyHttpMessageHandler { get; set; }
+
+        /// <summary>
         /// creates a custom HttpPipelineTransport to be used as <see cref="Azure.Core.ClientOptions.Transport"/> for storage targets
         /// </summary>
         /// <returns></returns>
@@ -48,6 +56,9 @@ namespace NLog.Extensions.AzureBlobStorage
         {
             if (RequiresManualProxyConfiguration)
             {
+                if (ProxyHttpMessageHandler != null)
+                    return new HttpClientTransport(new HttpClient(ProxyHttpMessageHandler));
+
                 var handler = new HttpClientHandler
                 {
                     UseProxy = !NoProxy,

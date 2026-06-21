@@ -255,6 +255,16 @@ namespace NLog.Targets
             }
         }
 
+        /// <summary>
+        /// Closes the target, disposing the proxy <see cref="System.Net.Http.HttpClient"/>/transport (if any
+        /// was created) so it does not leak across NLog reconfigurations.
+        /// </summary>
+        protected override void CloseTarget()
+        {
+            (_cloudQueueService as IDisposable)?.Dispose();
+            base.CloseTarget();
+        }
+
         private TimeSpan? RenderDefaultTimeToLive()
         {
             string timeToLiveSeconds = null;
@@ -332,12 +342,13 @@ namespace NLog.Targets
             return validQueueName;
         }
 
-        internal sealed class CloudQueueService : ICloudQueueService
+        internal sealed class CloudQueueService : ICloudQueueService, IDisposable
         {
             private QueueServiceClient _client;
             private QueueClient _queue;
             private IDictionary<string, string> _queueMetadata;
             private TimeSpan? _timeToLive;
+            private IDisposable _proxyTransport;
 
             public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata, ProxySettings proxySettings = null)
             {
@@ -359,7 +370,7 @@ namespace NLog.Targets
                 else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
                 {
                     var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
-                    _client = new QueueServiceClient(new Uri(serviceUri), tokenCredentials);
+                    _client = new QueueServiceClient(new Uri(serviceUri), tokenCredentials, options);
                 }
                 else
                 {
@@ -368,9 +379,11 @@ namespace NLog.Targets
                 }
             }
 
-            private static QueueClientOptions ConfigureClientOptions(ProxySettings proxySettings)
+            private QueueClientOptions ConfigureClientOptions(ProxySettings proxySettings)
             {
                 var transport = proxySettings?.CreateHttpClientTransport();
+                _proxyTransport?.Dispose();   // dispose any transport from a previous Connect (client replaced)
+                _proxyTransport = transport;
                 if (transport != null)
                 {
                     return new QueueClientOptions
@@ -379,6 +392,12 @@ namespace NLog.Targets
                     };
                 }
                 return null;
+            }
+
+            public void Dispose()
+            {
+                _proxyTransport?.Dispose();   // dispose the HttpClient/handler owned by the proxy transport
+                _proxyTransport = null;
             }
 
             public async Task AddMessageAsync(string queueName, string queueMessage, CancellationToken cancellationToken)

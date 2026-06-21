@@ -279,6 +279,16 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Closes the target, disposing the proxy <see cref="System.Net.Http.HttpClient"/>/transport (if any
+        /// was created) so it does not leak across NLog reconfigurations.
+        /// </summary>
+        protected override void CloseTarget()
+        {
+            (_cloudTableService as IDisposable)?.Dispose();
+            base.CloseTarget();
+        }
+
+        /// <summary>
         /// Override this to provide async task for writing a single logevent.
         /// </summary>
         /// <param name="logEvent">The log event.</param>
@@ -517,10 +527,11 @@ namespace NLog.Targets
             }
         }
 
-        internal sealed class CloudTableService : ICloudTableService
+        internal sealed class CloudTableService : ICloudTableService, IDisposable
         {
             private TableServiceClient _client;
             private TableClient _table;
+            private IDisposable _proxyTransport;
 
             public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
             {
@@ -540,7 +551,7 @@ namespace NLog.Targets
                 else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
                 {
                     var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
-                    _client = new TableServiceClient(new Uri(serviceUri), tokenCredentials);
+                    _client = new TableServiceClient(new Uri(serviceUri), tokenCredentials, options);
                 }
                 else
                 {
@@ -549,9 +560,11 @@ namespace NLog.Targets
                 }
             }
 
-            private static TableClientOptions ConfigureClientOptions(ProxySettings proxySettings)
+            private TableClientOptions ConfigureClientOptions(ProxySettings proxySettings)
             {
                 var transport = proxySettings?.CreateHttpClientTransport();
+                _proxyTransport?.Dispose();   // dispose any transport from a previous Connect (client replaced)
+                _proxyTransport = transport;
                 if (transport != null)
                 {
                     return new TableClientOptions
@@ -560,6 +573,12 @@ namespace NLog.Targets
                     };
                 }
                 return null;
+            }
+
+            public void Dispose()
+            {
+                _proxyTransport?.Dispose();   // dispose the HttpClient/handler owned by the proxy transport
+                _proxyTransport = null;
             }
 
             public async Task SubmitTransactionAsync(string tableName, IEnumerable<TableTransactionAction> tableTransaction, CancellationToken cancellationToken)

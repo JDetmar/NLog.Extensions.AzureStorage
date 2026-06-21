@@ -7,9 +7,13 @@ using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureBlobStorage.Tests
 {
-    class CloudBlobServiceMock : ICloudBlobService
+    class CloudBlobServiceMock : ICloudBlobService, IDisposable
     {
         public Dictionary<KeyValuePair<string,string>, byte[]> AppendBlob { get; } = new Dictionary<KeyValuePair<string, string>, byte[]>();
+
+        public int DisposeCount { get; private set; }
+
+        public void Dispose() => DisposeCount++;
 
         public string ConnectionString { get; private set; }
 
