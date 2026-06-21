@@ -1,47 +1,136 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
 using Azure.Messaging.ServiceBus;
+using NLog.Common;
+using NLog.Config;
 using NLog.Targets;
 using Xunit;
 
 namespace NLog.Extensions.AzureServiceBus.Test
 {
-    // #5: CreateMessageBatch estimates the batch byte-size as EstimateEventDataSize(maxBody) * count
-    // using int arithmetic. For a large flush this overflows to a NEGATIVE value, which makes
-    // CalculateBatchSize take the "small total" branch (up to 100 messages/batch) instead of
-    // splitting. The result is multi-MB batches that exceed the Service Bus limit and are rejected.
+    // S3 (full): the target now splits a flush into batches with the SDK's native
+    // ServiceBusMessageBatch + TryAddMessage (driven here by ServiceBusMock.FakeMessageBatch,
+    // which caps a batch at MaxBatchSizeBytes). These tests prove:
+    //   1. a payload just over the limit splits into ~2 batches, not the >=10 the old
+    //      count-based heuristic produced;
+    //   2. a large flush is delivered in full, with every batch within the size cap and a
+    //      sane batch count (no int-overflow, no oversized batch);
+    //   3. an oversize message is NOT silently swallowed as a whole chunk: its siblings are
+    //      still sent, only the single undeliverable message is dropped, and that drop is logged.
     public class ServiceBusBatchSizeTests
     {
-        private const int MaxBatch = 256 * 1024; // ServiceBusTarget.MaxBatchSizeBytes default
-
-        [Fact]
-        public void LargeFlushSizeEstimateDoesNotOverflow()
+        private static ServiceBusMock CreateTarget(int maxBatchSizeBytes, out LogFactory logFactory, out Logger logger)
         {
-            const int maxBodyBytes = 200_000; // ~200KB messages (each individually under the 256KB limit)
-            const int count = 20_000;         // a large flush
+            logFactory = new LogFactory();
+            var logConfig = new LoggingConfiguration(logFactory);
+            var serviceBusMock = new ServiceBusMock();
+            var target = new ServiceBusTarget(serviceBusMock)
+            {
+                ConnectionString = "LocalServiceBus",
+                QueueName = "${shortdate}",
+                Layout = "${message}",
+                MaxBatchSizeBytes = maxBatchSizeBytes,
+                BatchSize = 10000,                                              // deliver the flush in one WriteAsyncTask call
+                OverflowAction = Targets.Wrappers.AsyncTargetWrapperOverflowAction.Grow,
+                TaskDelayMilliseconds = 1,
+            };
+            logConfig.AddRuleForAllLevels(target);
+            logFactory.Configuration = logConfig;
+            logger = logFactory.GetLogger(nameof(ServiceBusBatchSizeTests));
+            return serviceBusMock;
+        }
 
-            // The true byte estimate (~12 GB) is far beyond a single 256KB batch -> the flush must split.
-            long trueTotal = (long)ServiceBusTarget.EstimateEventDataSize(maxBodyBytes) * count;
-            Assert.True(trueTotal > MaxBatch, "sanity: this flush genuinely needs many batches");
-
-            long estimate = ServiceBusTarget.EstimateBatchSizeBytes(maxBodyBytes, count);
-            Assert.True(estimate > 0, $"size estimate overflowed to {estimate} (negative) for a large flush");
-            Assert.Equal(trueTotal, estimate); // long arithmetic must keep the full magnitude (no overflow, no cap)
+        private static List<List<ServiceBusMessage>> SnapshotBatches(ServiceBusMock mock)
+        {
+            lock (mock.MessageDataSent)
+                return mock.MessageDataSent.Select(b => new List<ServiceBusMessage>(b)).ToList();
         }
 
         [Fact]
-        public void LargeFlushIsSplitIntoSmallBatches()
+        public void PayloadJustOverLimit_SplitsIntoFewBatches_NotMany()
         {
-            const int maxBodyBytes = 200_000;
-            const int count = 20_000;
+            const int cap = 1000;
+            var mock = CreateTarget(cap, out var logFactory, out var logger);
 
-            var target = new ServiceBusTarget { MaxBatchSizeBytes = MaxBatch };
-            var messages = new ServiceBusMessage[count]; // CalculateBatchSize only reads .Count
-            long estimate = ServiceBusTarget.EstimateBatchSizeBytes(maxBodyBytes, count);
+            // 5 x 300 bytes = 1500 bytes, just over a 1000-byte cap -> needs 2 batches (3 + 2).
+            for (int i = 0; i < 5; ++i)
+                logger.Info(new string('a', 300));
+            logFactory.Flush();
 
-            int perBatch = target.CalculateBatchSize(messages, estimate);
+            var batches = SnapshotBatches(mock);
+            int totalSent = batches.Sum(b => b.Count);
 
-            // Overflow -> negative estimate -> CalculateBatchSize returns Math.Min(count, 100) = 100,
-            // so each send packs ~100 x 200KB = ~20MB >> 256KB and is rejected. The fix must split small.
-            Assert.True(perBatch < 100, $"a {count}-message flush was placed into batches of {perBatch} (the overflow took the 'small total' path -> oversized batches)");
+            Assert.Equal(5, totalSent);                                        // nothing lost
+            Assert.True(batches.Count >= 2 && batches.Count <= 3,
+                $"expected ~2 batches for a payload just over the limit, got {batches.Count} (old count-based math produced >=10)");
+            Assert.All(batches, b => Assert.True(BodyBytes(b) <= cap, $"batch of {BodyBytes(b)} bytes exceeds the {cap}-byte cap"));
+        }
+
+        [Fact]
+        public void LargeFlush_DeliveredInFull_WithSaneBatchCountAndNoOversizedBatch()
+        {
+            const int cap = 4096;
+            const int count = 1000;
+            const int bodyBytes = 500;                                         // 8 messages per 4096-byte batch
+            var mock = CreateTarget(cap, out var logFactory, out var logger);
+
+            for (int i = 0; i < count; ++i)
+                logger.Info(new string('x', bodyBytes));
+            logFactory.Flush();
+
+            var batches = SnapshotBatches(mock);
+            int totalSent = batches.Sum(b => b.Count);
+
+            Assert.Equal(count, totalSent);                                    // no overflow, no whole-chunk drop
+            Assert.All(batches, b => Assert.True(BodyBytes(b) <= cap, $"batch of {BodyBytes(b)} bytes exceeds the {cap}-byte cap"));
+            // ~125 batches expected. Old math over-split to one-message-per-batch (~1000).
+            Assert.True(batches.Count > 1 && batches.Count <= count / 4,
+                $"expected a sane batch count near {count * bodyBytes / cap}, got {batches.Count}");
+        }
+
+        [Fact]
+        public void OversizeMessage_IsDroppedAndLogged_SiblingsStillSent()
+        {
+            const int cap = 1000;
+            var mock = CreateTarget(cap, out var logFactory, out var logger);
+
+            var originalWriter = InternalLogger.LogWriter;
+            var originalLevel = InternalLogger.LogLevel;
+            var capture = new StringWriter();
+            InternalLogger.LogWriter = capture;
+            InternalLogger.LogLevel = LogLevel.Error;
+            try
+            {
+                logger.Info(new string('a', 300));
+                logger.Info(new string('b', 300));
+                logger.Info(new string('g', 5000));     // larger than the 1000-byte cap -> undeliverable on its own
+                logger.Info(new string('c', 300));
+                logger.Info(new string('d', 300));
+                logFactory.Flush();
+            }
+            finally
+            {
+                InternalLogger.LogWriter = originalWriter;
+                InternalLogger.LogLevel = originalLevel;
+            }
+
+            var batches = SnapshotBatches(mock);
+            var delivered = batches.SelectMany(b => b).Select(m => Encoding.UTF8.GetString(m.Body)).ToList();
+
+            Assert.Equal(4, delivered.Count);                                  // the 4 siblings still send
+            Assert.DoesNotContain(delivered, body => body.Length == 5000);     // the oversize one is gone
+            Assert.All(delivered, body => Assert.Equal(300, body.Length));
+            Assert.All(batches, b => Assert.True(BodyBytes(b) <= cap));
+            // Dropped distinctly, not lost silently and not swallowed as a whole chunk.
+            Assert.Contains("Dropped 1 logevents", capture.ToString());
+        }
+
+        private static int BodyBytes(IEnumerable<ServiceBusMessage> batch)
+        {
+            return batch.Sum(m => m.Body.ToMemory().Length);
         }
     }
 }
