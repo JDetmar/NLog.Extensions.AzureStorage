@@ -26,7 +26,7 @@ on:
         default: false
 
 permissions:
-  contents: read
+  contents: write  # Required to create git tags and GitHub Releases after publishing
   actions: read    # Required to download artifacts from other workflows
   id-token: write  # Required for Trusted Publishing OIDC token
 
@@ -41,8 +41,8 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         if [ -n "${{ inputs.run_id }}" ]; then
-          echo "run_id=${{ inputs.run_id }}" >> $GITHUB_OUTPUT
-          echo "Using provided run ID: ${{ inputs.run_id }}"
+          RUN_ID="${{ inputs.run_id }}"
+          echo "Using provided run ID: $RUN_ID"
         else
           # Get latest successful CI run on master
           RUN_ID=$(gh api repos/${{ github.repository }}/actions/workflows/ci.yml/runs --jq '[.workflow_runs[] | select(.conclusion == "success" and .head_branch == "master")] | .[0].id')
@@ -50,9 +50,19 @@ jobs:
             echo "ERROR: No successful CI runs found on master branch." >&2
             exit 1
           fi
-          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
           echo "Using latest successful CI run: $RUN_ID"
         fi
+        echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+
+        # Resolve the commit these artifacts were built from, so release tags point
+        # at the right SHA (this job downloads artifacts and never checks out the repo).
+        HEAD_SHA=$(gh api repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
+        if [ -z "$HEAD_SHA" ] || [ "$HEAD_SHA" = "null" ]; then
+          echo "ERROR: Could not resolve head_sha for run $RUN_ID." >&2
+          exit 1
+        fi
+        echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
+        echo "Artifacts built from commit: $HEAD_SHA"
 
     - name: Download NLog.Extensions.AzureBlobStorage
       if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureBlobStorage'
@@ -138,19 +148,169 @@ jobs:
     - name: Push to NuGet
       if: inputs.dry_run == false
       working-directory: packages
-      run: dotnet nuget push '*.nupkg' --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+      run: |
+        shopt -s nullglob
+
+        # Classify each package as "new" (version not yet on NuGet) or "skip"
+        # (version already published) BEFORE pushing. After the push everything
+        # exists on NuGet, so new-vs-skip can only be determined up front. This
+        # is what surfaces a package you meant to release but forgot to bump:
+        # it lands in "Skipped" instead of "Published".
+        new=()
+        skip=()
+        for f in *.nupkg; do
+          base=$(basename "$f" .nupkg)
+          id=$(printf '%s' "$base" | grep -oP '^.*?(?=\.\d)' || true)
+          version=$(printf '%s' "$base" | grep -oP '^.*?\.\K\d.*' || true)
+          if [ -z "$id" ] || [ -z "$version" ]; then
+            echo "WARNING: could not parse id/version from '$f'." >&2
+            continue
+          fi
+          id_lower=$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')
+          http=$(curl -sS --retry 3 --retry-delay 2 --retry-all-errors --connect-timeout 10 --max-time 30 \
+            -o "$RUNNER_TEMP/versions.json" -w '%{http_code}' \
+            "https://api.nuget.org/v3-flatcontainer/${id_lower}/index.json") || http="000"
+          if [ "$http" = "200" ] && jq -e --arg v "$version" '.versions | index($v) != null' "$RUNNER_TEMP/versions.json" >/dev/null 2>&1; then
+            skip+=("$id $version")
+          else
+            new+=("$id $version")
+          fi
+        done
+
+        # Push everything; --skip-duplicate makes already-published versions a no-op.
+        dotnet nuget push '*.nupkg' --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+        # Summary — only reached if the push above succeeded. Written to the job
+        # summary panel (Actions UI) and the step log.
+        {
+          echo "## NuGet publish summary"
+          echo ""
+          if [ ${#new[@]} -gt 0 ]; then
+            echo "### Published (new)"
+            for p in "${new[@]}"; do echo "- \`$p\`"; done
+          else
+            echo "**No new package versions were published** — every selected package's version already exists on NuGet. Did you forget to bump a \`<Version>\`?"
+          fi
+          if [ ${#skip[@]} -gt 0 ]; then
+            echo ""
+            echo "### Skipped (version already on NuGet)"
+            for p in "${skip[@]}"; do echo "- \`$p\`"; done
+          fi
+        } | tee -a "$GITHUB_STEP_SUMMARY"
+
+    # Auto-tag after a successful push. Packages are versioned independently, so each
+    # published package gets its own tag (<PackageId>-<Version>) and GitHub Release,
+    # pointing at the commit the artifacts were built from.
+    - name: Tag releases and create GitHub Releases
+      if: inputs.dry_run == false
+      working-directory: packages
+      env:
+        GH_TOKEN: ${{ github.token }}
+        HEAD_SHA: ${{ steps.get-run-id.outputs.head_sha }}
+        RUN_ID: ${{ steps.get-run-id.outputs.run_id }}
+        REPO: ${{ github.repository }}
+        SERVER_URL: ${{ github.server_url }}
+      run: |
+        shopt -s nullglob
+        nupkgs=(*.nupkg)
+        if [ ${#nupkgs[@]} -eq 0 ]; then
+          echo "ERROR: No .nupkg files found to tag." >&2
+          exit 1
+        fi
+
+        for f in "${nupkgs[@]}"; do
+          base=$(basename "$f" .nupkg)
+          # Split "<PackageId>.<Version>" at the first dot that starts the version (a dot
+          # followed by a digit). Package ids here are alphabetic segments, so this is safe.
+          id=$(printf '%s' "$base" | grep -oP '^.*?(?=\.\d)' || true)
+          version=$(printf '%s' "$base" | grep -oP '^.*?\.\K\d.*' || true)
+          if [ -z "$id" ] || [ -z "$version" ]; then
+            echo "WARNING: could not parse id/version from '$f' — skipping." >&2
+            continue
+          fi
+          tag="$id-$version"
+
+          if gh release view "$tag" --repo "$REPO" >/dev/null 2>&1; then
+            echo "Release '$tag' already exists — skipping (idempotent re-run)."
+            continue
+          fi
+
+          # Mark SemVer pre-releases (version contains a hyphen) as GitHub pre-releases.
+          prerelease_flag=""
+          case "$version" in
+            *-*) prerelease_flag="--prerelease" ;;
+          esac
+
+          notes=$(printf '%s\n' \
+            "Published \`$id\` \`$version\` to NuGet.org." \
+            "" \
+            "- Commit: $HEAD_SHA" \
+            "- CI run: $SERVER_URL/$REPO/actions/runs/$RUN_ID" \
+            "- NuGet: https://www.nuget.org/packages/$id/$version")
+
+          echo "Creating release '$tag' at $HEAD_SHA"
+          # --latest=false: with independent package versions, no single release is "latest".
+          gh release create "$tag" \
+            --repo "$REPO" \
+            --target "$HEAD_SHA" \
+            --title "$id $version" \
+            --notes "$notes" \
+            --latest=false \
+            $prerelease_flag
+        done
 
     - name: Dry run summary
       if: inputs.dry_run == true
+      env:
+        HEAD_SHA: ${{ steps.get-run-id.outputs.head_sha }}
       run: |
-        echo "DRY RUN - Would push the following packages to NuGet.org:"
         if [ ! -d "packages" ]; then
           echo "ERROR: packages directory does not exist. Artifact download may have failed." >&2
           exit 1
         fi
-        PACKAGES=$(find packages -name "*.nupkg" -type f)
-        if [ -z "$PACKAGES" ]; then
+        mapfile -t PKGS < <(find packages -name "*.nupkg" -type f | sort)
+        if [ ${#PKGS[@]} -eq 0 ]; then
           echo "ERROR: No .nupkg files found in packages directory. Check that artifacts were downloaded correctly." >&2
           exit 1
         fi
-        echo "$PACKAGES" | while read f; do echo "  - $(basename $f)"; done
+
+        # Same new-vs-skip classification as the real publish, so a dry run reveals a
+        # forgotten <Version> bump (it shows under "Would skip") before anything ships.
+        new=()
+        skip=()
+        for f in "${PKGS[@]}"; do
+          base=$(basename "$f" .nupkg)
+          id=$(printf '%s' "$base" | grep -oP '^.*?(?=\.\d)' || true)
+          version=$(printf '%s' "$base" | grep -oP '^.*?\.\K\d.*' || true)
+          if [ -z "$id" ] || [ -z "$version" ]; then
+            echo "WARNING: could not parse id/version from '$f'." >&2
+            continue
+          fi
+          id_lower=$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')
+          http=$(curl -sS --retry 3 --retry-delay 2 --retry-all-errors --connect-timeout 10 --max-time 30 \
+            -o "$RUNNER_TEMP/versions.json" -w '%{http_code}' \
+            "https://api.nuget.org/v3-flatcontainer/${id_lower}/index.json") || http="000"
+          if [ "$http" = "200" ] && jq -e --arg v "$version" '.versions | index($v) != null' "$RUNNER_TEMP/versions.json" >/dev/null 2>&1; then
+            skip+=("$id $version")
+          else
+            new+=("$id $version")
+          fi
+        done
+
+        {
+          echo "## DRY RUN - NuGet publish preview"
+          echo ""
+          echo "Resolved artifacts from commit \`${HEAD_SHA}\`."
+          echo ""
+          if [ ${#new[@]} -gt 0 ]; then
+            echo "### Would publish (new) + tag"
+            for p in "${new[@]}"; do echo "- \`$p\`  →  tag \`${p// /-}\`"; done
+          else
+            echo "**Nothing new would be published** — every selected package's version already exists on NuGet. Did you forget to bump a \`<Version>\`?"
+          fi
+          if [ ${#skip[@]} -gt 0 ]; then
+            echo ""
+            echo "### Would skip (version already on NuGet)"
+            for p in "${skip[@]}"; do echo "- \`$p\`"; done
+          fi
+        } | tee -a "$GITHUB_STEP_SUMMARY"
