@@ -11,9 +11,13 @@ using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureEventGrid.Tests
 {
-    public class EventGridServiceMock : IEventGridService
+    public class EventGridServiceMock : IEventGridService, IDisposable
     {
         public string Topic { get; set; }
+
+        public int DisposeCount { get; private set; }
+
+        public void Dispose() => DisposeCount++;
 
         public List<EventGridEvent> GridEvents { get; } = new List<EventGridEvent>();
 

@@ -285,6 +285,16 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Closes the target, disposing the proxy <see cref="System.Net.Http.HttpClient"/>/transport (if any
+        /// was created) so it does not leak across NLog reconfigurations.
+        /// </summary>
+        protected override void CloseTarget()
+        {
+            (_cloudBlobService as IDisposable)?.Dispose();
+            base.CloseTarget();
+        }
+
+        /// <summary>
         /// Override this to provide async task for writing a single logevent.
         /// </summary>
         /// <param name="logEvent">The log event.</param>
@@ -475,7 +485,7 @@ namespace NLog.Targets
             }
         }
 
-        internal sealed class CloudBlobService : ICloudBlobService
+        internal sealed class CloudBlobService : ICloudBlobService, IDisposable
         {
             private IDictionary<string, string> _blobMetadata;
             private IDictionary<string, string> _blobTags;
@@ -483,6 +493,7 @@ namespace NLog.Targets
             private BlobServiceClient _client;
             private AppendBlobClient _appendBlob;
             private BlobContainerClient _container;
+            private IDisposable _proxyTransport;
 
             public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags, ProxySettings proxySettings = null)
             {
@@ -513,9 +524,11 @@ namespace NLog.Targets
                 }
             }
 
-            private static BlobClientOptions ConfigureClientOptions(ProxySettings proxySettings)
+            private BlobClientOptions ConfigureClientOptions(ProxySettings proxySettings)
             {
                 var transport = proxySettings?.CreateHttpClientTransport();
+                _proxyTransport?.Dispose();   // dispose any transport from a previous Connect (client replaced)
+                _proxyTransport = transport;
                 if (transport != null)
                 {
                     return new BlobClientOptions
@@ -524,6 +537,12 @@ namespace NLog.Targets
                     };
                 }
                 return null;
+            }
+
+            public void Dispose()
+            {
+                _proxyTransport?.Dispose();   // dispose the HttpClient/handler owned by the proxy transport
+                _proxyTransport = null;
             }
 
             public async Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, CancellationToken cancellationToken)

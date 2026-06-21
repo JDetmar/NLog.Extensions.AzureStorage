@@ -7,10 +7,14 @@ using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureQueueStorage.Tests
 {
-    class CloudQueueServiceMock : ICloudQueueService
+    class CloudQueueServiceMock : ICloudQueueService, IDisposable
     {
         public Dictionary<string, string> MessagesAdded { get; } = new Dictionary<string, string>();
-        
+
+        public int DisposeCount { get; private set; }
+
+        public void Dispose() => DisposeCount++;
+
         public string ConnectionString { get; private set; }
 
         public TimeSpan? TimeToLive { get; private set; }

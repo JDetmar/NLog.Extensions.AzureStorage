@@ -9,9 +9,14 @@ using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureTableStorage.Tests
 {
-    class CloudTableServiceMock : ICloudTableService
+    class CloudTableServiceMock : ICloudTableService, IDisposable
     {
         public Dictionary<string, IEnumerable<TableTransactionAction>> BatchExecuted { get; } = new Dictionary<string, IEnumerable<TableTransactionAction>>();
+
+        public int DisposeCount { get; private set; }
+
+        public void Dispose() => DisposeCount++;
+
         public string ConnectionString { get; private set; }
 
         public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
