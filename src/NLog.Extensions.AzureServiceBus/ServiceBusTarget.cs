@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -415,8 +414,8 @@ namespace NLog.Targets
 
                 try
                 {
-                    var messageBatch = CreateMessageBatch(logEvents, partitionKey, out var messageBatchSize);
-                    return WriteSingleBatchAsync(messageBatch, cancellationToken);
+                    var messages = CreateMessages(logEvents, partitionKey);
+                    return WriteMessagesAsync(messages, partitionKey, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -434,9 +433,9 @@ namespace NLog.Targets
 
                 try
                 {
-                    var messageBatch = CreateMessageBatch(partitionBucket.Value, partitionBucket.Key, out var messageBatchSize);
+                    var messages = CreateMessages(partitionBucket.Value, partitionKey);
 
-                    Task sendTask = WritePartitionBucketAsync(messageBatch, messageBatchSize, cancellationToken);
+                    Task sendTask = WriteMessagesAsync(messages, partitionKey, cancellationToken);
                     if (multipleTasks == null)
                         return sendTask;
 
@@ -453,115 +452,68 @@ namespace NLog.Targets
             return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
         }
 
-        private Task WritePartitionBucketAsync(IList<ServiceBusMessage> messageBatch, long messageBatchSize, CancellationToken cancellationToken)
+        private async Task WriteMessagesAsync(IList<ServiceBusMessage> messages, string partitionKey, CancellationToken cancellationToken)
         {
-            int maxBatchSize = CalculateBatchSize(messageBatch, messageBatchSize);
-            if (messageBatch.Count <= maxBatchSize)
-            {
-                return WriteSingleBatchAsync(messageBatch, cancellationToken);
-            }
-            else
-            {
-                var batchCollection = GenerateBatches(messageBatch, maxBatchSize);
-                return WriteMultipleBatchesAsync(batchCollection, cancellationToken);
-            }
-        }
+            if (messages.Count == 0)
+                return;
 
-        private async Task WriteMultipleBatchesAsync(IEnumerable<IEnumerable<ServiceBusMessage>> batchCollection, CancellationToken cancellationToken)
-        {
-            // Must chain the tasks together so they don't run concurrently
-            foreach (var batchItem in batchCollection)
+            int index = 0;
+            int droppedCount = 0;
+            long effectiveMaxSizeBytes = MaxBatchSizeBytes;     // Captured from the batch on drop, so the log reports the SDK's real max (authoritative when MaxBatchSizeBytes <= 0)
+
+            // Build batches with the SDK's native ServiceBusMessageBatch: TryAddMessage enforces the
+            // authoritative size limit (real per-message AMQP overhead + the namespace max), so a full
+            // batch is sealed and sent before the next one starts. Nothing oversized is ever sent, so
+            // there is no whole-chunk drop. Only a message that cannot fit even in an empty batch is
+            // genuinely undeliverable - it is skipped so its siblings still send, and counted for a
+            // distinct log entry below instead of being lost silently.
+            while (index < messages.Count)
             {
+                var messageBatch = await _cloudServiceBus.CreateMessageBatchAsync(MaxBatchSizeBytes, cancellationToken).ConfigureAwait(false);
                 try
                 {
-                    await WriteSingleBatchAsync(batchItem, cancellationToken).ConfigureAwait(false);
+                    while (index < messages.Count && messageBatch.TryAddMessage(messages[index]))
+                        ++index;
+
+                    if (messageBatch.Count == 0)
+                    {
+                        effectiveMaxSizeBytes = messageBatch.MaximumSizeInBytes;
+                        ++droppedCount;
+                        ++index;    // Skip the single oversized message so the remaining messages still send
+                        continue;
+                    }
+
+                    await messageBatch.SendAsync(cancellationToken).ConfigureAwait(false);
                 }
-                catch (ServiceBusException ex)
+                finally
                 {
-                    if (ex.Reason != ServiceBusFailureReason.MessageSizeExceeded && ex.Reason != ServiceBusFailureReason.QuotaExceeded)
-                        throw;
-
-                    InternalLogger.Error(ex, "AzureServiceBusTarget(Name={0}): Skipping failing logevents for EntityPath={1}", Name, ex.EntityPath);
+                    messageBatch.Dispose();
                 }
             }
+
+            if (droppedCount > 0)
+                InternalLogger.Error("AzureServiceBusTarget(Name={0}): Dropped {1} logevents exceeding the max batch size of {2} bytes for EntityPath={3} with PartitionKey={4}", Name, droppedCount, effectiveMaxSizeBytes, _cloudServiceBus?.EntityPath, partitionKey);
         }
 
-        IEnumerable<IEnumerable<ServiceBusMessage>> GenerateBatches(IList<ServiceBusMessage> source, int batchSize)
-        {
-            for (int i = 0; i < source.Count; i += batchSize)
-                yield return source.Skip(i).Take(batchSize);
-        }
-
-        private Task WriteSingleBatchAsync(IEnumerable<ServiceBusMessage> messageBatch, CancellationToken cancellationToken)
-        {
-            return _cloudServiceBus.SendAsync(messageBatch, cancellationToken);
-        }
-
-        internal int CalculateBatchSize(IList<ServiceBusMessage> messageBatch, long messageBatchSize)
-        {
-            if (messageBatchSize < MaxBatchSizeBytes)
-                return Math.Min(messageBatch.Count, 100);
-
-            if (messageBatch.Count > 10)
-            {
-                long numberOfBatches = Math.Max(messageBatchSize / MaxBatchSizeBytes, 10);
-                int batchSize = (int)Math.Max(messageBatch.Count / numberOfBatches - 1, 1);
-                return Math.Min(batchSize, 100);
-            }
-
-            return 1;
-        }
-
-        private IList<ServiceBusMessage> CreateMessageBatch(IList<LogEventInfo> logEventList, string partitionKey, out long messageBatchSize)
+        private IList<ServiceBusMessage> CreateMessages(IList<LogEventInfo> logEventList, string partitionKey)
         {
             if (logEventList.Count == 0)
-            {
-                messageBatchSize = 0;
                 return Array.Empty<ServiceBusMessage>();
-            }
 
             if (logEventList.Count == 1)
             {
                 var messageData = CreateMessageData(logEventList[0], partitionKey, true);
-                if (messageData == null)
-                {
-                    messageBatchSize = 0;
-                    return Array.Empty<ServiceBusMessage>();
-                }
-                messageBatchSize = EstimateEventDataSize(messageData.Body.ToMemory().Length);
-                return new[] { messageData };
+                return messageData == null ? Array.Empty<ServiceBusMessage>() : new[] { messageData };
             }
 
-            int maxBodySize = 0;
-            List<ServiceBusMessage> messageBatch = new List<ServiceBusMessage>(logEventList.Count);
+            var messageBatch = new List<ServiceBusMessage>(logEventList.Count);
             for (int i = 0; i < logEventList.Count; ++i)
             {
                 var messageData = CreateMessageData(logEventList[i], partitionKey, messageBatch.Count == 0 && i == logEventList.Count - 1);
                 if (messageData != null)
-                {
-                    int bodySize = messageData.Body.ToMemory().Length;
-                    if (bodySize > maxBodySize)
-                        maxBodySize = bodySize;
                     messageBatch.Add(messageData);
-                }
             }
-
-            messageBatchSize = EstimateBatchSizeBytes(maxBodySize, logEventList.Count);
             return messageBatch;
-        }
-
-        internal static int EstimateEventDataSize(int eventDataSize)
-        {
-            return (eventDataSize + 128) * 3 + 128;
-        }
-
-        internal static long EstimateBatchSizeBytes(int maxBodySize, int messageCount)
-        {
-            // Use long so a large flush cannot overflow int to a negative size, which would make
-            // CalculateBatchSize treat a huge payload as a "small total" and send oversized batches.
-            // Keeping the full magnitude (instead of capping at int.MaxValue) lets the splitting
-            // heuristic scale beyond 2GB totals without saturating numberOfBatches.
-            return (long)EstimateEventDataSize(maxBodySize) * messageCount;
         }
 
         private ServiceBusMessage CreateMessageData(LogEventInfo logEvent, string partitionKey, bool allowThrow)
@@ -746,12 +698,52 @@ namespace NLog.Targets
                 await (_client?.DisposeAsync() ?? new ValueTask(Task.CompletedTask));
             }
 
-            public Task SendAsync(IEnumerable<ServiceBusMessage> messages, CancellationToken cancellationToken)
+            public async Task<IServiceBusMessageBatch> CreateMessageBatchAsync(int maxBatchSizeBytes, CancellationToken cancellationToken)
             {
-                if (_client == null)
+                if (_sender == null)
                     throw new InvalidOperationException("ServiceBusClient has not been initialized");
 
-                return _sender.SendMessagesAsync(messages, cancellationToken);
+                ServiceBusMessageBatch batch;
+                if (maxBatchSizeBytes > 0)
+                {
+                    try
+                    {
+                        batch = await _sender.CreateMessageBatchAsync(new CreateMessageBatchOptions { MaxSizeInBytes = maxBatchSizeBytes }, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // Requested cap exceeds the namespace's negotiated maximum - let the SDK use its max.
+                        batch = await _sender.CreateMessageBatchAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                }
+                else
+                {
+                    batch = await _sender.CreateMessageBatchAsync(cancellationToken).ConfigureAwait(false);
+                }
+
+                return new ServiceBusMessageBatchWrapper(_sender, batch);
+            }
+
+            private sealed class ServiceBusMessageBatchWrapper : IServiceBusMessageBatch
+            {
+                private readonly ServiceBusSender _sender;
+                private readonly ServiceBusMessageBatch _batch;
+
+                public ServiceBusMessageBatchWrapper(ServiceBusSender sender, ServiceBusMessageBatch batch)
+                {
+                    _sender = sender;
+                    _batch = batch;
+                }
+
+                public int Count => _batch.Count;
+
+                public long MaximumSizeInBytes => _batch.MaxSizeInBytes;
+
+                public bool TryAddMessage(ServiceBusMessage message) => _batch.TryAddMessage(message);
+
+                public Task SendAsync(CancellationToken cancellationToken) => _sender.SendMessagesAsync(_batch, cancellationToken);
+
+                public void Dispose() => _batch.Dispose();
             }
         }
     }

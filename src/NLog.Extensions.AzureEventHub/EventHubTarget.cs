@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -352,8 +351,8 @@ namespace NLog.Targets
 
                 try
                 {
-                    var eventDataBatch = CreateEventDataBatch(logEvents, partitionKey, out var eventDataSize);
-                    return WriteSingleBatchAsync(eventDataBatch, partitionKey, cancellationToken);
+                    var eventDataList = CreateEventDataList(logEvents);
+                    return WriteEventDataAsync(eventDataList, partitionKey, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -371,9 +370,9 @@ namespace NLog.Targets
 
                 try
                 {
-                    var eventDataBatch = CreateEventDataBatch(partitionBucket.Value, partitionKey, out var eventDataSize);
+                    var eventDataList = CreateEventDataList(partitionBucket.Value);
 
-                    Task sendTask = WritePartitionBucketAsync(eventDataBatch, eventDataSize, partitionKey, cancellationToken);
+                    Task sendTask = WriteEventDataAsync(eventDataList, partitionKey, cancellationToken);
                     if (multipleTasks == null)
                         return sendTask;
 
@@ -390,126 +389,76 @@ namespace NLog.Targets
             return multipleTasks?.Count > 0 ? Task.WhenAll(multipleTasks) : Task.CompletedTask;
         }
 
-        private Task WritePartitionBucketAsync(IList<EventData> eventDataList, long eventDataSize, string partitionKey, CancellationToken cancellationToken)
+        private async Task WriteEventDataAsync(IList<EventData> eventDataList, string partitionKey, CancellationToken cancellationToken)
         {
-            int maxBatchSize = CalculateBatchSize(eventDataList, eventDataSize);
-            if (eventDataList.Count <= maxBatchSize)
-            {
-                return WriteSingleBatchAsync(eventDataList, partitionKey, cancellationToken);
-            }
-            else
-            {
-                var batchCollection = GenerateBatches(eventDataList, maxBatchSize);
-                return WriteMultipleBatchesAsync(batchCollection, partitionKey, cancellationToken);
-            }
-        }
+            if (eventDataList.Count == 0)
+                return;
 
-        private async Task WriteMultipleBatchesAsync(IEnumerable<IEnumerable<EventData>> batchCollection, string partitionKey, CancellationToken cancellationToken)
-        {
-            // Must chain the tasks together so they don't run concurrently
-            foreach (var batchItem in batchCollection)
+            int index = 0;
+            int droppedCount = 0;
+            long effectiveMaxSizeBytes = MaxBatchSizeBytes;
+
+            // Build batches with the SDK's native EventDataBatch: TryAdd enforces the authoritative
+            // size limit (real per-event AMQP overhead + the namespace max), so a full batch is sealed
+            // and sent before the next one starts. Nothing oversized is ever sent, so there is no
+            // whole-chunk drop. Only an event that cannot fit even in an empty batch is genuinely
+            // undeliverable - it is skipped so its siblings still send, and counted for a distinct log
+            // entry below instead of being lost silently. The partition key is carried by the batch.
+            while (index < eventDataList.Count)
             {
+                var eventDataBatch = await _eventHubService.CreateBatchAsync(partitionKey, MaxBatchSizeBytes, cancellationToken).ConfigureAwait(false);
                 try
                 {
-                    await WriteSingleBatchAsync(batchItem, partitionKey, cancellationToken).ConfigureAwait(false);
+                    while (index < eventDataList.Count && eventDataBatch.TryAddEvent(eventDataList[index]))
+                        ++index;
+
+                    if (eventDataBatch.Count == 0)
+                    {
+                        effectiveMaxSizeBytes = eventDataBatch.MaximumSizeInBytes;
+                        ++droppedCount;
+                        ++index;    // Skip the single oversized event so the remaining events still send
+                        continue;
+                    }
+
+                    await eventDataBatch.SendAsync(cancellationToken).ConfigureAwait(false);
                 }
-                catch (EventHubsException ex)
+                finally
                 {
-                    if (ex.Reason != EventHubsException.FailureReason.MessageSizeExceeded && ex.Reason != EventHubsException.FailureReason.QuotaExceeded)
-                        throw;
-
-                    InternalLogger.Error(ex, "AzureEventHubTarget(Name={0}): Skipping failing logevents for EntityPath={1} with PartitionKey={2}", Name, ex.EventHubName, partitionKey);
+                    eventDataBatch.Dispose();
                 }
             }
+
+            if (droppedCount > 0)
+                InternalLogger.Error("AzureEventHubTarget(Name={0}): Dropped {1} logevents exceeding the max batch size of {2} bytes for EntityPath={3} with PartitionKey={4}", Name, droppedCount, effectiveMaxSizeBytes, _eventHubService?.EventHubName, partitionKey);
         }
 
-        IEnumerable<IEnumerable<EventData>> GenerateBatches(IList<EventData> source, int batchSize)
-        {
-            for (int i = 0; i < source.Count; i += batchSize)
-                yield return source.Skip(i).Take(batchSize);
-        }
-
-        private Task WriteSingleBatchAsync(IEnumerable<EventData> eventDataBatch, string partitionKey, CancellationToken cancellationToken)
-        {
-            return _eventHubService.SendAsync(eventDataBatch, partitionKey, cancellationToken);
-        }
-
-        internal int CalculateBatchSize(IList<EventData> eventDataBatch, long eventDataSize)
-        {
-            if (eventDataSize < MaxBatchSizeBytes)
-                return Math.Min(eventDataBatch.Count, 100);
-
-            if (eventDataBatch.Count > 10)
-            {
-                long numberOfBatches = Math.Max(eventDataSize / MaxBatchSizeBytes, 10);
-                int batchSize = (int)Math.Max(eventDataBatch.Count / numberOfBatches - 1, 1);
-                return Math.Min(batchSize, 100);
-            }
-
-            return 1;
-        }
-
-        private IList<EventData> CreateEventDataBatch(IList<LogEventInfo> logEventList, string partitionKey, out long eventDataSize)
+        private IList<EventData> CreateEventDataList(IList<LogEventInfo> logEventList)
         {
             if (logEventList.Count == 0)
-            {
-                eventDataSize = 0;
                 return Array.Empty<EventData>();
-            }
-
-            if (string.IsNullOrEmpty(partitionKey))
-                partitionKey = null;
 
             if (logEventList.Count == 1)
             {
-                var eventData = CreateEventData(partitionKey, logEventList[0], true);
-                if (eventData == null)
-                {
-                    eventDataSize = 0;
-                    return Array.Empty<EventData>();
-                }
-                eventDataSize = EstimateEventDataSize(eventData.Body.Length);
-                return new[] { eventData };
+                var eventData = CreateEventData(logEventList[0], true);
+                return eventData == null ? Array.Empty<EventData>() : new[] { eventData };
             }
 
-            int maxBodySize = 0;
-            List<EventData> eventDataBatch = new List<EventData>(logEventList.Count);
+            var eventDataList = new List<EventData>(logEventList.Count);
             for (int i = 0; i < logEventList.Count; ++i)
             {
-                var eventData = CreateEventData(partitionKey, logEventList[i], eventDataBatch.Count == 0 && i == logEventList.Count - 1);
+                var eventData = CreateEventData(logEventList[i], eventDataList.Count == 0 && i == logEventList.Count - 1);
                 if (eventData != null)
-                {
-                    int bodySize = eventData.Body.Length;
-                    if (bodySize > maxBodySize)
-                        maxBodySize = bodySize;
-                    eventDataBatch.Add(eventData);
-                }
+                    eventDataList.Add(eventData);
             }
-
-            eventDataSize = EstimateBatchSizeBytes(maxBodySize, logEventList.Count);
-            return eventDataBatch;
+            return eventDataList;
         }
 
-        internal static int EstimateEventDataSize(int eventDataSize)
-        {
-            return (eventDataSize + 128) * 3 + 128;
-        }
-
-        internal static long EstimateBatchSizeBytes(int maxBodySize, int messageCount)
-        {
-            // Use long so a large flush cannot overflow int to a negative size, which would make
-            // CalculateBatchSize treat a huge payload as a "small total" and send oversized batches.
-            // Keeping the full magnitude (instead of capping at int.MaxValue) lets the splitting
-            // heuristic scale beyond 2GB totals without saturating numberOfBatches.
-            return (long)EstimateEventDataSize(maxBodySize) * messageCount;
-        }
-
-        private EventData CreateEventData(string partitionKey, LogEventInfo logEvent, bool allowThrow)
+        private EventData CreateEventData(LogEventInfo logEvent, bool allowThrow)
         {
             try
             {
                 var eventDataBody = RenderLogEvent(Layout, logEvent) ?? string.Empty;
-                var eventData = EventHubsModelFactory.EventData(new BinaryData(EncodeToUTF8(eventDataBody)), partitionKey: partitionKey, offsetString: null);
+                var eventData = new EventData(EncodeToUTF8(eventDataBody));
 
                 var contentType = RenderLogEvent(ContentType, logEvent) ?? string.Empty;
                 if (!string.IsNullOrWhiteSpace(contentType))
@@ -610,7 +559,6 @@ namespace NLog.Targets
         private sealed class EventHubService : IEventHubService
         {
             private Azure.Messaging.EventHubs.Producer.EventHubProducerClient _client;
-            private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Azure.Messaging.EventHubs.Producer.SendEventOptions> _partitionKeys = new System.Collections.Concurrent.ConcurrentDictionary<string, Azure.Messaging.EventHubs.Producer.SendEventOptions>();
 
             public string EventHubName { get; private set; }
 
@@ -667,25 +615,60 @@ namespace NLog.Targets
                 return _client?.CloseAsync() ?? Task.CompletedTask;
             }
 
-            public Task SendAsync(IEnumerable<EventData> eventDataBatch, string partitionKey, CancellationToken cancellationToken)
+            public async Task<IEventDataBatch> CreateBatchAsync(string partitionKey, int maxBatchSizeBytes, CancellationToken cancellationToken)
             {
                 if (_client == null)
                     throw new InvalidOperationException("EventHubClient has not been initialized");
 
-                Azure.Messaging.EventHubs.Producer.SendEventOptions sendEventOptions = null;
+                var options = new Azure.Messaging.EventHubs.Producer.CreateBatchOptions();
                 if (!string.IsNullOrEmpty(partitionKey))
+                    options.PartitionKey = partitionKey;
+
+                Azure.Messaging.EventHubs.Producer.EventDataBatch batch;
+                if (maxBatchSizeBytes > 0)
                 {
-                    if (!_partitionKeys.TryGetValue(partitionKey, out sendEventOptions))
+                    options.MaximumSizeInBytes = maxBatchSizeBytes;
+                    try
                     {
-                        sendEventOptions = new Azure.Messaging.EventHubs.Producer.SendEventOptions() { PartitionKey = partitionKey };
-                        _partitionKeys.TryAdd(partitionKey, sendEventOptions);
+                        batch = await _client.CreateBatchAsync(options, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // Requested cap exceeds the namespace's negotiated maximum - let the SDK use its max.
+                        var fallback = new Azure.Messaging.EventHubs.Producer.CreateBatchOptions();
+                        if (!string.IsNullOrEmpty(partitionKey))
+                            fallback.PartitionKey = partitionKey;
+                        batch = await _client.CreateBatchAsync(fallback, cancellationToken).ConfigureAwait(false);
                     }
                 }
-
-                if (sendEventOptions != null)
-                    return _client.SendAsync(eventDataBatch, sendEventOptions, cancellationToken);
                 else
-                    return _client.SendAsync(eventDataBatch, cancellationToken);
+                {
+                    batch = await _client.CreateBatchAsync(options, cancellationToken).ConfigureAwait(false);
+                }
+
+                return new EventDataBatchWrapper(_client, batch);
+            }
+
+            private sealed class EventDataBatchWrapper : IEventDataBatch
+            {
+                private readonly Azure.Messaging.EventHubs.Producer.EventHubProducerClient _client;
+                private readonly Azure.Messaging.EventHubs.Producer.EventDataBatch _batch;
+
+                public EventDataBatchWrapper(Azure.Messaging.EventHubs.Producer.EventHubProducerClient client, Azure.Messaging.EventHubs.Producer.EventDataBatch batch)
+                {
+                    _client = client;
+                    _batch = batch;
+                }
+
+                public int Count => _batch.Count;
+
+                public long MaximumSizeInBytes => _batch.MaximumSizeInBytes;
+
+                public bool TryAddEvent(EventData eventData) => _batch.TryAdd(eventData);
+
+                public Task SendAsync(CancellationToken cancellationToken) => _client.SendAsync(_batch, cancellationToken);
+
+                public void Dispose() => _batch.Dispose();
             }
         }
     }
