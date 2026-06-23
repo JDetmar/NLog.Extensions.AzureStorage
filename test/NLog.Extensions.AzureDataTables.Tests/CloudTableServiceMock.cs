@@ -31,24 +31,25 @@ namespace NLog.Extensions.AzureTableStorage.Tests
             ConnectionString = connectionString;
         }
 
-        public Task SubmitTransactionAsync(string tableName, IEnumerable<TableTransactionAction> tableTransaction, CancellationToken cancellationToken)
+        public async Task SubmitTransactionAsync(string tableName, IEnumerable<TableTransactionAction> tableTransaction, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("CloudTableService not connected");
 
-            return Task.Delay(10).ContinueWith(t =>
+            // Honor the cancellation token like the production CloudTableService does: a cancelled token
+            // throws here and commits nothing, rather than silently committing after cancellation.
+            await Task.Delay(10, cancellationToken).ConfigureAwait(false);
+
+            // Azure ENUMERATES the transaction (rendering each entity) and commits it all-or-nothing.
+            // Materialize here so a deferred render exception faults the whole transaction and records
+            // nothing -- exactly the silent whole-batch loss the eager-build fix is meant to prevent --
+            // rather than being quietly deferred past the target's guard.
+            var materialized = tableTransaction.ToList();
+            lock (_sync)
             {
-                // Azure ENUMERATES the transaction (rendering each entity) and commits it all-or-nothing.
-                // Materialize here so a deferred render exception faults the whole transaction and records
-                // nothing -- exactly the silent whole-batch loss the eager-build fix is meant to prevent --
-                // rather than being quietly deferred past the target's guard.
-                var materialized = tableTransaction.ToList();
-                lock (_sync)
-                {
-                    BatchExecuted[tableName] = materialized;
-                    Transactions.Add(new KeyValuePair<string, List<TableTransactionAction>>(tableName, materialized));
-                }
-            });
+                BatchExecuted[tableName] = materialized;
+                Transactions.Add(new KeyValuePair<string, List<TableTransactionAction>>(tableName, materialized));
+            }
         }
 
         public IEnumerable<ITableEntity> PeekLastAdded(string tableName)
