@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
@@ -344,7 +343,13 @@ namespace NLog.Targets
                 {
                     if (partitionBucket.Value.Count <= BatchMaxSize)
                     {
-                        var batchItem = GenerateBatch(partitionBucket.Value, partitionKey);
+                        // Render the entities EAGERLY here (inside the guard) so a single un-renderable
+                        // event is dropped rather than faulting the whole atomic transaction when the SDK
+                        // enumerates the batch later, during SubmitTransactionAsync.
+                        var batchItem = GenerateBatch(partitionBucket.Value, 0, partitionBucket.Value.Count, partitionKey, tableName);
+                        if (batchItem.Count == 0)
+                            continue;   // every event in this partition failed to render; nothing valid to submit
+
                         var writeTask = WriteToTableAsync(tableName, batchItem, cancellationToken);
                         if (multipleTasks == null)
                             return writeTask;
@@ -354,7 +359,7 @@ namespace NLog.Targets
                     else
                     {
                         // Must chain the tasks together so they don't run concurrently
-                        var batchCollection = GenerateBatches(partitionBucket.Value, partitionKey, BatchMaxSize);
+                        var batchCollection = GenerateBatches(partitionBucket.Value, partitionKey, tableName, BatchMaxSize);
                         Task writeTask = WriteMultipleBatchesAsync(batchCollection, tableName, cancellationToken);
                         if (multipleTasks == null)
                             return writeTask;
@@ -381,15 +386,47 @@ namespace NLog.Targets
             }
         }
 
-        IEnumerable<IEnumerable<TableTransactionAction>> GenerateBatches(IList<LogEventInfo> source, string partitionKey, int batchSize)
+        // Split a >100-event partition into <=batchSize transactions, building every entity EAGERLY (so a
+        // render failure is contained per-event) and slicing the IList by index (O(n), not Skip/Take's O(n^2)
+        // on frameworks whose Enumerable.Skip is not IList-optimized).
+        private List<List<TableTransactionAction>> GenerateBatches(IList<LogEventInfo> source, string partitionKey, string tableName, int batchSize)
         {
+            var batches = new List<List<TableTransactionAction>>((source.Count + batchSize - 1) / batchSize);
             for (int i = 0; i < source.Count; i += batchSize)
-                yield return GenerateBatch(source.Skip(i).Take(batchSize), partitionKey);
+            {
+                var batch = GenerateBatch(source, i, Math.Min(batchSize, source.Count - i), partitionKey, tableName);
+                if (batch.Count > 0)
+                    batches.Add(batch);
+            }
+            return batches;
         }
 
-        private IEnumerable<TableTransactionAction> GenerateBatch(IEnumerable<LogEventInfo> logEvents, string partitionKey)
+        // Render source[startIndex .. startIndex+count) into transaction actions, EAGERLY. An event whose
+        // layout/property rendering throws is dropped (and counted) so the remaining events still form a
+        // valid atomic transaction, instead of one poison event faulting the whole batch from inside the
+        // SDK's deferred enumeration during SubmitTransactionAsync.
+        private List<TableTransactionAction> GenerateBatch(IList<LogEventInfo> source, int startIndex, int count, string partitionKey, string tableName)
         {
-            return logEvents.Select(evt => GenerateTableTransactionAction(partitionKey, evt));
+            var batch = new List<TableTransactionAction>(count);
+            int dropped = 0;
+            int end = startIndex + count;
+            for (int i = startIndex; i < end; ++i)
+            {
+                try
+                {
+                    batch.Add(GenerateTableTransactionAction(partitionKey, source[i]));
+                }
+                catch (Exception ex)
+                {
+                    ++dropped;
+                    InternalLogger.Warn(ex, "AzureDataTablesTarget(Name={0}): Skipping logevent that failed to render for Table={1} with PartitionKey={2}", Name, tableName, partitionKey);
+                }
+            }
+
+            if (dropped > 0)
+                InternalLogger.Error("AzureDataTablesTarget(Name={0}): Dropped {1} logevents that failed to render for Table={2} with PartitionKey={3}", Name, dropped, tableName, partitionKey);
+
+            return batch;
         }
 
         private TableTransactionAction GenerateTableTransactionAction(string partitionKey, LogEventInfo evt)
@@ -438,8 +475,14 @@ namespace NLog.Targets
             if (ContextProperties.Count > 0)
             {
                 var entity = new TableEntity(partitionKey, rowKey);
-                bool logTimeStampOverridden = "LogTimeStamp".Equals(ContextProperties[0].Name, StringComparison.OrdinalIgnoreCase);
-                if (!logTimeStampOverridden)
+
+                // A user-defined "LogTimeStamp" context property overrides the library default. Detect it
+                // at ANY index (not just [0]): otherwise a LogTimeStamp at index >= 1 left the default in
+                // place, so an empty override leaked the default timestamp and the skip-when-empty semantics
+                // were silently positional. (TableEntity.Add overwrites a duplicate key, so this is a leaked
+                // default rather than a crash.)
+                int logTimeStampIndex = IndexOfLogTimeStampProperty();
+                if (logTimeStampIndex < 0)
                 {
                     entity.Add("LogTimeStamp", logEvent.TimeStamp.ToUniversalTime());
                 }
@@ -451,8 +494,8 @@ namespace NLog.Targets
                         continue;
 
                     var propertyValue = RenderLogEvent(contextproperty.Layout, logEvent) ?? string.Empty;
-                    if (logTimeStampOverridden && i == 0 && string.IsNullOrEmpty(propertyValue))
-                        continue;
+                    if (i == logTimeStampIndex && string.IsNullOrEmpty(propertyValue))
+                        continue;   // honor the override's skip-when-empty at any index (no default was added)
 
                     if (!contextproperty.IncludeEmptyValue && string.IsNullOrEmpty(propertyValue))
                         continue;
@@ -478,6 +521,17 @@ namespace NLog.Targets
                 }
                 return new NLogEntity(logEvent, layoutMessage, _machineName, partitionKey, rowKey, LogTimeStampFormat);
             }
+        }
+
+        // Index of the first context property that overrides the default "LogTimeStamp" column, or -1.
+        private int IndexOfLogTimeStampProperty()
+        {
+            for (int i = 0; i < ContextProperties.Count; ++i)
+            {
+                if ("LogTimeStamp".Equals(ContextProperties[i].Name, StringComparison.OrdinalIgnoreCase))
+                    return i;
+            }
+            return -1;
         }
 
         private string CheckAndRepairTableName(string tableName)
