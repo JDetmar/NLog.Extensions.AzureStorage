@@ -313,14 +313,62 @@ namespace NLog.Targets
             }
         }
 
+        // Upper bound on how long shutdown blocks waiting for the connection to close. Generous
+        // enough for a healthy-but-slow teardown (the old hard 500ms cap truncated those), yet
+        // bounded so a hung SDK close cannot stall process shutdown. On timeout the close is not
+        // abandoned: its outcome is still observed asynchronously so a later fault never becomes an
+        // unobserved task exception.
+        private static readonly TimeSpan ConnectionCloseTimeout = TimeSpan.FromSeconds(5);
+
         /// <summary>
         /// Closes the target and releases any unmanaged resources.
         /// </summary>
         protected override void CloseTarget()
         {
-            var task = Task.Run(async () => await _eventHubService.CloseAsync().ConfigureAwait(false));
-            task.Wait(TimeSpan.FromMilliseconds(500));
-            base.CloseTarget();
+            try
+            {
+                // Let NLog drain any remaining queued events over the still-open connection first,
+                // then close the connection - never the other way around.
+                base.CloseTarget();
+            }
+            finally
+            {
+                CloseConnection();
+            }
+        }
+
+        private void CloseConnection()
+        {
+            try
+            {
+                var closeTask = Task.Run(() => _eventHubService.CloseAsync());
+
+                bool completed;
+                try
+                {
+                    completed = closeTask.Wait(ConnectionCloseTimeout);
+                }
+                catch (Exception ex)
+                {
+                    // CloseAsync faulted within the wait window - observed here, logged, not rethrown.
+                    InternalLogger.Warn(ex.GetBaseException(), "AzureEventHubTarget(Name={0}): Failed to close EventHubClient connection during shutdown", Name);
+                    return;
+                }
+
+                if (!completed)
+                {
+                    // Still closing after the bound: observe the eventual outcome so a later fault is
+                    // never an unobserved task exception, and surface it via InternalLogger.
+                    closeTask.ContinueWith(
+                        t => InternalLogger.Warn(t.Exception?.GetBaseException(), "AzureEventHubTarget(Name={0}): Failed to close EventHubClient connection during shutdown", Name),
+                        CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+                    InternalLogger.Warn("AzureEventHubTarget(Name={0}): EventHubClient connection still closing after {1}; continuing shutdown", Name, ConnectionCloseTimeout);
+                }
+            }
+            catch (Exception ex)
+            {
+                InternalLogger.Warn(ex, "AzureEventHubTarget(Name={0}): Failed to close EventHubClient connection during shutdown", Name);
+            }
         }
 
         /// <summary>
