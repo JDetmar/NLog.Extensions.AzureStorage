@@ -391,9 +391,16 @@ namespace NLog.Targets
         /// <inheritdoc />
         protected override void CloseTarget()
         {
-            var task = Task.Run(async () => await _cloudServiceBus.CloseAsync().ConfigureAwait(false));
-            task.Wait(TimeSpan.FromMilliseconds(500));
-            base.CloseTarget();
+            try
+            {
+                // Let NLog drain any remaining queued events over the still-open connection first,
+                // then close the connection - never the other way around.
+                base.CloseTarget();
+            }
+            finally
+            {
+                AsyncTargetCloseHelper.CloseConnection(_cloudServiceBus.CloseAsync, "AzureServiceBusTarget", "ServiceBusClient", Name);
+            }
         }
 
         /// <inheritdoc />
