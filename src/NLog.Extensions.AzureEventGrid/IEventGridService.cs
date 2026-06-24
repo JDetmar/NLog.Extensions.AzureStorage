@@ -1,6 +1,7 @@
 ﻿using Azure.Messaging;
 using Azure.Messaging.EventGrid;
 using NLog.Extensions.AzureBlobStorage;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,5 +16,9 @@ namespace NLog.Extensions.AzureStorage
         Task SendEventAsync(EventGridEvent gridEvent, CancellationToken cancellationToken);
 
         Task SendEventAsync(CloudEvent cloudEvent, CancellationToken cancellationToken);
+
+        Task SendEventsAsync(IEnumerable<EventGridEvent> gridEvents, CancellationToken cancellationToken);
+
+        Task SendEventsAsync(IEnumerable<CloudEvent> cloudEvents, CancellationToken cancellationToken);
     }
 }

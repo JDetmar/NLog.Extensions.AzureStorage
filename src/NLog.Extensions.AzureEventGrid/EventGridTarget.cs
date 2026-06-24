@@ -278,6 +278,42 @@ namespace NLog.Targets
             }
         }
 
+        /// <summary>
+        /// Override this to provide async task for writing a batch of logevents in a single request.
+        /// </summary>
+        /// <param name="logEvents">The log events.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        protected override Task WriteAsyncTask(IList<LogEventInfo> logEvents, CancellationToken cancellationToken)
+        {
+            if (logEvents.Count == 1)
+                return WriteAsyncTask(logEvents[0], cancellationToken);  // single-event path, NLog uses it for count==1
+
+            // ponytail: one SendEventsAsync per flush; NLog BatchSize bounds it. Split by size only if the
+            // ~1MB EventGrid limit is actually hit.
+            try
+            {
+                if (CloudEventSource is null)
+                {
+                    var gridEvents = new List<EventGridEvent>(logEvents.Count);
+                    for (int i = 0; i < logEvents.Count; ++i)
+                        gridEvents.Add(CreateGridEvent(logEvents[i]));
+                    return _eventGridService.SendEventsAsync(gridEvents, cancellationToken);
+                }
+                else
+                {
+                    var cloudEvents = new List<CloudEvent>(logEvents.Count);
+                    for (int i = 0; i < logEvents.Count; ++i)
+                        cloudEvents.Add(CreateCloudEvent(logEvents[i]));
+                    return _eventGridService.SendEventsAsync(cloudEvents, cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                InternalLogger.Error(ex, "AzureEventGridTarget(Name={0}): Failed sending {1} logevents to Topic={2}", Name, logEvents.Count, _eventGridService?.Topic);
+                throw;
+            }
+        }
+
         internal sealed class EventGridService : IEventGridService, IDisposable
         {
             EventGridPublisherClient _client;
@@ -338,6 +374,16 @@ namespace NLog.Targets
             public Task SendEventAsync(CloudEvent cloudEvent, CancellationToken cancellationToken)
             {
                 return _client.SendEventAsync(cloudEvent, cancellationToken);
+            }
+
+            public Task SendEventsAsync(IEnumerable<EventGridEvent> gridEvents, CancellationToken cancellationToken)
+            {
+                return _client.SendEventsAsync(gridEvents, cancellationToken);
+            }
+
+            public Task SendEventsAsync(IEnumerable<CloudEvent> cloudEvents, CancellationToken cancellationToken)
+            {
+                return _client.SendEventsAsync(cloudEvents, cancellationToken);
             }
         }
 
