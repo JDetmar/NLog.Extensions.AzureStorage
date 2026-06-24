@@ -23,6 +23,9 @@ namespace NLog.Extensions.AzureEventGrid.Tests
 
         public List<CloudEvent> CloudEvents { get; } = new List<CloudEvent>();
 
+        /// <summary>Number of service send calls (one per HTTP request). One batched flush => 1.</summary>
+        public int SendCallCount { get; private set; }
+
         public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
         {
             Topic = topic;
@@ -36,7 +39,10 @@ namespace NLog.Extensions.AzureEventGrid.Tests
             return Task.Delay(10, cancellationToken).ContinueWith(t =>
             {
                 lock (GridEvents)
+                {
+                    SendCallCount++;
                     GridEvents.Add(gridEvent);
+                }
             });
         }
 
@@ -48,7 +54,42 @@ namespace NLog.Extensions.AzureEventGrid.Tests
             return Task.Delay(10, cancellationToken).ContinueWith(t =>
             {
                 lock (CloudEvents)
+                {
+                    SendCallCount++;
                     CloudEvents.Add(cloudEvent);
+                }
+            });
+        }
+
+        public Task SendEventsAsync(IEnumerable<EventGridEvent> gridEvents, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrEmpty(Topic))
+                throw new InvalidOperationException("TopicUri not connected");
+
+            var batch = gridEvents.ToList();
+            return Task.Delay(10, cancellationToken).ContinueWith(t =>
+            {
+                lock (GridEvents)
+                {
+                    SendCallCount++;   // one batched send => one request
+                    GridEvents.AddRange(batch);
+                }
+            });
+        }
+
+        public Task SendEventsAsync(IEnumerable<CloudEvent> cloudEvents, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrEmpty(Topic))
+                throw new InvalidOperationException("TopicUri not connected");
+
+            var batch = cloudEvents.ToList();
+            return Task.Delay(10, cancellationToken).ContinueWith(t =>
+            {
+                lock (CloudEvents)
+                {
+                    SendCallCount++;   // one batched send => one request
+                    CloudEvents.AddRange(batch);
+                }
             });
         }
 
