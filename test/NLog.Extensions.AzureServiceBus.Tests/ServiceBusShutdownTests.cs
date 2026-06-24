@@ -15,6 +15,7 @@ namespace NLog.Extensions.AzureServiceBus.Test
     /// close must be awaited rather than abandoned by an over-tight timeout (which would also leak
     /// the undisposed client). Events must be flushed before the connection is closed.
     /// </summary>
+    [Collection("InternalLogger isolation")]
     public class ServiceBusShutdownTests
     {
         private static (LogFactory, RecordingCloudServiceBus) BuildTarget(int taskDelayMs = 1)

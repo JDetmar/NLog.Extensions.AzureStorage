@@ -14,6 +14,7 @@ namespace NLog.Extensions.AzureEventHub.Test
     /// propagate out of shutdown, and a legitimately slow close must be awaited rather than
     /// abandoned by an over-tight timeout. Events must be flushed before the connection is closed.
     /// </summary>
+    [Collection("InternalLogger isolation")]
     public class EventHubShutdownTests
     {
         private static (LogFactory, RecordingEventHubService) BuildTarget(int taskDelayMs = 1)
