@@ -26,6 +26,9 @@ namespace NLog.Extensions.AzureEventGrid.Tests
         /// <summary>Number of service send calls (one per HTTP request). One batched flush => 1.</summary>
         public int SendCallCount { get; private set; }
 
+        /// <summary>Event count of each batched send call, in order. One entry per request issued.</summary>
+        public List<int> SendBatchSizes { get; } = new List<int>();
+
         public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
         {
             Topic = topic;
@@ -72,6 +75,7 @@ namespace NLog.Extensions.AzureEventGrid.Tests
                 lock (GridEvents)
                 {
                     SendCallCount++;   // one batched send => one request
+                    SendBatchSizes.Add(batch.Count);
                     GridEvents.AddRange(batch);
                 }
             });
@@ -88,6 +92,7 @@ namespace NLog.Extensions.AzureEventGrid.Tests
                 lock (CloudEvents)
                 {
                     SendCallCount++;   // one batched send => one request
+                    SendBatchSizes.Add(batch.Count);
                     CloudEvents.AddRange(batch);
                 }
             });
