@@ -688,7 +688,7 @@ namespace NLog.Targets
                 else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
                 {
                     var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
-                    _client = new ServiceBusClient(serviceUri, tokenCredentials);
+                    _client = new ServiceBusClient(serviceUri, tokenCredentials, options);
                 }
                 else
                 {

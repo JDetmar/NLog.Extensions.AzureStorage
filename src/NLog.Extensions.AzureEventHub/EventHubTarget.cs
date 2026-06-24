@@ -608,7 +608,7 @@ namespace NLog.Targets
                 else if (!string.IsNullOrEmpty(clientAuthId) && !string.IsNullOrEmpty(clientAuthSecret) && !string.IsNullOrEmpty(tenantIdentity))
                 {
                     var tokenCredentials = new Azure.Identity.ClientSecretCredential(tenantIdentity, clientAuthId, clientAuthSecret);
-                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, tokenCredentials);
+                    _client = new Azure.Messaging.EventHubs.Producer.EventHubProducerClient(serviceUri, eventHubName, tokenCredentials, options);
                 }
                 else
                 {
