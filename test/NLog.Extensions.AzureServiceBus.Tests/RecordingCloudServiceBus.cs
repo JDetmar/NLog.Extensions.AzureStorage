@@ -9,8 +9,8 @@ using NLog.Extensions.AzureStorage;
 namespace NLog.Extensions.AzureServiceBus.Test
 {
     /// <summary>
-    /// Instrumented <see cref="ICloudServiceBus"/> that records the ORDER of batch sends relative
-    /// to <see cref="CloseAsync"/>, and can make CloseAsync slow and/or throw on demand. Models the
+    /// Instrumented <see cref="ICloudServiceBus"/> that counts batch sends relative to
+    /// <see cref="CloseAsync"/>, and can make CloseAsync slow and/or throw on demand. Models the
     /// real CloseAsync that closes the sender and then disposes the client, so a test can assert the
     /// client dispose is awaited (not abandoned). Used to reproduce/regression-test the S5 teardown.
     /// </summary>
@@ -18,10 +18,8 @@ namespace NLog.Extensions.AzureServiceBus.Test
     {
         private readonly object _sync = new object();
 
-        public List<string> Timeline { get; } = new List<string>();
         public int SendCount;
         public int SendAfterCloseCount;
-        public int CloseStartedCount;
         public int CloseCompletedCount;
 
         /// <summary>True once the sender has been closed.</summary>
@@ -41,36 +39,20 @@ namespace NLog.Extensions.AzureServiceBus.Test
 
         public async Task CloseAsync()
         {
-            lock (_sync)
-            {
-                Timeline.Add("close:start");
-                CloseStartedCount++;
-            }
-
             if (CloseDelay > TimeSpan.Zero)
                 await Task.Delay(CloseDelay).ConfigureAwait(false);
 
             if (CloseThrows)
-            {
-                lock (_sync)
-                    Timeline.Add("close:throw");
                 throw new InvalidOperationException("RecordingCloudServiceBus.CloseAsync boom");
-            }
 
             ConnectionClosed = true;    // _sender.CloseAsync()
             DisposeCompleted = true;    // _client.DisposeAsync()
             lock (_sync)
-            {
-                Timeline.Add("close:end");
                 CloseCompletedCount++;
-            }
         }
 
         public Task<IServiceBusMessageBatch> CreateMessageBatchAsync(int maxBatchSizeBytes, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrEmpty(EntityPath))
-                throw new InvalidOperationException("ServiceBusService not connected");
-
             return Task.FromResult<IServiceBusMessageBatch>(new RecordingBatch(this));
         }
 
@@ -78,18 +60,10 @@ namespace NLog.Extensions.AzureServiceBus.Test
         {
             lock (_sync)
             {
-                bool afterClose = ConnectionClosed;
-                Timeline.Add($"send:{count}{(afterClose ? ":AFTER-CLOSE" : "")}");
                 SendCount += count;
-                if (afterClose)
+                if (ConnectionClosed)
                     SendAfterCloseCount += count;
             }
-        }
-
-        public string DumpTimeline()
-        {
-            lock (_sync)
-                return string.Join(" | ", Timeline);
         }
 
         private sealed class RecordingBatch : IServiceBusMessageBatch
