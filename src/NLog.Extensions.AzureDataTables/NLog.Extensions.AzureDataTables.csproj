@@ -28,10 +28,10 @@
 - Fixed off-by-one truncation of max-length table string values (#193)
 - Fixed silent log loss from an un-awaited nested Task on the cache-miss path (#194)
 - Fixed AzureStorageNameCache thread-safety under concurrent use (#196)
-- Sanitize Table PartitionKey/RowKey to prevent whole-batch loss (#198)
+- Sanitized table PartitionKey/RowKey to prevent whole-batch loss (#198)
 - Fixed HttpClient/transport leak when connecting through a proxy (#200)
 - Fixed batch integrity so one un-renderable event no longer sinks the whole atomic batch (#202)
-- Truncate over-long PartitionKey/RowKey to 512 chars to prevent whole-batch loss (#206)
+- Truncated over-long PartitionKey/RowKey to 512 chars to prevent whole-batch loss (#206)
 
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureDataTables/README.md
     </PackageReleaseNotes>

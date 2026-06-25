@@ -26,7 +26,7 @@
     <PackageReleaseNotes>
 - Fixed batch-size estimate integer overflow (#197)
 - Redesigned batch splitting using the SDK native batch API to prevent log loss (#201)
-- Fixed shutdown teardown to observe CloseAsync outcome and bound the wait (#203)
+- Fixed shutdown to observe CloseAsync outcome and bound the wait (#203)
 - Fixed AMQP client-secret auth dropping WebSockets/proxy options (#204)
       
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureEventHub/README.md
