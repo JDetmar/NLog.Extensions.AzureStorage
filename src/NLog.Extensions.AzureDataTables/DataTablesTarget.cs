@@ -19,6 +19,11 @@ namespace NLog.Targets
     {
         internal const int ColumnStringValueMaxSize = 32768;
 
+        // Azure caps a PartitionKey/RowKey at the documented "1 KiB" -- that is 1024 bytes, and
+        // because keys are measured in UTF-16, the real limit is 512 chars (verified against the
+        // emulator: 512 single-unit chars or 256 surrogate pairs are accepted, 513 is rejected).
+        internal const int KeyValueMaxSize = 512;
+
         private readonly ICloudTableService _cloudTableService;
         private string _machineName;
         private readonly AzureStorageNameCache _containerNameCache = new AzureStorageNameCache();
@@ -440,24 +445,31 @@ namespace NLog.Targets
             return _cloudTableService.SubmitTransactionAsync(tableName, tableTransaction, cancellationToken);
         }
 
-        // Azure Table keys may not contain '/', '\', '#', '?' or control chars; such a key makes
-        // Azure reject the whole transaction (losing the entire batch). Replace them with '_'.
+        // Azure Table keys may not contain '/', '\', '#', '?' or control chars, and may be at most
+        // KeyValueMaxSize chars long; either violation makes Azure reject the whole transaction
+        // (losing the entire batch). Replace forbidden chars with '_' and truncate an over-long key.
         private static string SanitizeKey(string key)
         {
             if (string.IsNullOrEmpty(key))
                 return key;
 
+            // Only the first KeyValueMaxSize chars survive, so never scan or allocate past the cap:
+            // a forbidden char beyond index 511 would be truncated away regardless.
+            int length = Math.Min(key.Length, KeyValueMaxSize);
             char[] buffer = null;
-            for (int i = 0; i < key.Length; ++i)
+            for (int i = 0; i < length; ++i)
             {
                 char c = key[i];
                 if (c == '/' || c == '\\' || c == '#' || c == '?' || c < 0x20 || (c >= 0x7F && c <= 0x9F))
                 {
-                    buffer = buffer ?? key.ToCharArray();
+                    buffer = buffer ?? key.ToCharArray(0, length);
                     buffer[i] = '_';
                 }
             }
-            return buffer == null ? key : new string(buffer);
+
+            if (buffer != null)
+                return new string(buffer);
+            return key.Length > KeyValueMaxSize ? key.Substring(0, KeyValueMaxSize) : key;
         }
 
         private ITableEntity CreateTableEntity(LogEventInfo logEvent, string partitionKey)
@@ -465,11 +477,12 @@ namespace NLog.Targets
             // partitionKey is already sanitized by the caller, so the partition bucket key matches the
             // written entity key. Only the rowKey is rendered (and sanitized) here.
             //
-            // Residual: SanitizeKey is lossy, so two distinct rowKeys within one batch can collapse to
-            // the same value (e.g. "id/1" and "id#1" both -> "id_1"). Azure rejects a transaction that
+            // Residual: SanitizeKey is lossy (char replacement and over-512-char truncation), so two
+            // distinct rowKeys within one batch can collapse to the same value (e.g. "id/1" and "id#1"
+            // both -> "id_1", or two keys sharing a 512-char prefix). Azure rejects a transaction that
             // contains duplicate row keys, so that batch is still lost. This is far narrower than the
-            // pre-fix behavior (ANY forbidden char failed the whole batch) and only occurs with custom
-            // RowKey layouts that emit forbidden chars -- the default GUID-based RowKey never collides.
+            // pre-fix behavior (ANY forbidden or over-long key failed the whole batch) and only occurs
+            // with custom RowKey layouts -- the default GUID-based RowKey never collides.
             var rowKey = SanitizeKey(RenderLogEvent(RowKey, logEvent));
 
             if (ContextProperties.Count > 0)
