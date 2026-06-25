@@ -23,33 +23,71 @@ namespace NLog.Extensions.AzureEventGrid.Tests
 
         public List<CloudEvent> CloudEvents { get; } = new List<CloudEvent>();
 
+        /// <summary>Number of service send calls (one per HTTP request). One batched flush => 1.</summary>
+        public int SendCallCount { get; private set; }
+
+        /// <summary>Event count of each batched send call, in order. One entry per request issued.</summary>
+        public List<int> SendBatchSizes { get; } = new List<int>();
+
         public void Connect(string topic, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string accessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
         {
             Topic = topic;
         }
 
-        public Task SendEventAsync(EventGridEvent gridEvent, CancellationToken cancellationToken)
+        public async Task SendEventAsync(EventGridEvent gridEvent, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(Topic))
                 throw new InvalidOperationException("TopicUri not connected");
 
-            return Task.Delay(10, cancellationToken).ContinueWith(t =>
+            await Task.Delay(10, cancellationToken).ConfigureAwait(false);   // canceled delay throws here, so a canceled send records nothing
+            lock (GridEvents)
             {
-                lock (GridEvents)
-                    GridEvents.Add(gridEvent);
-            });
+                SendCallCount++;
+                GridEvents.Add(gridEvent);
+            }
         }
 
-        public Task SendEventAsync(CloudEvent cloudEvent, CancellationToken cancellationToken)
+        public async Task SendEventAsync(CloudEvent cloudEvent, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(Topic))
                 throw new InvalidOperationException("TopicUri not connected");
 
-            return Task.Delay(10, cancellationToken).ContinueWith(t =>
+            await Task.Delay(10, cancellationToken).ConfigureAwait(false);
+            lock (CloudEvents)
             {
-                lock (CloudEvents)
-                    CloudEvents.Add(cloudEvent);
-            });
+                SendCallCount++;
+                CloudEvents.Add(cloudEvent);
+            }
+        }
+
+        public async Task SendEventsAsync(IEnumerable<EventGridEvent> gridEvents, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrEmpty(Topic))
+                throw new InvalidOperationException("TopicUri not connected");
+
+            var batch = gridEvents.ToList();
+            await Task.Delay(10, cancellationToken).ConfigureAwait(false);
+            lock (GridEvents)
+            {
+                SendCallCount++;   // one batched send => one request
+                SendBatchSizes.Add(batch.Count);
+                GridEvents.AddRange(batch);
+            }
+        }
+
+        public async Task SendEventsAsync(IEnumerable<CloudEvent> cloudEvents, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrEmpty(Topic))
+                throw new InvalidOperationException("TopicUri not connected");
+
+            var batch = cloudEvents.ToList();
+            await Task.Delay(10, cancellationToken).ConfigureAwait(false);
+            lock (CloudEvents)
+            {
+                SendCallCount++;   // one batched send => one request
+                SendBatchSizes.Add(batch.Count);
+                CloudEvents.AddRange(batch);
+            }
         }
 
         public string PeekLastGridEvent()

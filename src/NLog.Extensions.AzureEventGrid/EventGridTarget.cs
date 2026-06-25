@@ -23,6 +23,10 @@ namespace NLog.Targets
         private readonly IEventGridService _eventGridService;
         private readonly char[] _reusableEncodingBuffer = new char[32 * 1024];  // Avoid large-object-heap
 
+        private const int DefaultMaxBatchSizeBytes = 1000 * 1000;   // ~1MB EventGrid request limit, with headroom under the hard cap
+        private const int MaxEventsPerRequest = 1000;               // EventGrid namespace cap (custom topics allow 5000); 1000 is safe everywhere
+        private const int EventEnvelopeOverheadBytes = 512;         // id (GUID) + timestamp + JSON field names/punctuation per event
+
         /// <summary>
         /// The topic endpoint. For example, "https://TOPIC-NAME.REGION-NAME-1.eventgrid.azure.net/api/events"
         /// </summary>
@@ -74,6 +78,13 @@ namespace NLog.Targets
         /// The schema version of the data object.
         /// </summary>
         public Layout DataSchema { get; set; }
+
+        /// <summary>
+        /// Maximum estimated size (in bytes) of a single batched publish request. When a flush (bounded by
+        /// <see cref="AsyncTaskTarget.BatchSize"/>) would exceed this, it is split across multiple requests so
+        /// each stays under Azure Event Grid's ~1 MB per-request limit. Default 1,000,000.
+        /// </summary>
+        public int MaxBatchSizeBytes { get; set; } = DefaultMaxBatchSizeBytes;
 
         /// <summary>
         /// TenantId for <see cref="Azure.Identity.DefaultAzureCredentialOptions"/>. Used with DefaultAzureCredential authentication when connecting to the Event Grid topic endpoint.
@@ -278,6 +289,40 @@ namespace NLog.Targets
             }
         }
 
+        /// <summary>
+        /// Override this to provide async task for writing a batch of logevents in a single request.
+        /// </summary>
+        /// <param name="logEvents">The log events.</param>
+        /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+        protected override Task WriteAsyncTask(IList<LogEventInfo> logEvents, CancellationToken cancellationToken)
+        {
+            if (logEvents.Count == 1)
+                return WriteAsyncTask(logEvents[0], cancellationToken);  // single-event path, NLog uses it for count==1
+
+            try
+            {
+                if (CloudEventSource is null)
+                {
+                    var gridEvents = new List<EventGridEvent>(logEvents.Count);
+                    for (int i = 0; i < logEvents.Count; ++i)
+                        gridEvents.Add(CreateGridEvent(logEvents[i]));
+                    return SendInBatches(gridEvents, EstimateGridEventBytes, (batch, ct) => _eventGridService.SendEventsAsync(batch, ct), cancellationToken);
+                }
+                else
+                {
+                    var cloudEvents = new List<CloudEvent>(logEvents.Count);
+                    for (int i = 0; i < logEvents.Count; ++i)
+                        cloudEvents.Add(CreateCloudEvent(logEvents[i]));
+                    return SendInBatches(cloudEvents, EstimateCloudEventBytes, (batch, ct) => _eventGridService.SendEventsAsync(batch, ct), cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                InternalLogger.Error(ex, "AzureEventGridTarget(Name={0}): Failed sending {1} logevents to Topic={2}", Name, logEvents.Count, _eventGridService?.Topic);
+                throw;
+            }
+        }
+
         internal sealed class EventGridService : IEventGridService, IDisposable
         {
             EventGridPublisherClient _client;
@@ -339,6 +384,16 @@ namespace NLog.Targets
             {
                 return _client.SendEventAsync(cloudEvent, cancellationToken);
             }
+
+            public Task SendEventsAsync(IEnumerable<EventGridEvent> gridEvents, CancellationToken cancellationToken)
+            {
+                return _client.SendEventsAsync(gridEvents, cancellationToken);
+            }
+
+            public Task SendEventsAsync(IEnumerable<CloudEvent> cloudEvents, CancellationToken cancellationToken)
+            {
+                return _client.SendEventsAsync(cloudEvents, cancellationToken);
+            }
         }
 
 #if NET6_0_OR_GREATER
@@ -385,6 +440,68 @@ namespace NLog.Targets
             var gridEvent = new EventGridEvent(eventSubject, eventType, eventDataSchema, new BinaryData(EncodeToUTF8(eventDataBody)));
             gridEvent.EventTime = logEvent.TimeStamp.ToUniversalTime();
             return gridEvent;
+        }
+
+        // ponytail: EventGrid's SDK has no TryAdd batch-builder (unlike the ServiceBus/EventHub SDKs), so the
+        // request size is a conservative estimate that over-counts (per-event envelope allowance + base64
+        // inflation) to stay safely under the limit and never under-count into a 413. The cap default leaves
+        // headroom under EventGrid's ~1MB hard limit. Swap in exact serialization accounting only if the
+        // estimate ever proves too coarse in practice.
+        private Task SendInBatches<T>(IList<T> events, Func<T, long> estimateBytes, Func<IList<T>, CancellationToken, Task> sendBatch, CancellationToken cancellationToken)
+        {
+            long sizeLimit = MaxBatchSizeBytes > 0 ? MaxBatchSizeBytes : DefaultMaxBatchSizeBytes;
+
+            List<Task> sendTasks = null;
+            var batch = new List<T>();
+            long batchBytes = 0;
+
+            for (int i = 0; i < events.Count; ++i)
+            {
+                long eventBytes = estimateBytes(events[i]);
+                if (batch.Count > 0 && (batch.Count >= MaxEventsPerRequest || batchBytes + eventBytes > sizeLimit))
+                {
+                    if (sendTasks == null)
+                        sendTasks = new List<Task>();
+                    sendTasks.Add(sendBatch(batch, cancellationToken));
+                    batch = new List<T>();
+                    batchBytes = 0;
+                }
+
+                batch.Add(events[i]);   // a single event over the limit is still sent alone - the service is the authority, not our estimate
+                batchBytes += eventBytes;
+            }
+
+            if (sendTasks == null)
+                return sendBatch(batch, cancellationToken);   // common case: the whole flush fits one request
+
+            sendTasks.Add(sendBatch(batch, cancellationToken));
+            return Task.WhenAll(sendTasks);
+        }
+
+        private static long EstimateGridEventBytes(EventGridEvent gridEvent)
+        {
+            long bytes = EventEnvelopeOverheadBytes;
+            if (gridEvent.Data != null)
+                bytes += EstimateDataBytes(gridEvent.Data.ToMemory().Length, false);   // EventGridEvent has no binary data format
+            bytes += (gridEvent.Subject?.Length ?? 0) + (gridEvent.EventType?.Length ?? 0) + (gridEvent.DataVersion?.Length ?? 0);
+            return bytes;
+        }
+
+        private long EstimateCloudEventBytes(CloudEvent cloudEvent)
+        {
+            long bytes = EventEnvelopeOverheadBytes;
+            if (cloudEvent.Data != null)
+                bytes += EstimateDataBytes(cloudEvent.Data.ToMemory().Length, _dataFormatJson != true);   // binary data is base64-encoded in the envelope
+            bytes += (cloudEvent.Source?.Length ?? 0) + (cloudEvent.Type?.Length ?? 0) + (cloudEvent.DataSchema?.Length ?? 0);
+            foreach (var attribute in cloudEvent.ExtensionAttributes)
+                bytes += attribute.Key.Length + (attribute.Value?.ToString()?.Length ?? 0) + 8;   // "key":"value",
+            return bytes;
+        }
+
+        private static long EstimateDataBytes(int rawDataLength, bool binary)
+        {
+            // Conservative: binary is base64-encoded (~4/3), JSON/text gets a margin for string escaping.
+            return binary ? (rawDataLength * 4L / 3 + 4) : (rawDataLength + rawDataLength / 8 + 16);
         }
 
         private byte[] EncodeToUTF8(string eventDataBody)
