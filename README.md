@@ -1,4 +1,4 @@
-# NLog Targets for Azure Storage [![AppVeyor](https://img.shields.io/appveyor/ci/JDetmar/nlog-extensions-azurestorage.svg)](https://ci.appveyor.com/project/JDetmar/nlog-extensions-azurestorage)
+# NLog Targets for Azure Storage [![CI](https://github.com/JDetmar/NLog.Extensions.AzureStorage/actions/workflows/ci.yml/badge.svg)](https://github.com/JDetmar/NLog.Extensions.AzureStorage/actions/workflows/ci.yml)
 
 ![logo](logo64.png?raw=true)
 
