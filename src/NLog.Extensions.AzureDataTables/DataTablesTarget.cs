@@ -465,9 +465,7 @@ namespace NLog.Targets
             }
 
             var sanitized = buffer == null ? key : new string(buffer);
-            if (sanitized.Length > KeyValueMaxSize)
-                sanitized = sanitized.Substring(0, KeyValueMaxSize);
-            return sanitized;
+            return sanitized.Length > KeyValueMaxSize ? sanitized.Substring(0, KeyValueMaxSize) : sanitized;
         }
 
         private ITableEntity CreateTableEntity(LogEventInfo logEvent, string partitionKey)

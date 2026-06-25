@@ -37,8 +37,10 @@ namespace NLog.Extensions.AzureTableStorage.Tests
             }
         }
 
-        [Fact]
-        public void OverLongKeys_AreTruncatedTo512()
+        [Theory]
+        [InlineData(600)]   // over the 512 cap -> truncated so Azure accepts the key
+        [InlineData(512)]   // exactly the cap -> preserved (no off-by-one)
+        public void Keys_AreTruncatedToAtMost512(int inputLength)
         {
             // Azure caps PartitionKey/RowKey at 512 chars (the "1 KiB" UTF-16 limit); an over-long key
             // makes Azure reject the whole transaction, losing every entry in the batch (proven against
@@ -50,33 +52,8 @@ namespace NLog.Extensions.AzureTableStorage.Tests
             var target = new DataTablesTarget(svc);
             target.ConnectionString = "${var:ConnectionString}";
             target.TableName = "${logger}";
-            target.PartitionKey = new string('p', 600);   // longer than the 512 cap
-            target.RowKey = new string('r', 600);          // longer than the 512 cap
-            target.Layout = "${message}";
-            logConfig.AddRuleForAllLevels(target);
-            logFactory.Configuration = logConfig;
-
-            logFactory.GetLogger("Test").Info("hi");
-            logFactory.Flush();
-
-            var entity = svc.PeekLastAdded("Test").First();
-            Assert.Equal(512, entity.PartitionKey.Length);
-            Assert.Equal(512, entity.RowKey.Length);
-        }
-
-        [Fact]
-        public void MaxLengthKeys_ArePreserved()
-        {
-            // A key of exactly 512 chars is valid and must NOT be truncated (no off-by-one).
-            var logFactory = new LogFactory();
-            var logConfig = new Config.LoggingConfiguration(logFactory);
-            logConfig.Variables["ConnectionString"] = nameof(DataTablesKeySanitizationTests);
-            var svc = new CloudTableServiceMock();
-            var target = new DataTablesTarget(svc);
-            target.ConnectionString = "${var:ConnectionString}";
-            target.TableName = "${logger}";
-            target.PartitionKey = new string('p', 512);
-            target.RowKey = new string('r', 512);
+            target.PartitionKey = new string('p', inputLength);
+            target.RowKey = new string('r', inputLength);
             target.Layout = "${message}";
             logConfig.AddRuleForAllLevels(target);
             logFactory.Configuration = logConfig;
