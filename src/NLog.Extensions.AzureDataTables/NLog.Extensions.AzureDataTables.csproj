@@ -9,7 +9,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-    <Version>4.7.1</Version>
+    <Version>4.7.2</Version>
 
     <Description>NLog DataTablesTarget for writing to Azure Tables in Azure storage accounts or Azure Cosmos DB table API</Description>
     <Authors>jdetmar</Authors>
@@ -24,7 +24,14 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Updated Azure.Identity to ver 1.17.1 (Security fix)
+- Fixed CheckAndRepairTableNamingRules returning the un-repaired table name (#192)
+- Fixed off-by-one truncation of max-length table string values (#193)
+- Fixed silent log loss from an un-awaited nested Task on the cache-miss path (#194)
+- Fixed AzureStorageNameCache thread-safety under concurrent use (#196)
+- Sanitized table PartitionKey/RowKey to prevent whole-batch loss (#198)
+- Fixed HttpClient/transport leak when connecting through a proxy (#200)
+- Fixed batch integrity so one un-renderable event no longer sinks the whole atomic batch (#202)
+- Truncated over-long PartitionKey/RowKey to 512 chars to prevent whole-batch loss (#206)
 
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureDataTables/README.md
     </PackageReleaseNotes>

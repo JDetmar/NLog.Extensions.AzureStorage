@@ -9,7 +9,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-    <Version>4.7.1</Version>
+    <Version>4.8.0</Version>
 
     <Description>NLog EventGridTarget for writing to Azure Event Grid</Description>
     <Authors>jdetmar</Authors>
@@ -24,7 +24,8 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Updated Azure.Identity to ver 1.17.1 (Security fix)
+- Fixed HttpClient/transport leak when connecting through a proxy (#200)
+- Batch EventGrid sends: one HTTP request per flush instead of one per event (#205)
 
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureEventGrid/README.md
     </PackageReleaseNotes>

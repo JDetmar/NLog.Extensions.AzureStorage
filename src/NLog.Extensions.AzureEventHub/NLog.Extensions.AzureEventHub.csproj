@@ -9,7 +9,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-    <Version>4.7.1</Version>
+    <Version>4.7.2</Version>
 
     <Description>NLog EventHubTarget for writing to Azure Event Hubs datastreams</Description>
     <Authors>jdetmar</Authors>
@@ -24,7 +24,10 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Updated Azure.Identity to ver 1.17.1 (Security fix)
+- Fixed batch-size estimate integer overflow (#197)
+- Redesigned batch splitting using the SDK native batch API to prevent log loss (#201)
+- Fixed shutdown to observe CloseAsync outcome and bound the wait (#203)
+- Fixed AMQP client-secret auth dropping WebSockets/proxy options (#204)
       
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureEventHub/README.md
     </PackageReleaseNotes>
