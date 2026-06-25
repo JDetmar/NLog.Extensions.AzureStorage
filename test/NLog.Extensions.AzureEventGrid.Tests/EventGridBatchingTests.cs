@@ -20,7 +20,8 @@ namespace NLog.Extensions.AzureEventGrid.Tests
                 Topic = "${var:TopicUrl}",
                 Layout = "${message}",
                 BatchSize = 100000,          // deliver the whole flush in one WriteAsyncTask call
-                TaskDelayMilliseconds = 1,
+                TaskDelayMilliseconds = 1000,  // long enough that the timer never flushes mid-loop; Flush() forces the send
+
             };
             if (maxBatchSizeBytes > 0)
                 target.MaxBatchSizeBytes = maxBatchSizeBytes;
