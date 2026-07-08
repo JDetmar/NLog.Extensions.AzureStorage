@@ -25,14 +25,17 @@ on:
         type: boolean
         default: false
 
+# Read-only by default; the publish job below escalates to exactly what it needs.
 permissions:
-  contents: write  # Required to create git tags and GitHub Releases after publishing
-  actions: read    # Required to download artifacts from other workflows
-  id-token: write  # Required for Trusted Publishing OIDC token
+  contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to create git tags and GitHub Releases after publishing
+      actions: read    # Required to download artifacts from other workflows
+      id-token: write  # Required for Trusted Publishing OIDC token
 
     steps:
     - name: Get CI run ID
@@ -66,7 +69,7 @@ jobs:
 
     - name: Download NLog.Extensions.AzureBlobStorage
       if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureBlobStorage'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
       with:
         name: package-NLog.Extensions.AzureBlobStorage
         path: packages
@@ -75,7 +78,7 @@ jobs:
 
     - name: Download NLog.Extensions.AzureDataTables
       if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureDataTables'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
       with:
         name: package-NLog.Extensions.AzureDataTables
         path: packages
@@ -84,7 +87,7 @@ jobs:
 
     - name: Download NLog.Extensions.AzureQueueStorage
       if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureQueueStorage'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
       with:
         name: package-NLog.Extensions.AzureQueueStorage
         path: packages
@@ -93,7 +96,7 @@ jobs:
 
     - name: Download NLog.Extensions.AzureEventGrid
       if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureEventGrid'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
       with:
         name: package-NLog.Extensions.AzureEventGrid
         path: packages
@@ -102,7 +105,7 @@ jobs:
 
     - name: Download NLog.Extensions.AzureEventHub
       if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureEventHub'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
       with:
         name: package-NLog.Extensions.AzureEventHub
         path: packages
@@ -111,7 +114,7 @@ jobs:
 
     - name: Download NLog.Extensions.AzureServiceBus
       if: inputs.package == 'All' || inputs.package == 'NLog.Extensions.AzureServiceBus'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
       with:
         name: package-NLog.Extensions.AzureServiceBus
         path: packages
@@ -132,7 +135,7 @@ jobs:
         echo "$PACKAGES" | while read f; do echo "  - $(basename $f)"; done
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9  # v4.3.1
       with:
         dotnet-version: '8.0.x'
 
@@ -141,7 +144,7 @@ jobs:
     - name: Authenticate with NuGet (Trusted Publishing)
       if: inputs.dry_run == false
       id: nuget-login
-      uses: nuget/login@v1
+      uses: nuget/login@8d196754b4036150537f80ac539e15c2f1028841  # v1.2.0
       with:
         user: ${{ secrets.NUGET_USER }}
 
