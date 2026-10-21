@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NLog;
 using NLog.Extensions.AzureStorage;
 
 namespace NLog.Extensions.AzureBlobStorage.Tests
@@ -31,7 +32,7 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             BlobTags = blobTags;
         }
 
-        public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, Func<IDictionary<string, string>> blobMetadataFactory, Func<IDictionary<string, string>> blobTagsFactory, CancellationToken cancellationToken)
+        public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, LogEventInfo blobPropertiesLogEvent, Func<LogEventInfo, IDictionary<string, string>> blobMetadataRenderer, Func<LogEventInfo, IDictionary<string, string>> blobTagsRenderer, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("CloudBlobService not connected");
@@ -41,8 +42,8 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             AppendBlob[blobKey] = buffer;
             if (isNewBlob)
             {
-                var blobMetadata = blobMetadataFactory?.Invoke();
-                var blobTags = blobTagsFactory?.Invoke();
+                var blobMetadata = blobMetadataRenderer?.Invoke(blobPropertiesLogEvent);
+                var blobTags = blobTagsRenderer?.Invoke(blobPropertiesLogEvent);
                 AppendBlobMetadata[blobKey] = blobMetadata != null ? new Dictionary<string, string>(blobMetadata) : null;
                 AppendBlobTags[blobKey] = blobTags != null ? new Dictionary<string, string>(blobTags) : null;
             }

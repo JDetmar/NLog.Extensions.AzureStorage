@@ -52,7 +52,7 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             // orphaned inner task); after the fix the returned task faults.
             await Assert.ThrowsAnyAsync<Exception>(() =>
                 service.AppendFromByteArrayAsync("nlogcontainer", "test.log", "text/plain",
-                    Encoding.UTF8.GetBytes("hello"), null, null, CancellationToken.None));
+                    Encoding.UTF8.GetBytes("hello"), null, null, null, CancellationToken.None));
         }
 
         [SkippableFact]
@@ -68,7 +68,7 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             Connect(service, devStorage);
 
             await service.AppendFromByteArrayAsync(container, "test.log", "text/plain",
-                Encoding.UTF8.GetBytes("Hello S1"), null, null, CancellationToken.None);
+                Encoding.UTF8.GetBytes("Hello S1"), null, null, null, CancellationToken.None);
 
             var verify = new BlobServiceClient(devStorage)
                 .GetBlobContainerClient(container)
