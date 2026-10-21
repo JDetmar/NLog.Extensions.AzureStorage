@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
@@ -9,7 +10,9 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
 {
     class CloudBlobServiceMock : ICloudBlobService, IDisposable
     {
-        public Dictionary<KeyValuePair<string,string>, byte[]> AppendBlob { get; } = new Dictionary<KeyValuePair<string, string>, byte[]>();
+        public ConcurrentDictionary<KeyValuePair<string,string>, byte[]> AppendBlob { get; } = new ConcurrentDictionary<KeyValuePair<string, string>, byte[]>();
+        public ConcurrentDictionary<KeyValuePair<string, string>, IDictionary<string, string>> AppendBlobMetadata { get; } = new ConcurrentDictionary<KeyValuePair<string, string>, IDictionary<string, string>>();
+        public ConcurrentDictionary<KeyValuePair<string, string>, IDictionary<string, string>> AppendBlobTags { get; } = new ConcurrentDictionary<KeyValuePair<string, string>, IDictionary<string, string>>();
 
         public int DisposeCount { get; private set; }
 
@@ -28,24 +31,50 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             BlobTags = blobTags;
         }
 
-        public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, CancellationToken cancellationToken)
+        public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, Func<IDictionary<string, string>> blobMetadataFactory, Func<IDictionary<string, string>> blobTagsFactory, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("CloudBlobService not connected");
 
-            lock (AppendBlob)
-                AppendBlob[new KeyValuePair<string, string>(containerName, blobName)] = buffer;
+            var blobKey = new KeyValuePair<string, string>(containerName, blobName);
+            var isNewBlob = !AppendBlob.ContainsKey(blobKey);
+            AppendBlob[blobKey] = buffer;
+            if (isNewBlob)
+            {
+                var blobMetadata = blobMetadataFactory?.Invoke();
+                var blobTags = blobTagsFactory?.Invoke();
+                AppendBlobMetadata[blobKey] = blobMetadata != null ? new Dictionary<string, string>(blobMetadata) : null;
+                AppendBlobTags[blobKey] = blobTags != null ? new Dictionary<string, string>(blobTags) : null;
+            }
+
             return Task.Delay(10, cancellationToken);
         }
 
         public string PeekLastAppendBlob(string containerName, string blobName)
         {
-            lock (AppendBlob)
+            if (AppendBlob.TryGetValue(new KeyValuePair<string, string>(containerName, blobName), out var payload))
             {
-                if (AppendBlob.TryGetValue(new KeyValuePair<string, string>(containerName, blobName), out var payload))
-                {
-                    return Encoding.UTF8.GetString(payload);
-                }
+                return Encoding.UTF8.GetString(payload);
+            }
+
+            return null;
+        }
+
+        public IDictionary<string, string> PeekLastBlobMetadata(string containerName, string blobName)
+        {
+            if (AppendBlobMetadata.TryGetValue(new KeyValuePair<string, string>(containerName, blobName), out var metadata))
+            {
+                return metadata;
+            }
+
+            return null;
+        }
+
+        public IDictionary<string, string> PeekLastBlobTags(string containerName, string blobName)
+        {
+            if (AppendBlobTags.TryGetValue(new KeyValuePair<string, string>(containerName, blobName), out var tags))
+            {
+                return tags;
             }
 
             return null;

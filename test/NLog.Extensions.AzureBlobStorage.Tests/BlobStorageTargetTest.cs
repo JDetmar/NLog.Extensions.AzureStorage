@@ -27,12 +27,37 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             logFactory.GetLogger("Test").Info("Hello World");
             logFactory.Flush();
             Assert.Equal(nameof(BlobStorageTargetTest), cloudBlobService.ConnectionString);
-            Assert.Single(cloudBlobService.BlobMetadata);
-            Assert.Contains(new KeyValuePair<string, string>("MyMetadata", "MyMetadataValue"), cloudBlobService.BlobMetadata);
-            Assert.Single(cloudBlobService.BlobTags);
-            Assert.Contains(new KeyValuePair<string, string>("MyTag", "MyTagValue"), cloudBlobService.BlobTags);
+            Assert.Equal("MyMetadataValue", cloudBlobService.PeekLastBlobMetadata("info", "Test")["MyMetadata"]);
+            Assert.Equal("MyTagValue", cloudBlobService.PeekLastBlobTags("info", "Test")["MyTag"]);
             Assert.Single(cloudBlobService.AppendBlob);   // One partition
             Assert.Equal("Hello World" + System.Environment.NewLine, cloudBlobService.PeekLastAppendBlob("info", "Test"));
+        }
+
+        [Fact]
+        public void BlobMetadataAndTagsAreRenderedPerNewBlob()
+        {
+            var logFactory = new LogFactory();
+            var logConfig = new Config.LoggingConfiguration(logFactory);
+            logConfig.Variables["ConnectionString"] = nameof(BlobStorageTargetTest);
+            var cloudBlobService = new CloudBlobServiceMock();
+            var blobStorageTarget = new BlobStorageTarget(cloudBlobService);
+            blobStorageTarget.ConnectionString = "${var:ConnectionString}";
+            blobStorageTarget.Container = "${level}";
+            blobStorageTarget.BlobName = "${logger}";
+            blobStorageTarget.Layout = "${message}";
+            blobStorageTarget.BlobMetadata.Add(new TargetPropertyWithContext() { Name = "MetaValue", Layout = "${logger}" });
+            blobStorageTarget.BlobTags.Add(new TargetPropertyWithContext() { Name = "TagValue", Layout = "${logger}" });
+            logConfig.AddRuleForAllLevels(blobStorageTarget);
+            logFactory.Configuration = logConfig;
+
+            logFactory.GetLogger("BlobA").Info("first payload");
+            logFactory.GetLogger("BlobB").Info("second payload");
+            logFactory.Flush();
+
+            Assert.Equal("BlobA", cloudBlobService.PeekLastBlobMetadata("info", "BlobA")["MetaValue"]);
+            Assert.Equal("BlobA", cloudBlobService.PeekLastBlobTags("info", "BlobA")["TagValue"]);
+            Assert.Equal("BlobB", cloudBlobService.PeekLastBlobMetadata("info", "BlobB")["MetaValue"]);
+            Assert.Equal("BlobB", cloudBlobService.PeekLastBlobTags("info", "BlobB")["TagValue"]);
         }
 
         [Fact]

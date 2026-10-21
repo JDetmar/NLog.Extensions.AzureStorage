@@ -212,8 +212,6 @@ namespace NLog.Targets
             string clientAuthId = string.Empty;
             string clientAuthSecret = string.Empty;
 
-            Dictionary<string, string> blobMetadata = null;
-            Dictionary<string, string> blobTags = null;
             ProxySettings proxySettings = null;
 
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
@@ -242,36 +240,7 @@ namespace NLog.Targets
                     Password = ProxyPassword?.Render(defaultLogEvent)
                 };
 
-                if (BlobMetadata?.Count > 0)
-                {
-                    blobMetadata = new Dictionary<string, string>();
-                    foreach (var metadata in BlobMetadata)
-                    {
-                        if (string.IsNullOrWhiteSpace(metadata.Name))
-                            continue;
-
-                        var metadataValue = metadata.Layout?.Render(defaultLogEvent);
-                        if (string.IsNullOrEmpty(metadataValue))
-                            continue;
-
-                        blobMetadata[metadata.Name.Trim()] = metadataValue;
-                    }
-                }
-
-                if (BlobTags?.Count > 0)
-                {
-                    blobTags = new Dictionary<string, string>();
-                    foreach (var tag in BlobTags)
-                    {
-                        if (string.IsNullOrWhiteSpace(tag.Name))
-                            continue;
-
-                        var metadataValue = tag.Layout?.Render(defaultLogEvent);
-                        blobTags[tag.Name.Trim()] = metadataValue ?? string.Empty;
-                    }
-                }
-
-                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, blobMetadata, blobTags, proxySettings);
+                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, null, null, proxySettings);
                 InternalLogger.Debug("AzureBlobStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -321,11 +290,13 @@ namespace NLog.Targets
             {
                 var containerName = RenderLogEvent(Container, logEvents[0]);
                 var blobName = RenderLogEvent(BlobName, logEvents[0]);
+                var blobMetadataFactory = CreateBlobMetadataFactory(logEvents[0]);
+                var blobTagsFactory = CreateBlobTagsFactory(logEvents[0]);
 
                 try
                 {
                     var blobPayload = CreateBlobPayload(logEvents);
-                    return WriteToBlobAsync(blobPayload, containerName, blobName, cancellationToken);
+                    return WriteToBlobAsync(blobPayload, containerName, blobName, blobMetadataFactory, blobTagsFactory, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -345,7 +316,9 @@ namespace NLog.Targets
                 try
                 {
                     var blobPayload = CreateBlobPayload(partitionBucket.Value);
-                    var sendTask = WriteToBlobAsync(blobPayload, containerName, blobName, cancellationToken);
+                    var blobMetadataFactory = CreateBlobMetadataFactory(partitionBucket.Value[0]);
+                    var blobTagsFactory = CreateBlobTagsFactory(partitionBucket.Value[0]);
+                    var sendTask = WriteToBlobAsync(blobPayload, containerName, blobName, blobMetadataFactory, blobTagsFactory, cancellationToken);
                     if (multipleTasks == null)
                         return sendTask;
 
@@ -400,12 +373,56 @@ namespace NLog.Targets
             }
         }
 
-        private Task WriteToBlobAsync(byte[] buffer, string containerName, string blobName, CancellationToken cancellationToken)
+        private Task WriteToBlobAsync(byte[] buffer, string containerName, string blobName, Func<IDictionary<string, string>> blobMetadataFactory, Func<IDictionary<string, string>> blobTagsFactory, CancellationToken cancellationToken)
         {
             containerName = CheckAndRepairContainerName(containerName);
             blobName = CheckAndRepairBlobNamingRules(blobName);
 
-            return _cloudBlobService.AppendFromByteArrayAsync(containerName, blobName, ContentType, buffer, cancellationToken);
+            return _cloudBlobService.AppendFromByteArrayAsync(containerName, blobName, ContentType, buffer, blobMetadataFactory, blobTagsFactory, cancellationToken);
+        }
+
+        private Func<IDictionary<string, string>> CreateBlobMetadataFactory(LogEventInfo logEvent)
+        {
+            return BlobMetadata?.Count > 0 ? (Func<IDictionary<string, string>>)(() => RenderBlobMetadata(logEvent)) : null;
+        }
+
+        private Func<IDictionary<string, string>> CreateBlobTagsFactory(LogEventInfo logEvent)
+        {
+            return BlobTags?.Count > 0 ? (Func<IDictionary<string, string>>)(() => RenderBlobTags(logEvent)) : null;
+        }
+
+        private IDictionary<string, string> RenderBlobMetadata(LogEventInfo logEvent)
+        {
+            return RenderBlobProperties(BlobMetadata, logEvent, true);
+        }
+
+        private IDictionary<string, string> RenderBlobTags(LogEventInfo logEvent)
+        {
+            return RenderBlobProperties(BlobTags, logEvent, false);
+        }
+
+        private static IDictionary<string, string> RenderBlobProperties(IList<TargetPropertyWithContext> blobProperties, LogEventInfo logEvent, bool skipEmptyValue)
+        {
+            if (blobProperties?.Count > 0)
+            {
+                var renderedProperties = new Dictionary<string, string>();
+                foreach (var property in blobProperties)
+                {
+                    if (string.IsNullOrWhiteSpace(property.Name))
+                        continue;
+
+                    var propertyValue = property.Layout?.Render(logEvent);
+                    if (skipEmptyValue && string.IsNullOrEmpty(propertyValue))
+                        continue;
+
+                    renderedProperties[property.Name.Trim()] = propertyValue ?? string.Empty;
+                }
+
+                if (renderedProperties.Count > 0)
+                    return renderedProperties;
+            }
+
+            return null;
         }
 
         private string CheckAndRepairContainerName(string containerName)
@@ -487,9 +504,6 @@ namespace NLog.Targets
 
         internal sealed class CloudBlobService : ICloudBlobService, IDisposable
         {
-            private IDictionary<string, string> _blobMetadata;
-            private IDictionary<string, string> _blobTags;
-
             private BlobServiceClient _client;
             private AppendBlobClient _appendBlob;
             private BlobContainerClient _container;
@@ -497,8 +511,6 @@ namespace NLog.Targets
 
             public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags, ProxySettings proxySettings = null)
             {
-                _blobMetadata = blobMetadata?.Count > 0 ? blobMetadata : null;
-                _blobTags = blobTags?.Count > 0 ? blobTags : null;
                 BlobClientOptions options = ConfigureClientOptions(proxySettings);
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
@@ -545,7 +557,7 @@ namespace NLog.Targets
                 _proxyTransport = null;
             }
 
-            public async Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, CancellationToken cancellationToken)
+            public async Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, Func<IDictionary<string, string>> blobMetadataFactory, Func<IDictionary<string, string>> blobTagsFactory, CancellationToken cancellationToken)
             {
                 using (var stream = new System.IO.MemoryStream(buffer))
                 {
@@ -553,14 +565,14 @@ namespace NLog.Targets
                     var container = _container;
                     if (string.IsNullOrEmpty(containerName) || container?.Name != containerName || string.IsNullOrEmpty(blobName) || blob?.Name != blobName)
                     {
-                        blob = await InitializeAndCacheBlobAsync(containerName, blobName, contentType, cancellationToken).ConfigureAwait(false);
+                        blob = await InitializeAndCacheBlobAsync(containerName, blobName, contentType, blobMetadataFactory, blobTagsFactory, cancellationToken).ConfigureAwait(false);
                     }
 
                     await blob.AppendBlockAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
             }
 
-            async Task<AppendBlobClient> InitializeAndCacheBlobAsync(string containerName, string blobName, string contentType, CancellationToken cancellationToken)
+            async Task<AppendBlobClient> InitializeAndCacheBlobAsync(string containerName, string blobName, string contentType, Func<IDictionary<string, string>> blobMetadataFactory, Func<IDictionary<string, string>> blobTagsFactory, CancellationToken cancellationToken)
             {
                 try
                 {
@@ -578,7 +590,7 @@ namespace NLog.Targets
                     var blob = _appendBlob;
                     if (string.IsNullOrEmpty(blobName) || blob?.Name != blobName)
                     {
-                        blob = await InitializeBlob(blobName, container, contentType, cancellationToken).ConfigureAwait(false);
+                        blob = await InitializeBlob(blobName, container, contentType, blobMetadataFactory, blobTagsFactory, cancellationToken).ConfigureAwait(false);
                         if (blob != null && ReferenceEquals(container, _container))
                         {
                             _appendBlob = blob;
@@ -599,8 +611,10 @@ namespace NLog.Targets
             /// <param name="blobName">Name of the BLOB.</param>
             /// <param name="blobContainer">The blob container client.</param>
             /// <param name="contentType">MIME content type for the blob.</param>
+            /// <param name="blobMetadataFactory">Metadata factory invoked when creating new blob.</param>
+            /// <param name="blobTagsFactory">Tags factory invoked when creating new blob.</param>
             /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-            private async Task<AppendBlobClient> InitializeBlob(string blobName, BlobContainerClient blobContainer, string contentType, CancellationToken cancellationToken)
+            private async Task<AppendBlobClient> InitializeBlob(string blobName, BlobContainerClient blobContainer, string contentType, Func<IDictionary<string, string>> blobMetadataFactory, Func<IDictionary<string, string>> blobTagsFactory, CancellationToken cancellationToken)
             {
                 InternalLogger.Debug("AzureBlobStorageTarget: Initializing blob: {0}", blobName);
                 var appendBlob = blobContainer.GetAppendBlobClient(blobName);
@@ -617,8 +631,10 @@ namespace NLog.Targets
                     ContentEncoding = Encoding.UTF8.WebName,
                 };
                 blobCreateOptions.HttpHeaders = httpHeaders;
-                blobCreateOptions.Metadata = _blobMetadata;     // Optional custom metadata to set for this append blob.
-                blobCreateOptions.Tags = _blobTags;             // Options tags to set for this append blob.
+                var blobMetadata = blobMetadataFactory?.Invoke();
+                var blobTags = blobTagsFactory?.Invoke();
+                blobCreateOptions.Metadata = blobMetadata?.Count > 0 ? blobMetadata : null;     // Optional custom metadata to set for this append blob.
+                blobCreateOptions.Tags = blobTags?.Count > 0 ? blobTags : null;                 // Optional tags to set for this append blob.
 
                 await appendBlob.CreateIfNotExistsAsync(blobCreateOptions, cancellationToken).ConfigureAwait(false);
                 return appendBlob;
