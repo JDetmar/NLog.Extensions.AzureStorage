@@ -61,6 +61,37 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
         }
 
         [Fact]
+        public void BlobMetadataAndTagsRespectIncludeEmptyValue()
+        {
+            var logFactory = new LogFactory();
+            var logConfig = new Config.LoggingConfiguration(logFactory);
+            logConfig.Variables["ConnectionString"] = nameof(BlobStorageTargetTest);
+            var cloudBlobService = new CloudBlobServiceMock();
+            var blobStorageTarget = new BlobStorageTarget(cloudBlobService);
+            blobStorageTarget.ConnectionString = "${var:ConnectionString}";
+            blobStorageTarget.Container = "${level}";
+            blobStorageTarget.BlobName = "${logger}";
+            blobStorageTarget.Layout = "${message}";
+            blobStorageTarget.BlobMetadata.Add(new TargetPropertyWithContext() { Name = "SkipMeta", Layout = "${event-properties:item=MissingMeta}" });
+            blobStorageTarget.BlobMetadata.Add(new TargetPropertyWithContext() { Name = "KeepMeta", Layout = "${event-properties:item=MissingMeta}", IncludeEmptyValue = true });
+            blobStorageTarget.BlobTags.Add(new TargetPropertyWithContext() { Name = "SkipTag", Layout = "${event-properties:item=MissingTag}" });
+            blobStorageTarget.BlobTags.Add(new TargetPropertyWithContext() { Name = "KeepTag", Layout = "${event-properties:item=MissingTag}", IncludeEmptyValue = true });
+            logConfig.AddRuleForAllLevels(blobStorageTarget);
+            logFactory.Configuration = logConfig;
+
+            logFactory.GetLogger("Test").Info("Hello World");
+            logFactory.Flush();
+
+            var metadata = cloudBlobService.PeekLastBlobMetadata("info", "Test");
+            var tags = cloudBlobService.PeekLastBlobTags("info", "Test");
+
+            Assert.False(metadata.ContainsKey("SkipMeta"));
+            Assert.Equal(string.Empty, metadata["KeepMeta"]);
+            Assert.False(tags.ContainsKey("SkipTag"));
+            Assert.Equal(string.Empty, tags["KeepTag"]);
+        }
+
+        [Fact]
         public void MultiplePartitionKeysTest()
         {
             var logFactory = new LogFactory();

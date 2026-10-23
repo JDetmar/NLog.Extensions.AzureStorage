@@ -51,7 +51,7 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
         {
             var handler = new TrackingHttpMessageHandler();
             var service = new BlobStorageTarget.CloudBlobService();
-            service.Connect(DevConnectionString, null, null, null, null, null, null, null, null, null, null, null, ProxyWith(handler));
+            service.Connect(DevConnectionString, null, null, null, null, null, null, null, null, null, ProxyWith(handler));
 
             Assert.Equal(0, handler.DisposeCount);  // leak: the proxy HttpClient is still alive after Connect
 
@@ -67,8 +67,8 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             var second = new TrackingHttpMessageHandler();
             var service = new BlobStorageTarget.CloudBlobService();
 
-            service.Connect(DevConnectionString, null, null, null, null, null, null, null, null, null, null, null, ProxyWith(first));
-            service.Connect(DevConnectionString, null, null, null, null, null, null, null, null, null, null, null, ProxyWith(second));
+            service.Connect(DevConnectionString, null, null, null, null, null, null, null, null, null, ProxyWith(first));
+            service.Connect(DevConnectionString, null, null, null, null, null, null, null, null, null, ProxyWith(second));
 
             Assert.Equal(1, first.DisposeCount);   // the first transport was replaced on reconnect -> disposed
             Assert.Equal(0, second.DisposeCount);

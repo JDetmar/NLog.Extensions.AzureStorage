@@ -18,7 +18,7 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
     {
         private static void Connect(BlobStorageTarget.CloudBlobService service, string connectionString)
         {
-            service.Connect(connectionString, null, null, null, null, null, null, null, null, null, null, null);
+            service.Connect(connectionString, null, null, null, null, null, null, null, null, null, null);
         }
 
         private static async Task<bool> AzuriteAvailableAsync(int port = 10000)

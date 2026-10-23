@@ -178,7 +178,7 @@ namespace NLog.Targets
         /// Initializes a new instance of the <see cref="BlobStorageTarget"/> class.
         /// </summary>
         public BlobStorageTarget()
-            :this(new CloudBlobService())
+            : this(new CloudBlobService())
         {
         }
 
@@ -244,7 +244,7 @@ namespace NLog.Targets
                     Password = ProxyPassword?.Render(defaultLogEvent)
                 };
 
-                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, null, null, proxySettings);
+                _cloudBlobService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, proxySettings);
                 InternalLogger.Debug("AzureBlobStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -389,15 +389,15 @@ namespace NLog.Targets
 
         private IDictionary<string, string> RenderBlobMetadata(LogEventInfo logEvent)
         {
-            return RenderBlobProperties(BlobMetadata, logEvent, true);
+            return RenderBlobProperties(BlobMetadata, logEvent);
         }
 
         private IDictionary<string, string> RenderBlobTags(LogEventInfo logEvent)
         {
-            return RenderBlobProperties(BlobTags, logEvent, false);
+            return RenderBlobProperties(BlobTags, logEvent);
         }
 
-        private static IDictionary<string, string> RenderBlobProperties(IList<TargetPropertyWithContext> blobProperties, LogEventInfo logEvent, bool skipEmptyValue)
+        private static IDictionary<string, string> RenderBlobProperties(IList<TargetPropertyWithContext> blobProperties, LogEventInfo logEvent)
         {
             if (blobProperties?.Count > 0)
             {
@@ -408,7 +408,7 @@ namespace NLog.Targets
                         continue;
 
                     var propertyValue = property.Layout?.Render(logEvent);
-                    if (skipEmptyValue && string.IsNullOrEmpty(propertyValue))
+                    if (!property.IncludeEmptyValue && string.IsNullOrEmpty(propertyValue))
                         continue;
 
                     renderedProperties[property.Name.Trim()] = propertyValue ?? string.Empty;
@@ -505,7 +505,7 @@ namespace NLog.Targets
             private BlobContainerClient _container;
             private IDisposable _proxyTransport;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags, ProxySettings proxySettings = null)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
             {
                 BlobClientOptions options = ConfigureClientOptions(proxySettings);
                 if (string.IsNullOrWhiteSpace(serviceUri))

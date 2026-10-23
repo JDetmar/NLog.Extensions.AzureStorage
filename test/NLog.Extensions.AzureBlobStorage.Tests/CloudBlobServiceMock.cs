@@ -21,15 +21,9 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
 
         public string ConnectionString { get; private set; }
 
-        public IDictionary<string, string> BlobMetadata { get; private set; }
-
-        public IDictionary<string, string> BlobTags { get; private set; }
-
-        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, IDictionary<string, string> blobMetadata, IDictionary<string, string> blobTags, ProxySettings proxySettings = null)
+        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
         {
             ConnectionString = connectionString;
-            BlobMetadata = blobMetadata;
-            BlobTags = blobTags;
         }
 
         public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, LogEventInfo blobPropertiesLogEvent, Func<LogEventInfo, IDictionary<string, string>> blobMetadataRenderer, Func<LogEventInfo, IDictionary<string, string>> blobTagsRenderer, CancellationToken cancellationToken)
