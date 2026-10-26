@@ -20,13 +20,18 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
         public void Dispose() => DisposeCount++;
 
         public string ConnectionString { get; private set; }
+        
+        private Func<LogEventInfo, IDictionary<string, string>> blobMetadataRenderer;
+        private Func<LogEventInfo, IDictionary<string, string>> blobTagsRenderer;
 
-        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, ProxySettings proxySettings = null)
+        public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, Func<LogEventInfo, IDictionary<string, string>> blobMetadataRenderer, Func<LogEventInfo, IDictionary<string, string>> blobTagsRenderer, ProxySettings proxySettings = null)
         {
             ConnectionString = connectionString;
+            this.blobMetadataRenderer = blobMetadataRenderer;
+            this.blobTagsRenderer = blobTagsRenderer;
         }
 
-        public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, LogEventInfo blobPropertiesLogEvent, Func<LogEventInfo, IDictionary<string, string>> blobMetadataRenderer, Func<LogEventInfo, IDictionary<string, string>> blobTagsRenderer, CancellationToken cancellationToken)
+        public Task AppendFromByteArrayAsync(string containerName, string blobName, string contentType, byte[] buffer, LogEventInfo blobPropertiesLogEvent, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(ConnectionString))
                 throw new InvalidOperationException("CloudBlobService not connected");

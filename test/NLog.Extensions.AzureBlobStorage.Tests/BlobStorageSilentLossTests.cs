@@ -18,7 +18,7 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
     {
         private static void Connect(BlobStorageTarget.CloudBlobService service, string connectionString)
         {
-            service.Connect(connectionString, null, null, null, null, null, null, null, null, null, null);
+            service.Connect(connectionString, null, null, null, null, null, null, null, null, null, null, null, null);
         }
 
         private static async Task<bool> AzuriteAvailableAsync(int port = 10000)
@@ -52,7 +52,7 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             // orphaned inner task); after the fix the returned task faults.
             await Assert.ThrowsAnyAsync<Exception>(() =>
                 service.AppendFromByteArrayAsync("nlogcontainer", "test.log", "text/plain",
-                    Encoding.UTF8.GetBytes("hello"), null, null, null, CancellationToken.None));
+                    Encoding.UTF8.GetBytes("hello"), null, CancellationToken.None));
         }
 
         [SkippableFact]
@@ -68,7 +68,7 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             Connect(service, devStorage);
 
             await service.AppendFromByteArrayAsync(container, "test.log", "text/plain",
-                Encoding.UTF8.GetBytes("Hello S1"), null, null, null, CancellationToken.None);
+                Encoding.UTF8.GetBytes("Hello S1"), null, CancellationToken.None);
 
             var verify = new BlobServiceClient(devStorage)
                 .GetBlobContainerClient(container)
