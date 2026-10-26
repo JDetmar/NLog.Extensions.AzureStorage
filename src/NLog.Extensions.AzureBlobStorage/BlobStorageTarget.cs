@@ -166,13 +166,13 @@ namespace NLog.Targets
         /// Gets the collection of custom metadata key-value pairs to attach to the blob.
         /// </summary>
         [ArrayParameter(typeof(TargetPropertyWithContext), "metadata")]
-        public IList<TargetPropertyWithContext> BlobMetadata { get; private set; }
+        public IList<TargetPropertyWithContext> BlobMetadata { get; }
 
         /// <summary>
         /// Gets the collection of blob tags for categorization and filtering.
         /// </summary>
         [ArrayParameter(typeof(TargetPropertyWithContext), "tag")]
-        public IList<TargetPropertyWithContext> BlobTags { get; private set; }
+        public IList<TargetPropertyWithContext> BlobTags { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BlobStorageTarget"/> class.
@@ -192,8 +192,8 @@ namespace NLog.Targets
             BlobTags = new List<TargetPropertyWithContext>();
 
             _checkAndRepairContainerNameDelegate = CheckAndRepairContainerNamingRules;
-            _renderBlobMetadataDelegate = RenderBlobMetadata;
-            _renderBlobTagsDelegate = RenderBlobTags;
+            _renderBlobMetadataDelegate = (logEvent) => RenderBlobProperties(BlobMetadata, logEvent);
+            _renderBlobTagsDelegate = (logEvent) => RenderBlobProperties(BlobTags, logEvent);
             _cloudBlobService = cloudBlobService;
         }
 
@@ -385,16 +385,6 @@ namespace NLog.Targets
             blobName = CheckAndRepairBlobNamingRules(blobName);
 
             return _cloudBlobService.AppendFromByteArrayAsync(containerName, blobName, ContentType, buffer, blobPropertiesLogEvent, blobMetadataRenderer, blobTagsRenderer, cancellationToken);
-        }
-
-        private IDictionary<string, string> RenderBlobMetadata(LogEventInfo logEvent)
-        {
-            return RenderBlobProperties(BlobMetadata, logEvent);
-        }
-
-        private IDictionary<string, string> RenderBlobTags(LogEventInfo logEvent)
-        {
-            return RenderBlobProperties(BlobTags, logEvent);
         }
 
         private static IDictionary<string, string> RenderBlobProperties(IList<TargetPropertyWithContext> blobProperties, LogEventInfo logEvent)
