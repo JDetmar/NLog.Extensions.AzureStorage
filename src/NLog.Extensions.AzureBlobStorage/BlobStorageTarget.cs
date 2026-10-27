@@ -301,7 +301,7 @@ namespace NLog.Targets
                 try
                 {
                     var blobPayload = CreateBlobPayload(logEvents);
-                    return WriteToBlobAsync(blobPayload, containerName, blobName, blobPropertiesLogEvent, blobMetadataRenderer, blobTagsRenderer, cancellationToken);
+                    return WriteToBlobAsync(blobPayload, containerName, blobName, blobPropertiesLogEvent, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -324,7 +324,7 @@ namespace NLog.Targets
                     var blobPropertiesLogEvent = partitionBucket.Value[0];
                     var blobMetadataRenderer = BlobMetadata?.Count > 0 ? _renderBlobMetadataDelegate : null;
                     var blobTagsRenderer = BlobTags?.Count > 0 ? _renderBlobTagsDelegate : null;
-                    var sendTask = WriteToBlobAsync(blobPayload, containerName, blobName, blobPropertiesLogEvent, blobMetadataRenderer, blobTagsRenderer, cancellationToken);
+                    var sendTask = WriteToBlobAsync(blobPayload, containerName, blobName, blobPropertiesLogEvent, cancellationToken);
                     if (multipleTasks == null)
                         return sendTask;
 
@@ -379,7 +379,7 @@ namespace NLog.Targets
             }
         }
 
-        private Task WriteToBlobAsync(byte[] buffer, string containerName, string blobName, LogEventInfo blobPropertiesLogEvent, Func<LogEventInfo, IDictionary<string, string>> blobMetadataRenderer, Func<LogEventInfo, IDictionary<string, string>> blobTagsRenderer, CancellationToken cancellationToken)
+        private Task WriteToBlobAsync(byte[] buffer, string containerName, string blobName, LogEventInfo blobPropertiesLogEvent, CancellationToken cancellationToken)
         {
             containerName = CheckAndRepairContainerName(containerName);
             blobName = CheckAndRepairBlobNamingRules(blobName);
