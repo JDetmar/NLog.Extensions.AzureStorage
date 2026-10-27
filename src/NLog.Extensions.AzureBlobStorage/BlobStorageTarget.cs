@@ -320,8 +320,6 @@ namespace NLog.Targets
                 {
                     var blobPayload = CreateBlobPayload(partitionBucket.Value);
                     var blobPropertiesLogEvent = partitionBucket.Value[0];
-                    var blobMetadataRenderer = BlobMetadata?.Count > 0 ? _renderBlobMetadataDelegate : null;
-                    var blobTagsRenderer = BlobTags?.Count > 0 ? _renderBlobTagsDelegate : null;
                     var sendTask = WriteToBlobAsync(blobPayload, containerName, blobName, blobPropertiesLogEvent, cancellationToken);
                     if (multipleTasks == null)
                         return sendTask;
