@@ -295,8 +295,6 @@ namespace NLog.Targets
                 var containerName = RenderLogEvent(Container, logEvents[0]);
                 var blobName = RenderLogEvent(BlobName, logEvents[0]);
                 var blobPropertiesLogEvent = logEvents[0];
-                var blobMetadataRenderer = BlobMetadata?.Count > 0 ? _renderBlobMetadataDelegate : null;
-                var blobTagsRenderer = BlobTags?.Count > 0 ? _renderBlobTagsDelegate : null;
 
                 try
                 {
