@@ -26,7 +26,7 @@ namespace NLog.Extensions.AzureTableStorage.Tests
                 TableName = "${logger}",
                 Layout = "${message}",
                 BatchSize = 100000,          // deliver the whole flush in one WriteAsyncTask call (>100 path)
-                TaskDelayMilliseconds = 1,
+                TaskDelayMilliseconds = 60_000,  // timer never fires during the test: only Flush() drains, so batching is deterministic
             };
             logConfig.AddRuleForAllLevels(target);
             logFactory.Configuration = logConfig;
