@@ -39,6 +39,11 @@ _timeToLiveSeconds_ - Default Time-To-Live (TTL) for Queue messages in seconds (
 
 _timeToLiveDays_ - Default Time-To-Live (TTL) for Queue messages in days (Optional)
 
+_metadata_ - Metadata set on a queue when the target creates it (Optional).
+The layout is rendered from the first log event written to a new queue, and existing queues are not updated.
+Characters Azure does not accept in metadata values (non-ASCII, control characters, leading/trailing whitespace) are trimmed or replaced with `_`.
+If Azure still rejects the metadata (for example a name that is not a valid C# identifier), the queue is created without it and an error is written to the NLog internal log.
+
 ### Authentication Options
 
 _managedIdentityClientId_ - clientId for `ManagedIdentityClientId` on `DefaultAzureCredentialOptions`. Requires `serviceUri`

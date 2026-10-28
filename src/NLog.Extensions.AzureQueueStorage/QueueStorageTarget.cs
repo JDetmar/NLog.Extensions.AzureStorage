@@ -20,6 +20,7 @@ namespace NLog.Targets
         private readonly ICloudQueueService _cloudQueueService;
         private readonly AzureStorageNameCache _containerNameCache = new AzureStorageNameCache();
         private readonly Func<string, string> _checkAndRepairQueueNameDelegate;
+        private readonly Func<LogEventInfo, IDictionary<string, string>> _renderQueueMetadataDelegate;
 
         /// <summary>
         /// Gets or sets the Azure Storage connection string. Alternative to <see cref="ServiceUri"/>.
@@ -170,6 +171,7 @@ namespace NLog.Targets
             QueueMetadata = new List<TargetPropertyWithContext>();
             _cloudQueueService = cloudQueueService;
             _checkAndRepairQueueNameDelegate = CheckAndRepairQueueNamingRules;
+            _renderQueueMetadataDelegate = (logEvent) => StoragePropertyHelpers.RenderProperties(QueueMetadata, logEvent, StoragePropertyHelpers.SanitizeMetadataValue, "AzureQueueStorageTarget", Name);
         }
 
         /// <summary>
@@ -191,7 +193,6 @@ namespace NLog.Targets
             string clientAuthId = string.Empty;
             string clientAuthSecret = string.Empty;
 
-            Dictionary<string, string> queueMetadata = null;
             ProxySettings proxySettings = null;
 
             var defaultLogEvent = LogEventInfo.CreateNullEvent();
@@ -220,29 +221,13 @@ namespace NLog.Targets
                     Password = ProxyPassword?.Render(defaultLogEvent)
                 };
 
-                if (QueueMetadata?.Count > 0)
-                {
-                    queueMetadata = new Dictionary<string, string>();
-                    foreach (var metadata in QueueMetadata)
-                    {
-                        if (string.IsNullOrWhiteSpace(metadata.Name))
-                            continue;
-
-                        var metadataValue = metadata.Layout?.Render(defaultLogEvent);
-                        if (string.IsNullOrEmpty(metadataValue))
-                            continue;
-
-                        queueMetadata[metadata.Name.Trim()] = metadataValue;
-                    }
-                }
-
                 var timeToLive = RenderDefaultTimeToLive();
                 if (timeToLive <= TimeSpan.Zero)
                 {
                     timeToLive = default(TimeSpan?);
                 }
 
-                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, timeToLive, queueMetadata, proxySettings);
+                _cloudQueueService.Connect(connectionString, serviceUri, tenantIdentity, managedIdentityResourceId, managedIdentityClientId, sharedAccessSignature, storageAccountName, storageAccountAccessKey, clientAuthId, clientAuthSecret, timeToLive, _renderQueueMetadataDelegate, proxySettings);
                 InternalLogger.Debug("AzureQueueStorageTarget(Name={0}): Initialized", Name);
             }
             catch (Exception ex)
@@ -318,7 +303,7 @@ namespace NLog.Targets
             {
                 queueName = _containerNameCache.LookupStorageName(queueName, _checkAndRepairQueueNameDelegate);
 
-                return _cloudQueueService.AddMessageAsync(queueName, layoutMessage, cancellationToken);
+                return _cloudQueueService.AddMessageAsync(queueName, layoutMessage, logEvent, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -346,14 +331,14 @@ namespace NLog.Targets
         {
             private QueueServiceClient _client;
             private QueueClient _queue;
-            private IDictionary<string, string> _queueMetadata;
+            private Func<LogEventInfo, IDictionary<string, string>> _queueMetadataRenderer;
             private TimeSpan? _timeToLive;
             private IDisposable _proxyTransport;
 
-            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, TimeSpan? timeToLive, IDictionary<string, string> queueMetadata, ProxySettings proxySettings = null)
+            public void Connect(string connectionString, string serviceUri, string tenantIdentity, string managedIdentityResourceId, string managedIdentityClientId, string sharedAccessSignature, string storageAccountName, string storageAccountAccessKey, string clientAuthId, string clientAuthSecret, TimeSpan? timeToLive, Func<LogEventInfo, IDictionary<string, string>> queueMetadataRenderer, ProxySettings proxySettings = null)
             {
                 _timeToLive = timeToLive;
-                _queueMetadata = queueMetadata;
+                _queueMetadataRenderer = queueMetadataRenderer;
                 QueueClientOptions options = ConfigureClientOptions(proxySettings);
                 if (string.IsNullOrWhiteSpace(serviceUri))
                 {
@@ -400,18 +385,18 @@ namespace NLog.Targets
                 _proxyTransport = null;
             }
 
-            public async Task AddMessageAsync(string queueName, string queueMessage, CancellationToken cancellationToken)
+            public async Task AddMessageAsync(string queueName, string queueMessage, LogEventInfo queueMetadataLogEvent, CancellationToken cancellationToken)
             {
                 var queue = _queue;
                 if (string.IsNullOrEmpty(queueName) || queue?.Name != queueName)
                 {
-                    queue = await InitializeAndCacheQueueAsync(queueName, cancellationToken).ConfigureAwait(false);
+                    queue = await InitializeAndCacheQueueAsync(queueName, queueMetadataLogEvent, cancellationToken).ConfigureAwait(false);
                 }
 
                 await queue.SendMessageAsync(queueMessage, null, _timeToLive, cancellationToken).ConfigureAwait(false);
             }
 
-            private async Task<QueueClient> InitializeAndCacheQueueAsync(string queueName, CancellationToken cancellationToken)
+            private async Task<QueueClient> InitializeAndCacheQueueAsync(string queueName, LogEventInfo queueMetadataLogEvent, CancellationToken cancellationToken)
             {
                 try
                 {
@@ -424,7 +409,21 @@ namespace NLog.Targets
                     if (!queueExists)
                     {
                         InternalLogger.Debug("AzureQueueStorageTarget: Creating new queue: {0}", queueName);
-                        await queue.CreateIfNotExistsAsync(_queueMetadata, cancellationToken).ConfigureAwait(false);
+                        var queueMetadata = _queueMetadataRenderer?.Invoke(queueMetadataLogEvent);
+                        if (queueMetadata?.Count == 0)
+                            queueMetadata = null;   // Optional custom metadata to set for this queue.
+                        try
+                        {
+                            await queue.CreateIfNotExistsAsync(queueMetadata, cancellationToken).ConfigureAwait(false);
+                        }
+                        catch (Azure.RequestFailedException ex) when (ex.Status == 400 && queueMetadata != null)
+                        {
+                            // Rejected metadata (invalid name, over the metadata size limit) must not lose the message,
+                            // so create the queue without it. A 400 caused by something else fails again and is rethrown.
+                            // Not 403: unlike blob tags, queue metadata needs no extra permission, so a 403 is a real auth failure.
+                            InternalLogger.Error(ex, "AzureQueueStorageTarget: Failed to create queue: {0} with metadata, retrying without it", queueName);
+                            await queue.CreateIfNotExistsAsync(null, cancellationToken).ConfigureAwait(false);
+                        }
                     }
                     _queue = queue;
                     return queue;

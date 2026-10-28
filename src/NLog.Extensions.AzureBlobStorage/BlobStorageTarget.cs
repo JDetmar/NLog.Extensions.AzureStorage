@@ -192,8 +192,8 @@ namespace NLog.Targets
             BlobTags = new List<TargetPropertyWithContext>();
 
             _checkAndRepairContainerNameDelegate = CheckAndRepairContainerNamingRules;
-            _renderBlobMetadataDelegate = (logEvent) => RenderBlobProperties(BlobMetadata, logEvent, SanitizeMetadataValue);
-            _renderBlobTagsDelegate = (logEvent) => RenderBlobProperties(BlobTags, logEvent, SanitizeTagValue);
+            _renderBlobMetadataDelegate = (logEvent) => StoragePropertyHelpers.RenderProperties(BlobMetadata, logEvent, StoragePropertyHelpers.SanitizeMetadataValue, "AzureBlobStorageTarget", Name);
+            _renderBlobTagsDelegate = (logEvent) => StoragePropertyHelpers.RenderProperties(BlobTags, logEvent, SanitizeTagValue, "AzureBlobStorageTarget", Name);
             _cloudBlobService = cloudBlobService;
         }
 
@@ -383,63 +383,10 @@ namespace NLog.Targets
             return _cloudBlobService.AppendFromByteArrayAsync(containerName, blobName, ContentType, buffer, blobPropertiesLogEvent, cancellationToken);
         }
 
-        private static IDictionary<string, string> RenderBlobProperties(IList<TargetPropertyWithContext> blobProperties, LogEventInfo logEvent, Func<string, string> sanitizeValue)
-        {
-            if (blobProperties?.Count > 0)
-            {
-                var renderedProperties = new Dictionary<string, string>();
-                foreach (var property in blobProperties)
-                {
-                    if (string.IsNullOrWhiteSpace(property.Name))
-                        continue;
-
-                    var propertyValue = property.Layout?.Render(logEvent);
-                    if (!property.IncludeEmptyValue && string.IsNullOrEmpty(propertyValue))
-                        continue;
-
-                    propertyValue = propertyValue ?? string.Empty;
-                    var sanitizedValue = sanitizeValue(propertyValue);
-                    if (sanitizedValue != propertyValue)
-                        InternalLogger.Debug("AzureBlobStorageTarget: Repaired blob metadata/tag {0} value: '{1}' -> '{2}'", property.Name, propertyValue, sanitizedValue);
-                    renderedProperties[property.Name.Trim()] = sanitizedValue;
-                }
-
-                if (renderedProperties.Count > 0)
-                    return renderedProperties;
-            }
-
-            return null;
-        }
-
         // Blob tag values may only contain a-z A-Z 0-9 space + - . / : = _ and be at most 256 chars.
         private const int TagValueMaxSize = 256;
         private static bool IsValidTagValueChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || " +-./:=_".IndexOf(c) >= 0;
-        private static string SanitizeTagValue(string value) => ReplaceInvalidChars(value, IsValidTagValueChar, TagValueMaxSize);
-
-        // Metadata values travel as HTTP headers, so the SDK refuses non-ASCII or control chars outright, and
-        // leading/trailing whitespace is stripped from the sent header after signing (-> 403 auth failure).
-        private static bool IsValidMetadataValueChar(char c) => c >= 0x20 && c < 0x7F;
-        private static string SanitizeMetadataValue(string value) => ReplaceInvalidChars(value.Trim(), IsValidMetadataValueChar, int.MaxValue);
-
-        // Metadata/tags are rendered from a real log event when a blob is created; a value Azure rejects
-        // fails CreateIfNotExists and loses the entire batch. Replace invalid chars with '_' and truncate.
-        private static string ReplaceInvalidChars(string value, Func<char, bool> isValidChar, int maxLength)
-        {
-            int length = Math.Min(value.Length, maxLength);
-            char[] buffer = null;
-            for (int i = 0; i < length; ++i)
-            {
-                if (!isValidChar(value[i]))
-                {
-                    buffer = buffer ?? value.ToCharArray(0, length);
-                    buffer[i] = '_';
-                }
-            }
-
-            if (buffer != null)
-                return new string(buffer);
-            return value.Length > maxLength ? value.Substring(0, maxLength) : value;
-        }
+        private static string SanitizeTagValue(string value) => StoragePropertyHelpers.ReplaceInvalidChars(value, IsValidTagValueChar, TagValueMaxSize);
 
         private string CheckAndRepairContainerName(string containerName)
         {
