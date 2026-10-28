@@ -42,15 +42,17 @@ namespace NLog.Extensions.AzureQueueStorage.Tests
             queueStorageTarget.QueueName = "${logger}";
             queueStorageTarget.Layout = "${message}";
             queueStorageTarget.QueueMetadata.Add(new TargetPropertyWithContext() { Name = "App", Layout = "${event-properties:item=App}" });
+            queueStorageTarget.QueueMetadata.Add(new TargetPropertyWithContext() { Name = "Blank", Layout = "${event-properties:item=Blank}" });
             logConfig.AddRuleForAllLevels(queueStorageTarget);
             logFactory.Configuration = logConfig;
 
             logFactory.GetLogger("billing").WithProperty("App", "billing").Info("first");
-            logFactory.GetLogger("jose").WithProperty("App", " José \r\n").Info("second");
+            logFactory.GetLogger("jose").WithProperty("App", " José \r\n").WithProperty("Blank", " \r\n").Info("second");
             logFactory.Flush();
 
             Assert.Equal("billing", cloudQueueService.QueueMetadata["billing"]["App"]);
             Assert.Equal("Jos_", cloudQueueService.QueueMetadata["jose"]["App"]);
+            Assert.False(cloudQueueService.QueueMetadata["jose"].ContainsKey("Blank"));   // whitespace-only is empty once trimmed -> skipped (IncludeEmptyValue=false)
         }
     }
 }

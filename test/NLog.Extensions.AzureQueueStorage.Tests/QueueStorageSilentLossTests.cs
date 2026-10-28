@@ -67,56 +67,81 @@ namespace NLog.Extensions.AzureQueueStorage.Tests
                 });
         }
 
-        // Forwards to Azurite, but rejects a queue create carrying metadata the way Azure does for an invalid
-        // metadata name or size (Azurite's queue service doesn't enforce either).
-        private sealed class RejectMetadataOnCreateHandler : DelegatingHandler
+        // Fake queue service (no Azurite, so it runs in CI): the queue doesn't exist yet, a create carrying
+        // metadata gets the configured rejection, a create without metadata succeeds, sends succeed.
+        private sealed class FakeQueueServiceHandler : HttpMessageHandler
         {
-            public int RejectedCount;
+            private readonly HttpStatusCode _createWithMetadataStatus;
+            private readonly string _createWithMetadataErrorCode;
+            public readonly List<string> Requests = new List<string>();
 
-            public RejectMetadataOnCreateHandler() : base(new HttpClientHandler { UseProxy = false }) { }
+            public FakeQueueServiceHandler(HttpStatusCode createWithMetadataStatus, string createWithMetadataErrorCode)
+            {
+                _createWithMetadataStatus = createWithMetadataStatus;
+                _createWithMetadataErrorCode = createWithMetadataErrorCode;
+            }
 
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
-                if (request.Method == HttpMethod.Put && request.Headers.Any(h => h.Key.StartsWith("x-ms-meta-", StringComparison.OrdinalIgnoreCase)))
-                {
-                    Interlocked.Increment(ref RejectedCount);
-                    var response = new HttpResponseMessage(HttpStatusCode.BadRequest) { RequestMessage = request };
-                    response.Headers.Add("x-ms-error-code", "InvalidMetadata");
-                    return Task.FromResult(response);
-                }
-                return base.SendAsync(request, cancellationToken);
+                var hasMetadata = request.Headers.Any(h => h.Key.StartsWith("x-ms-meta-", StringComparison.OrdinalIgnoreCase));
+                lock (Requests)
+                    Requests.Add(request.Method + (hasMetadata ? " +metadata" : ""));
+
+                if (request.Method == HttpMethod.Get)   // ExistsAsync -> GetProperties
+                    return Respond(request, HttpStatusCode.NotFound, "QueueNotFound");
+                if (request.Method == HttpMethod.Put)   // CreateIfNotExistsAsync
+                    return hasMetadata ? Respond(request, _createWithMetadataStatus, _createWithMetadataErrorCode) : Respond(request, HttpStatusCode.Created, null);
+
+                var response = new HttpResponseMessage(HttpStatusCode.Created) { RequestMessage = request };   // SendMessageAsync
+                response.Content = new StringContent("<?xml version=\"1.0\" encoding=\"utf-8\"?><QueueMessagesList><QueueMessage><MessageId>1</MessageId><InsertionTime>Mon, 01 Jan 2024 00:00:00 GMT</InsertionTime><ExpirationTime>Mon, 08 Jan 2024 00:00:00 GMT</ExpirationTime><PopReceipt>p</PopReceipt><TimeNextVisible>Mon, 01 Jan 2024 00:00:00 GMT</TimeNextVisible></QueueMessage></QueueMessagesList>", System.Text.Encoding.UTF8, "application/xml");
+                return Task.FromResult(response);
+            }
+
+            private static Task<HttpResponseMessage> Respond(HttpRequestMessage request, HttpStatusCode status, string errorCode)
+            {
+                var response = new HttpResponseMessage(status) { RequestMessage = request };
+                if (errorCode != null)
+                    response.Headers.Add("x-ms-error-code", errorCode);
+                return Task.FromResult(response);
             }
         }
 
-        // Metadata Azure rejects for reasons value cleanup can't fix (invalid name, size limit)
-        // must not lose the message: the queue is created without it.
-        [SkippableFact]
+        private static QueueStorageTarget.CloudQueueService ConnectWithMetadata(FakeQueueServiceHandler handler)
+        {
+            const string devStorage = "UseDevelopmentStorage=true";
+            var service = new QueueStorageTarget.CloudQueueService();
+            service.Connect(devStorage, null, null, null, null, null, null, null, null, null, null,
+                _ => new Dictionary<string, string> { ["app"] = "x" },
+                new ProxySettings { Address = "http://127.0.0.1:8888", ProxyHttpMessageHandler = handler });
+            return service;
+        }
+
+        // Metadata Azure rejects for reasons value cleanup can't fix (invalid name, size limit; live Azure
+        // answers 400 InvalidMetadata) must not lose the message: the queue is created without it.
+        [Fact]
         public async Task RejectedMetadata_QueueCreatedWithoutIt_MessageNotLost()
         {
-            // integration test: requires Azurite on 127.0.0.1:10001 -> report as skipped, not passed, when absent
-            Skip.IfNot(await AzuriteAvailableAsync(), "Azurite not reachable on 127.0.0.1:10001");
-
-            const string devStorage = "UseDevelopmentStorage=true";
-            var queue = new QueueServiceClient(devStorage).GetQueueClient("nlog" + Guid.NewGuid().ToString("n")); // unique -> no cross-run accumulation
-            var handler = new RejectMetadataOnCreateHandler();
-            var service = new QueueStorageTarget.CloudQueueService();
-            try
+            var handler = new FakeQueueServiceHandler(HttpStatusCode.BadRequest, "InvalidMetadata");
+            using (var service = ConnectWithMetadata(handler))
             {
-                service.Connect(devStorage, null, null, null, null, null, null, null, null, null, null,
-                    _ => new Dictionary<string, string> { ["app"] = "x" },
-                    new ProxySettings { Address = "http://127.0.0.1:8888", ProxyHttpMessageHandler = handler });
-
-                await service.AddMessageAsync(queue.Name, "hello", null, CancellationToken.None);
-
-                Assert.Equal(1, handler.RejectedCount);
-                Assert.Empty((await queue.GetPropertiesAsync()).Value.Metadata);
-                Assert.Equal("hello", (await queue.ReceiveMessageAsync()).Value?.MessageText);
+                await service.AddMessageAsync("nlogqueue", "hello", null, CancellationToken.None);
             }
-            finally
+
+            Assert.Equal(new[] { "GET", "PUT +metadata", "PUT", "POST" }, handler.Requests);
+        }
+
+        // A 403 is a real auth/permission failure (queue metadata needs no extra permission), so it must
+        // surface instead of a second, doomed create.
+        [Fact]
+        public async Task ForbiddenCreate_IsNotRetriedWithoutMetadata()
+        {
+            var handler = new FakeQueueServiceHandler(HttpStatusCode.Forbidden, "AuthorizationPermissionMismatch");
+            using (var service = ConnectWithMetadata(handler))
             {
-                service.Dispose();
-                await queue.DeleteIfExistsAsync();
+                await Assert.ThrowsAsync<Azure.RequestFailedException>(() => service.AddMessageAsync("nlogqueue", "hello", null, CancellationToken.None));
             }
+
+            Assert.Equal(new[] { "GET", "PUT +metadata" }, handler.Requests);
         }
 
         private static async Task WriteToAzuriteQueuesAsync(Action<QueueStorageTarget> configure, Func<IDictionary<string, QueueClient>, Task> assertQueues)

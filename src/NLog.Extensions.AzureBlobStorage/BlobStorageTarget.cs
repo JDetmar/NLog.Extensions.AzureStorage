@@ -192,8 +192,8 @@ namespace NLog.Targets
             BlobTags = new List<TargetPropertyWithContext>();
 
             _checkAndRepairContainerNameDelegate = CheckAndRepairContainerNamingRules;
-            _renderBlobMetadataDelegate = (logEvent) => StoragePropertyHelpers.RenderProperties(BlobMetadata, logEvent, StoragePropertyHelpers.SanitizeMetadataValue);
-            _renderBlobTagsDelegate = (logEvent) => StoragePropertyHelpers.RenderProperties(BlobTags, logEvent, SanitizeTagValue);
+            _renderBlobMetadataDelegate = (logEvent) => StoragePropertyHelpers.RenderProperties(BlobMetadata, logEvent, StoragePropertyHelpers.SanitizeMetadataValue, "AzureBlobStorageTarget", Name);
+            _renderBlobTagsDelegate = (logEvent) => StoragePropertyHelpers.RenderProperties(BlobTags, logEvent, SanitizeTagValue, "AzureBlobStorageTarget", Name);
             _cloudBlobService = cloudBlobService;
         }
 

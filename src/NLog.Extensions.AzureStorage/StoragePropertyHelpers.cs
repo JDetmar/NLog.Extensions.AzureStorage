@@ -11,7 +11,7 @@ namespace NLog.Extensions.AzureStorage
         /// Renders blob/queue metadata (or blob tags) from the log event that creates the blob/queue.
         /// </summary>
         /// <returns>Rendered properties (empty when there are none)</returns>
-        internal static IDictionary<string, string> RenderProperties(IList<TargetPropertyWithContext> properties, LogEventInfo logEvent, Func<string, string> sanitizeValue)
+        internal static IDictionary<string, string> RenderProperties(IList<TargetPropertyWithContext> properties, LogEventInfo logEvent, Func<string, string> sanitizeValue, string targetType, string targetName)
         {
             var renderedProperties = new Dictionary<string, string>();
             if (properties == null)
@@ -22,14 +22,13 @@ namespace NLog.Extensions.AzureStorage
                 if (string.IsNullOrWhiteSpace(property.Name))
                     continue;
 
-                var propertyValue = property.Layout?.Render(logEvent);
-                if (!property.IncludeEmptyValue && string.IsNullOrEmpty(propertyValue))
+                var propertyValue = property.Layout?.Render(logEvent) ?? string.Empty;
+                var sanitizedValue = sanitizeValue(propertyValue);    // before the empty check: trimming can empty a whitespace-only value
+                if (!property.IncludeEmptyValue && sanitizedValue.Length == 0)
                     continue;
 
-                propertyValue = propertyValue ?? string.Empty;
-                var sanitizedValue = sanitizeValue(propertyValue);
                 if (sanitizedValue != propertyValue)
-                    InternalLogger.Debug("AzureStorage: Repaired metadata/tag {0} value: '{1}' -> '{2}'", property.Name, propertyValue, sanitizedValue);
+                    InternalLogger.Debug("{0}(Name={1}): Repaired metadata/tag {2} value: '{3}' -> '{4}'", targetType, targetName, property.Name, propertyValue, sanitizedValue);
                 renderedProperties[property.Name.Trim()] = sanitizedValue;
             }
 

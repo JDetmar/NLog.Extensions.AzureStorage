@@ -171,7 +171,7 @@ namespace NLog.Targets
             QueueMetadata = new List<TargetPropertyWithContext>();
             _cloudQueueService = cloudQueueService;
             _checkAndRepairQueueNameDelegate = CheckAndRepairQueueNamingRules;
-            _renderQueueMetadataDelegate = (logEvent) => StoragePropertyHelpers.RenderProperties(QueueMetadata, logEvent, StoragePropertyHelpers.SanitizeMetadataValue);
+            _renderQueueMetadataDelegate = (logEvent) => StoragePropertyHelpers.RenderProperties(QueueMetadata, logEvent, StoragePropertyHelpers.SanitizeMetadataValue, "AzureQueueStorageTarget", Name);
         }
 
         /// <summary>
@@ -416,10 +416,11 @@ namespace NLog.Targets
                         {
                             await queue.CreateIfNotExistsAsync(queueMetadata, cancellationToken).ConfigureAwait(false);
                         }
-                        catch (Azure.RequestFailedException ex) when ((ex.Status == 400 || ex.Status == 403) && queueMetadata != null)
+                        catch (Azure.RequestFailedException ex) when (ex.Status == 400 && queueMetadata != null)
                         {
                             // Rejected metadata (invalid name, over the metadata size limit) must not lose the message,
-                            // so create the queue without it. A 400/403 caused by something else fails again and is rethrown.
+                            // so create the queue without it. A 400 caused by something else fails again and is rethrown.
+                            // Not 403: unlike blob tags, queue metadata needs no extra permission, so a 403 is a real auth failure.
                             InternalLogger.Error(ex, "AzureQueueStorageTarget: Failed to create queue: {0} with metadata, retrying without it", queueName);
                             await queue.CreateIfNotExistsAsync(null, cancellationToken).ConfigureAwait(false);
                         }
