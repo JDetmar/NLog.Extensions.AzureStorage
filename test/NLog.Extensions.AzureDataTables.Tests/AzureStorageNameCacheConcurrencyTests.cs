@@ -16,7 +16,7 @@ namespace NLog.Extensions.AzureTableStorage.Tests
     public class AzureStorageNameCacheConcurrencyTests
     {
         [Fact]
-        public void LookupStorageName_UnderConcurrentLoad_DoesNotThrowHangOrCorrupt()
+        public async Task LookupStorageName_UnderConcurrentLoad_DoesNotThrowHangOrCorrupt()
         {
             var cache = new AzureStorageNameCache();
             Func<string, string> repair = n => "ok-" + n; // deterministic: name -> "ok-"+name
@@ -43,7 +43,7 @@ namespace NLog.Extensions.AzureTableStorage.Tests
 
             try
             {
-                work.Wait();
+                await work;
             }
             catch (Exception ex) when (ex.GetBaseException() is OperationCanceledException)
             {
