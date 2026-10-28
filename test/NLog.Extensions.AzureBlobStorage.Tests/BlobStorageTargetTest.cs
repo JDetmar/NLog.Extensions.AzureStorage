@@ -92,6 +92,33 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
         }
 
         [Fact]
+        public void BlobMetadataAndTagsAreSanitizedToAzureRules()
+        {
+            var logFactory = new LogFactory();
+            var logConfig = new Config.LoggingConfiguration(logFactory);
+            logConfig.Variables["ConnectionString"] = nameof(BlobStorageTargetTest);
+            var cloudBlobService = new CloudBlobServiceMock();
+            var blobStorageTarget = new BlobStorageTarget(cloudBlobService);
+            blobStorageTarget.ConnectionString = "${var:ConnectionString}";
+            blobStorageTarget.Container = "${level}";
+            blobStorageTarget.BlobName = "app.log";
+            blobStorageTarget.Layout = "${message}";
+            blobStorageTarget.BlobMetadata.Add(new TargetPropertyWithContext() { Name = "User", Layout = "${event-properties:item=User}" });
+            blobStorageTarget.BlobTags.Add(new TargetPropertyWithContext() { Name = "Source", Layout = "${logger}" });
+            blobStorageTarget.BlobTags.Add(new TargetPropertyWithContext() { Name = "Long", Layout = "${event-properties:item=Long}" });
+            logConfig.AddRuleForAllLevels(blobStorageTarget);
+            logFactory.Configuration = logConfig;
+
+            logFactory.GetLogger("MyApp.Repo<Order>").WithProperty("User", "José\r\n").WithProperty("Long", new string('x', 300)).Info("Hello World");
+            logFactory.Flush();
+
+            Assert.Equal("Jos___", cloudBlobService.PeekLastBlobMetadata("info", "app.log")["User"]);
+            var tags = cloudBlobService.PeekLastBlobTags("info", "app.log");
+            Assert.Equal("MyApp.Repo_Order_", tags["Source"]);
+            Assert.Equal(new string('x', 256), tags["Long"]);
+        }
+
+        [Fact]
         public void MultiplePartitionKeysTest()
         {
             var logFactory = new LogFactory();
