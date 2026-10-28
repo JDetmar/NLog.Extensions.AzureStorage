@@ -109,10 +109,10 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             logConfig.AddRuleForAllLevels(blobStorageTarget);
             logFactory.Configuration = logConfig;
 
-            logFactory.GetLogger("MyApp.Repo<Order>").WithProperty("User", "José\r\n").WithProperty("Long", new string('x', 300)).Info("Hello World");
+            logFactory.GetLogger("MyApp.Repo<Order>").WithProperty("User", " José \r\n").WithProperty("Long", new string('x', 300)).Info("Hello World");
             logFactory.Flush();
 
-            Assert.Equal("Jos___", cloudBlobService.PeekLastBlobMetadata("info", "app.log")["User"]);
+            Assert.Equal("Jos_", cloudBlobService.PeekLastBlobMetadata("info", "app.log")["User"]);
             var tags = cloudBlobService.PeekLastBlobTags("info", "app.log");
             Assert.Equal("MyApp.Repo_Order_", tags["Source"]);
             Assert.Equal(new string('x', 256), tags["Long"]);
