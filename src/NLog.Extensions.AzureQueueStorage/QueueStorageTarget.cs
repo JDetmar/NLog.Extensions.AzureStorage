@@ -410,6 +410,8 @@ namespace NLog.Targets
                     {
                         InternalLogger.Debug("AzureQueueStorageTarget: Creating new queue: {0}", queueName);
                         var queueMetadata = _queueMetadataRenderer?.Invoke(queueMetadataLogEvent);
+                        if (queueMetadata?.Count == 0)
+                            queueMetadata = null;   // Optional custom metadata to set for this queue.
                         try
                         {
                             await queue.CreateIfNotExistsAsync(queueMetadata, cancellationToken).ConfigureAwait(false);

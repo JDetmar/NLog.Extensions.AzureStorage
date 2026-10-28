@@ -10,33 +10,30 @@ namespace NLog.Extensions.AzureStorage
         /// <summary>
         /// Renders blob/queue metadata (or blob tags) from the log event that creates the blob/queue.
         /// </summary>
-        /// <returns>Rendered properties, or null when there are none</returns>
+        /// <returns>Rendered properties (empty when there are none)</returns>
         internal static IDictionary<string, string> RenderProperties(IList<TargetPropertyWithContext> properties, LogEventInfo logEvent, Func<string, string> sanitizeValue)
         {
-            if (properties?.Count > 0)
+            var renderedProperties = new Dictionary<string, string>();
+            if (properties == null)
+                return renderedProperties;
+
+            foreach (var property in properties)
             {
-                var renderedProperties = new Dictionary<string, string>();
-                foreach (var property in properties)
-                {
-                    if (string.IsNullOrWhiteSpace(property.Name))
-                        continue;
+                if (string.IsNullOrWhiteSpace(property.Name))
+                    continue;
 
-                    var propertyValue = property.Layout?.Render(logEvent);
-                    if (!property.IncludeEmptyValue && string.IsNullOrEmpty(propertyValue))
-                        continue;
+                var propertyValue = property.Layout?.Render(logEvent);
+                if (!property.IncludeEmptyValue && string.IsNullOrEmpty(propertyValue))
+                    continue;
 
-                    propertyValue = propertyValue ?? string.Empty;
-                    var sanitizedValue = sanitizeValue(propertyValue);
-                    if (sanitizedValue != propertyValue)
-                        InternalLogger.Debug("AzureStorage: Repaired metadata/tag {0} value: '{1}' -> '{2}'", property.Name, propertyValue, sanitizedValue);
-                    renderedProperties[property.Name.Trim()] = sanitizedValue;
-                }
-
-                if (renderedProperties.Count > 0)
-                    return renderedProperties;
+                propertyValue = propertyValue ?? string.Empty;
+                var sanitizedValue = sanitizeValue(propertyValue);
+                if (sanitizedValue != propertyValue)
+                    InternalLogger.Debug("AzureStorage: Repaired metadata/tag {0} value: '{1}' -> '{2}'", property.Name, propertyValue, sanitizedValue);
+                renderedProperties[property.Name.Trim()] = sanitizedValue;
             }
 
-            return null;
+            return renderedProperties;
         }
 
         // Metadata values travel as HTTP headers, so the SDK refuses non-ASCII or control chars outright, and
