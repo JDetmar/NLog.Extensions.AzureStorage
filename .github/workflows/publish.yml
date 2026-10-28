@@ -39,29 +39,36 @@ jobs:
       id: get-run-id
       env:
         GH_TOKEN: ${{ github.token }}
+        # Passed via env, never interpolated into the script: inputs are caller-controlled.
+        INPUT_RUN_ID: ${{ inputs.run_id }}
+        REPO: ${{ github.repository }}
       run: |
-        if [ -n "${{ inputs.run_id }}" ]; then
-          RUN_ID="${{ inputs.run_id }}"
+        if [ -n "$INPUT_RUN_ID" ]; then
+          if ! [[ "$INPUT_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: run_id must be a numeric workflow run ID." >&2
+            exit 1
+          fi
+          RUN_ID="$INPUT_RUN_ID"
           echo "Using provided run ID: $RUN_ID"
         else
           # Get latest successful CI run on master
-          RUN_ID=$(gh api repos/${{ github.repository }}/actions/workflows/ci.yml/runs --jq '[.workflow_runs[] | select(.conclusion == "success" and .head_branch == "master")] | .[0].id')
+          RUN_ID=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs" --jq '[.workflow_runs[] | select(.conclusion == "success" and .head_branch == "master")] | .[0].id')
           if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
             echo "ERROR: No successful CI runs found on master branch." >&2
             exit 1
           fi
           echo "Using latest successful CI run: $RUN_ID"
         fi
-        echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+        echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
         # Resolve the commit these artifacts were built from, so release tags point
         # at the right SHA (this job downloads artifacts and never checks out the repo).
-        HEAD_SHA=$(gh api repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
+        HEAD_SHA=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq '.head_sha')
         if [ -z "$HEAD_SHA" ] || [ "$HEAD_SHA" = "null" ]; then
           echo "ERROR: Could not resolve head_sha for run $RUN_ID." >&2
           exit 1
         fi
-        echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
+        echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
         echo "Artifacts built from commit: $HEAD_SHA"
 
     - name: Download NLog.Extensions.AzureBlobStorage
@@ -129,7 +136,7 @@ jobs:
           echo "ERROR: No .nupkg files found in packages directory. Check that artifacts were downloaded correctly." >&2
           exit 1
         fi
-        echo "$PACKAGES" | while read f; do echo "  - $(basename $f)"; done
+        echo "$PACKAGES" | while read -r f; do echo "  - $(basename "$f")"; done
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -141,13 +148,15 @@ jobs:
     - name: Authenticate with NuGet (Trusted Publishing)
       if: inputs.dry_run == false
       id: nuget-login
-      uses: nuget/login@v1
+      uses: nuget/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
       with:
         user: ${{ secrets.NUGET_USER }}
 
     - name: Push to NuGet
       if: inputs.dry_run == false
       working-directory: packages
+      env:
+        NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
       run: |
         shopt -s nullglob
 
@@ -178,7 +187,7 @@ jobs:
         done
 
         # Push everything; --skip-duplicate makes already-published versions a no-op.
-        dotnet nuget push '*.nupkg' --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        dotnet nuget push '*.nupkg' --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
         # Summary — only reached if the push above succeeded. Written to the job
         # summary panel (Actions UI) and the step log.
