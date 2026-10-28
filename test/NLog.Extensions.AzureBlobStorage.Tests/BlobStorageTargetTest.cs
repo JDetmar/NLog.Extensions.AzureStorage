@@ -27,12 +27,68 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             logFactory.GetLogger("Test").Info("Hello World");
             logFactory.Flush();
             Assert.Equal(nameof(BlobStorageTargetTest), cloudBlobService.ConnectionString);
-            Assert.Single(cloudBlobService.BlobMetadata);
-            Assert.Contains(new KeyValuePair<string, string>("MyMetadata", "MyMetadataValue"), cloudBlobService.BlobMetadata);
-            Assert.Single(cloudBlobService.BlobTags);
-            Assert.Contains(new KeyValuePair<string, string>("MyTag", "MyTagValue"), cloudBlobService.BlobTags);
+            Assert.Equal("MyMetadataValue", cloudBlobService.PeekLastBlobMetadata("info", "Test")["MyMetadata"]);
+            Assert.Equal("MyTagValue", cloudBlobService.PeekLastBlobTags("info", "Test")["MyTag"]);
             Assert.Single(cloudBlobService.AppendBlob);   // One partition
             Assert.Equal("Hello World" + System.Environment.NewLine, cloudBlobService.PeekLastAppendBlob("info", "Test"));
+        }
+
+        [Fact]
+        public void BlobMetadataAndTagsAreRenderedPerNewBlob()
+        {
+            var logFactory = new LogFactory();
+            var logConfig = new Config.LoggingConfiguration(logFactory);
+            logConfig.Variables["ConnectionString"] = nameof(BlobStorageTargetTest);
+            var cloudBlobService = new CloudBlobServiceMock();
+            var blobStorageTarget = new BlobStorageTarget(cloudBlobService);
+            blobStorageTarget.ConnectionString = "${var:ConnectionString}";
+            blobStorageTarget.Container = "${level}";
+            blobStorageTarget.BlobName = "${logger}";
+            blobStorageTarget.Layout = "${message}";
+            blobStorageTarget.BlobMetadata.Add(new TargetPropertyWithContext() { Name = "MetaValue", Layout = "${logger}" });
+            blobStorageTarget.BlobTags.Add(new TargetPropertyWithContext() { Name = "TagValue", Layout = "${logger}" });
+            logConfig.AddRuleForAllLevels(blobStorageTarget);
+            logFactory.Configuration = logConfig;
+
+            logFactory.GetLogger("BlobA").Info("first payload");
+            logFactory.GetLogger("BlobB").Info("second payload");
+            logFactory.Flush();
+
+            Assert.Equal("BlobA", cloudBlobService.PeekLastBlobMetadata("info", "BlobA")["MetaValue"]);
+            Assert.Equal("BlobA", cloudBlobService.PeekLastBlobTags("info", "BlobA")["TagValue"]);
+            Assert.Equal("BlobB", cloudBlobService.PeekLastBlobMetadata("info", "BlobB")["MetaValue"]);
+            Assert.Equal("BlobB", cloudBlobService.PeekLastBlobTags("info", "BlobB")["TagValue"]);
+        }
+
+        [Fact]
+        public void BlobMetadataAndTagsRespectIncludeEmptyValue()
+        {
+            var logFactory = new LogFactory();
+            var logConfig = new Config.LoggingConfiguration(logFactory);
+            logConfig.Variables["ConnectionString"] = nameof(BlobStorageTargetTest);
+            var cloudBlobService = new CloudBlobServiceMock();
+            var blobStorageTarget = new BlobStorageTarget(cloudBlobService);
+            blobStorageTarget.ConnectionString = "${var:ConnectionString}";
+            blobStorageTarget.Container = "${level}";
+            blobStorageTarget.BlobName = "${logger}";
+            blobStorageTarget.Layout = "${message}";
+            blobStorageTarget.BlobMetadata.Add(new TargetPropertyWithContext() { Name = "SkipMeta", Layout = "${event-properties:item=MissingMeta}" });
+            blobStorageTarget.BlobMetadata.Add(new TargetPropertyWithContext() { Name = "KeepMeta", Layout = "${event-properties:item=MissingMeta}", IncludeEmptyValue = true });
+            blobStorageTarget.BlobTags.Add(new TargetPropertyWithContext() { Name = "SkipTag", Layout = "${event-properties:item=MissingTag}" });
+            blobStorageTarget.BlobTags.Add(new TargetPropertyWithContext() { Name = "KeepTag", Layout = "${event-properties:item=MissingTag}", IncludeEmptyValue = true });
+            logConfig.AddRuleForAllLevels(blobStorageTarget);
+            logFactory.Configuration = logConfig;
+
+            logFactory.GetLogger("Test").Info("Hello World");
+            logFactory.Flush();
+
+            var metadata = cloudBlobService.PeekLastBlobMetadata("info", "Test");
+            var tags = cloudBlobService.PeekLastBlobTags("info", "Test");
+
+            Assert.False(metadata.ContainsKey("SkipMeta"));
+            Assert.Equal(string.Empty, metadata["KeepMeta"]);
+            Assert.False(tags.ContainsKey("SkipTag"));
+            Assert.Equal(string.Empty, tags["KeepTag"]);
         }
 
         [Fact]
