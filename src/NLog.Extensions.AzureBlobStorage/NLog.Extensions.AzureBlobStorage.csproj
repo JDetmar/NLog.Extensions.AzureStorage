@@ -9,7 +9,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
-    <Version>4.7.2</Version>
+    <Version>4.8.0</Version>
 
     <Description>NLog BlobStorageTarget for writing to Azure Cloud Blob Storage</Description>
     <Authors>jdetmar</Authors>
@@ -24,9 +24,10 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Fixed silent log loss from an un-awaited nested Task on the cache-miss path (#194)
-- Fixed AzureStorageNameCache thread-safety under concurrent use (#196)
-- Fixed HttpClient/transport leak when connecting through a proxy (#200)
+- Metadata and tags are now rendered from the first log event written to a new blob, so event-based layouts like ${event-properties} work (#212)
+- Changed: a tag that renders empty is now skipped unless includeEmptyValue="true" (previously sent as an empty value) (#212)
+- Fixed whole-batch loss when a rendered tag or metadata value breaks Azure's rules: invalid characters are replaced with '_', metadata values are trimmed and tag values truncated to 256 chars (#214, #215)
+- Fixed whole-batch loss when Azure rejects metadata or tags (invalid name, more than 10 tags, 8 KB metadata limit, SAS without tag permission): the blob is now created without them and an error is logged (#214)
 
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureBlobStorage/README.md
     </PackageReleaseNotes>
