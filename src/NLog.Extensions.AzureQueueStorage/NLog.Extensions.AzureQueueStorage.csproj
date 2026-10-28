@@ -8,7 +8,7 @@
     <RepositoryBranch>master</RepositoryBranch>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>4.7.2</Version>
+    <Version>4.8.0</Version>
 
     <Description>NLog QueueStorageTarget for writing to Azure Cloud Queue Storage</Description>
     <Authors>jdetmar</Authors>
@@ -23,9 +23,10 @@
     <RepositoryUrl>https://github.com/JDetmar/NLog.Extensions.AzureStorage.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>
-- Fixed silent log loss from an un-awaited nested Task on the cache-miss path (#194)
-- Fixed AzureStorageNameCache thread-safety under concurrent use (#196)
-- Fixed HttpClient/transport leak when connecting through a proxy (#200)
+- Metadata is now rendered from the first log event written to a new queue, so event-based layouts like ${event-properties} work with a per-event queueName (#215)
+- Metadata with includeEmptyValue="true" is now set even when it renders empty (#215)
+- Fixed message loss when Azure rejects queue metadata (for example a name that is not a valid C# identifier): the queue is now created without it and an error is logged (#215)
+- Rendered metadata values are trimmed and characters Azure does not accept (non-ASCII, control characters) are replaced with '_' (#215)
 
 Docs: https://github.com/JDetmar/NLog.Extensions.AzureStorage/blob/master/src/NLog.Extensions.AzureQueueStorage/README.md
     </PackageReleaseNotes>
