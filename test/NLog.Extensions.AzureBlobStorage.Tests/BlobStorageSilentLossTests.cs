@@ -79,5 +79,69 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             // cleanup
             await new BlobServiceClient(devStorage).GetBlobContainerClient(container).DeleteIfExistsAsync();
         }
+
+        // Metadata/tags are rendered from the first event that creates the blob. A rendered value
+        // Azure rejects (tag chars outside its allowed set, non-ASCII metadata header, metadata with
+        // trailing whitespace -> 403) used to fail CreateIfNotExists and lose the whole batch.
+        [SkippableFact]
+        public async Task InvalidRenderedTagAndMetadataValues_DoNotLoseTheBatch()
+        {
+            // integration test: requires Azurite on 127.0.0.1:10000 -> report as skipped, not passed, when absent
+            Skip.IfNot(await AzuriteAvailableAsync(), "Azurite not reachable on 127.0.0.1:10000");
+
+            await WriteMixedBatchToAzuriteAsync(
+                target =>
+                {
+                    target.BlobTags.Add(new TargetPropertyWithContext("Source", "${logger}"));
+                    target.BlobMetadata.Add(new TargetPropertyWithContext("User", "${event-properties:item=User}"));
+                },
+                async blob =>
+                {
+                    Assert.Equal("MyApp.Repo_Order_", (await blob.GetTagsAsync()).Value.Tags["Source"]);
+                    Assert.Equal("Jos_", (await blob.GetPropertiesAsync()).Value.Metadata["User"]);
+                });
+        }
+
+        // Metadata/tags Azure rejects for reasons value cleanup can't fix (here an invalid metadata name)
+        // must not lose the batch: the blob is created without them.
+        [SkippableFact]
+        public async Task RejectedMetadataName_BlobCreatedWithoutProperties()
+        {
+            // integration test: requires Azurite on 127.0.0.1:10000 -> report as skipped, not passed, when absent
+            Skip.IfNot(await AzuriteAvailableAsync(), "Azurite not reachable on 127.0.0.1:10000");
+
+            await WriteMixedBatchToAzuriteAsync(
+                target => target.BlobMetadata.Add(new TargetPropertyWithContext("app-name", "x")),
+                async blob => Assert.Empty((await blob.GetPropertiesAsync()).Value.Metadata));
+        }
+
+        private static async Task WriteMixedBatchToAzuriteAsync(Action<BlobStorageTarget> configure, Func<BlobClient, Task> assertBlob)
+        {
+            const string devStorage = "UseDevelopmentStorage=true";
+            var container = new BlobServiceClient(devStorage).GetBlobContainerClient("nlog" + Guid.NewGuid().ToString("n")); // unique -> no cross-run accumulation
+            try
+            {
+                var logFactory = new LogFactory();
+                var logConfig = new NLog.Config.LoggingConfiguration(logFactory);
+                var target = new BlobStorageTarget { ConnectionString = devStorage, Container = container.Name, BlobName = "app.log", Layout = "${message}" };
+                configure(target);
+                logConfig.AddRuleForAllLevels(target);
+                logFactory.Configuration = logConfig;
+
+                logFactory.GetLogger("MyApp.Repo<Order>").WithProperty("User", "José ").Info("bad-first");
+                logFactory.GetLogger("MyApp.Good").WithProperty("User", "jose").Info("good");
+                logFactory.Flush();
+                logFactory.Shutdown();
+
+                var blob = container.GetBlobClient("app.log");
+                var downloaded = await blob.DownloadContentAsync();
+                Assert.Equal("bad-first" + Environment.NewLine + "good" + Environment.NewLine, downloaded.Value.Content.ToString());
+                await assertBlob(blob);
+            }
+            finally
+            {
+                await container.DeleteIfExistsAsync();
+            }
+        }
     }
 }
