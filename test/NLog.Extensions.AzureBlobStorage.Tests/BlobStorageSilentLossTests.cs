@@ -1,4 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -113,6 +117,68 @@ namespace NLog.Extensions.AzureBlobStorage.Tests
             await WriteMixedBatchToAzuriteAsync(
                 target => target.BlobMetadata.Add(new TargetPropertyWithContext("app-name", "x")),
                 async blob => Assert.Empty((await blob.GetPropertiesAsync()).Value.Metadata));
+        }
+
+        // Fake blob service (no Azurite, so it runs in CI): the container exists, the blob doesn't yet, a create
+        // carrying metadata/tags gets the configured rejection, a create without them succeeds, appends succeed.
+        private sealed class FakeBlobServiceHandler : HttpMessageHandler
+        {
+            private readonly HttpStatusCode _createWithPropertiesStatus;
+            private readonly string _createWithPropertiesErrorCode;
+            public readonly List<string> Requests = new List<string>();
+
+            public FakeBlobServiceHandler(HttpStatusCode createWithPropertiesStatus, string createWithPropertiesErrorCode)
+            {
+                _createWithPropertiesStatus = createWithPropertiesStatus;
+                _createWithPropertiesErrorCode = createWithPropertiesErrorCode;
+            }
+
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                var query = request.RequestUri.Query;
+                var hasProperties = request.Headers.Any(h => h.Key.StartsWith("x-ms-meta-", StringComparison.OrdinalIgnoreCase) || h.Key.Equals("x-ms-tags", StringComparison.OrdinalIgnoreCase));
+                string kind = query.Contains("restype=container") ? "container-exists" : request.Method == HttpMethod.Head ? "blob-exists" : query.Contains("comp=appendblock") ? "append" : "create" + (hasProperties ? " +properties" : "");
+                lock (Requests)
+                    Requests.Add(kind);
+
+                switch (kind)
+                {
+                    case "container-exists": return Respond(request, HttpStatusCode.OK, null);
+                    case "blob-exists": return Respond(request, HttpStatusCode.NotFound, "BlobNotFound");
+                    case "create +properties": return Respond(request, _createWithPropertiesStatus, _createWithPropertiesErrorCode);
+                    default: return Respond(request, HttpStatusCode.Created, null);
+                }
+            }
+
+            private static Task<HttpResponseMessage> Respond(HttpRequestMessage request, HttpStatusCode status, string errorCode)
+            {
+                var response = new HttpResponseMessage(status) { RequestMessage = request };
+                if (errorCode != null)
+                    response.Headers.Add("x-ms-error-code", errorCode);
+                return Task.FromResult(response);
+            }
+        }
+
+        // Metadata/tags Azure rejects for reasons value cleanup can't fix must not lose the batch: the blob is
+        // created without them. Live Azure answers 400 MetadataTooLarge/InvalidMetadata/InvalidTag, and 403
+        // AuthorizationPermissionMismatch for tags with a SAS lacking the 't' permission.
+        [Theory]
+        [InlineData(HttpStatusCode.BadRequest, "MetadataTooLarge")]
+        [InlineData(HttpStatusCode.Forbidden, "AuthorizationPermissionMismatch")]
+        public async Task RejectedMetadataOrTags_BlobCreatedWithoutThem_BatchNotLost(HttpStatusCode status, string errorCode)
+        {
+            var handler = new FakeBlobServiceHandler(status, errorCode);
+            using (var service = new BlobStorageTarget.CloudBlobService())
+            {
+                service.Connect("UseDevelopmentStorage=true", null, null, null, null, null, null, null, null, null,
+                    _ => new Dictionary<string, string> { ["app"] = "x" },
+                    _ => new Dictionary<string, string> { ["env"] = "prod" },
+                    new ProxySettings { Address = "http://127.0.0.1:8888", ProxyHttpMessageHandler = handler });
+
+                await service.AppendFromByteArrayAsync("nlogcontainer", "app.log", "text/plain", Encoding.UTF8.GetBytes("hello"), null, CancellationToken.None);
+            }
+
+            Assert.Equal(new[] { "container-exists", "blob-exists", "create +properties", "create", "append" }, handler.Requests);
         }
 
         private static async Task WriteMixedBatchToAzuriteAsync(Action<BlobStorageTarget> configure, Func<BlobClient, Task> assertBlob)

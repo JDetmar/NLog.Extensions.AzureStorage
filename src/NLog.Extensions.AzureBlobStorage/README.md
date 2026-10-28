@@ -37,6 +37,11 @@ _container_ - Azure blob container name. [Layout](https://github.com/NLog/NLog/w
 
 _contentType_ - Azure blob ContentType (Default = text/plain)
 
+_metadata_ / _tag_ - Metadata and blob index tags set on a blob when the target creates it (Optional).
+The layouts are rendered from the first log event written to a new blob, and existing blobs are not updated.
+Characters Azure does not accept are replaced with `_`: tag values allow only `a-z A-Z 0-9`, space and `+ - . / : = _` (max 256 chars), and metadata values must be printable ASCII (leading/trailing whitespace is trimmed).
+If Azure still rejects them (for example an invalid name, more than 10 tags, or a SAS without tag permission), the blob is created without metadata and tags and an error is written to the NLog internal log.
+
 _connectionString_ - Azure Blob Storage connection string from your storage account. Required unless using `ServiceUri`.
 
 _serviceUri_ - Uri to reference the blob service (e.g. https://{account_name}.blob.core.windows.net). Alternative to ConnectionString, where Managed Identiy is applied from DefaultAzureCredential.
