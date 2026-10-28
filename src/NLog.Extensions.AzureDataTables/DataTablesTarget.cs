@@ -453,11 +453,24 @@ namespace NLog.Targets
             if (string.IsNullOrEmpty(key))
                 return key;
 
-            return StoragePropertyHelpers.ReplaceInvalidChars(key, IsValidKeyCharDelegate, KeyValueMaxSize);
-        }
+            // Only the first KeyValueMaxSize chars survive, so never scan or allocate past the cap:
+            // a forbidden char beyond index 511 would be truncated away regardless.
+            int length = Math.Min(key.Length, KeyValueMaxSize);
+            char[] buffer = null;
+            for (int i = 0; i < length; ++i)
+            {
+                char c = key[i];
+                if (c == '/' || c == '\\' || c == '#' || c == '?' || c < 0x20 || (c >= 0x7F && c <= 0x9F))
+                {
+                    buffer = buffer ?? key.ToCharArray(0, length);
+                    buffer[i] = '_';
+                }
+            }
 
-        private static bool IsValidKeyChar(char c) => !(c == '/' || c == '\\' || c == '#' || c == '?' || c < 0x20 || (c >= 0x7F && c <= 0x9F));
-        private static readonly Func<char, bool> IsValidKeyCharDelegate = IsValidKeyChar;   // cached: C# 7.3 (netstandard2.0) allocates a delegate per method-group conversion, and SanitizeKey runs per event
+            if (buffer != null)
+                return new string(buffer);
+            return key.Length > KeyValueMaxSize ? key.Substring(0, KeyValueMaxSize) : key;
+        }
 
         private ITableEntity CreateTableEntity(LogEventInfo logEvent, string partitionKey)
         {
