@@ -22,22 +22,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup .NET 10.0
+    - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x'
-
-    - name: Setup .NET 8.0
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
+        global-json-file: global.json
 
     # Cache NuGet packages to speed up builds
     - name: Cache NuGet packages
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
 
@@ -77,15 +72,13 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: |
-          8.0.x
-          10.0.x
+        global-json-file: global.json
 
     - name: Cache NuGet packages
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
 
@@ -98,7 +91,7 @@ jobs:
       run: dotnet restore src\${{ matrix.project }}
 
     - name: Pack ${{ matrix.project }}
-      run: dotnet pack src\${{ matrix.project }} -c Release --no-build -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg -p:ContinuousIntegrationBuild=true -p:EmbedUntrackedSources=true -p:PublishRepositoryUrl=true --verbosity minimal
+      run: dotnet pack src\${{ matrix.project }} -c Release --no-build --verbosity minimal
 
     - name: Upload package
       uses: actions/upload-artifact@v4
@@ -128,15 +121,14 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: |
-          8.0.x
-          10.0.x
+        global-json-file: global.json
+        dotnet-version: '8.0.x'
 
     - name: Cache NuGet packages
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
 
@@ -147,3 +139,41 @@ jobs:
 
     - name: Test ${{ matrix.project }}
       run: dotnet test test\${{ matrix.project }} /p:Configuration=Release --verbosity minimal --no-build
+
+  reproducible:
+    # Rebuilds on Linux and requires byte-identical DLLs to the Windows build,
+    # so anyone can verify a released package against its source commit.
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: global.json
+
+    - name: Build
+      run: dotnet build src/NLog.Extensions.AzureStorage.sln -c Release --verbosity minimal
+
+    - name: Download Windows build
+      uses: actions/download-artifact@v4
+      with:
+        name: build-output
+        path: windows
+
+    - name: Compare DLLs with the Windows build
+      run: |
+        shopt -s failglob
+        status=0
+        for f in windows/src/*/bin/Release/*/NLog.Extensions.*.dll; do
+          linux=${f#windows/}
+          if cmp -s "$f" "$linux"; then
+            echo "identical: $linux"
+          else
+            echo "::error file=$linux::differs from the Windows build"
+            status=1
+          fi
+        done
+        exit $status

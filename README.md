@@ -69,5 +69,23 @@ and so [NLog.Extensions.AzureCosmosTable](https://www.nuget.org/packages/NLog.Ex
 </targets>
 ```
 
+## Verifying a Release
+
+The DLLs in each NuGet package are built reproducibly, so you can check that a package was built from its source commit.
+CI enforces this on every commit by rebuilding on Linux and requiring DLLs byte-identical to the Windows build that gets packed.
+
+Install the .NET SDK version pinned in `global.json`, then build the package's tag (`<PackageId>-<Version>`, also recorded as `commit` in the package's `.nuspec`):
+
+```bash
+git clone https://github.com/JDetmar/NLog.Extensions.AzureStorage.git
+cd NLog.Extensions.AzureStorage
+git checkout NLog.Extensions.AzureBlobStorage-<Version>
+dotnet build src/NLog.Extensions.AzureBlobStorage -c Release -p:ContinuousIntegrationBuild=true
+```
+
+Each `src/<PackageId>/bin/Release/<tfm>/<PackageId>.dll` should have the same SHA-256 as `lib/<tfm>/<PackageId>.dll` inside the `.nupkg` from nuget.org.
+Compare the DLLs, not the `.nupkg` files, because nuget.org signs each package after upload.
+Packages released before reproducible builds were introduced will not match.
+
 ## License
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage.svg?type=small)](https://app.fossa.io/projects/git%2Bgithub.com%2FJDetmar%2FNLog.Extensions.AzureStorage?ref=badge_small)

@@ -3,6 +3,10 @@
 ###############################################################################
 * text=auto
 
+# C# sources are compiler inputs: their line endings change the DLL bytes,
+# so keep them LF on every OS for reproducible builds.
+*.cs text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #
