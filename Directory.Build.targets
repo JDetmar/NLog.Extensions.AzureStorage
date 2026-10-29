@@ -1,0 +1,38 @@
+<Project>
+  <!-- The SDK writes generated sources (AssemblyInfo.cs, AssemblyAttributes.cs) with the OS newline,
+       and their bytes reach the PDB and through it the DLL. Normalize them to LF, as .gitattributes
+       does for checked-in sources, so Windows and Unix builds are byte-identical. -->
+  <Target Name="NormalizeGeneratedSourceLineEndings"
+          BeforeTargets="CoreCompile"
+          DependsOnTargets="GenerateAssemblyInfo;GenerateTargetFrameworkMonikerAttribute"
+          Condition="'$(ContinuousIntegrationBuild)' == 'true'">
+    <NormalizeLineEndings Files="@(Compile)" Directory="$(MSBuildProjectDirectory)/$(BaseIntermediateOutputPath)" />
+  </Target>
+
+  <UsingTask TaskName="NormalizeLineEndings" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <Directory Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var dir = System.IO.Path.GetFullPath(Directory);
+        foreach (var file in Files)
+        {
+            var path = file.GetMetadata("FullPath");
+            if (!path.StartsWith(dir, StringComparison.OrdinalIgnoreCase))
+                continue;
+            var bytes = System.IO.File.ReadAllBytes(path);
+            var lf = new System.Collections.Generic.List<byte>(bytes.Length);
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                if (bytes[i] != '\r' || i + 1 >= bytes.Length || bytes[i + 1] != '\n')
+                    lf.Add(bytes[i]);
+            }
+            if (lf.Count != bytes.Length)
+                System.IO.File.WriteAllBytes(path, lf.ToArray());
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+</Project>
