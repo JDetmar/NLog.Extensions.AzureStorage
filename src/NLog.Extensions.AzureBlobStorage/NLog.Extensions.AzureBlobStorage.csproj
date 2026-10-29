@@ -13,8 +13,7 @@
 
     <Description>NLog BlobStorageTarget for writing to Azure Cloud Blob Storage</Description>
     <Authors>jdetmar</Authors>
-    <CurrentYear>$([System.DateTime]::Now.ToString(yyyy))</CurrentYear>
-    <Copyright>Copyright (c) $(CurrentYear) - jdetmar</Copyright>
+    <Copyright>Copyright (c) 2017 - jdetmar</Copyright>
 
     <PackageTags>NLog;azure;CloudBlob;blob;storage;log;logging</PackageTags>
     <PackageIcon>logo64.png</PackageIcon>

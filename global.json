@@ -1,0 +1,7 @@
+{
+  "sdk": {
+    "version": "10.0.403",
+    "rollForward": "disable",
+    "errorMessage": "This repository builds reproducibly, so it needs exactly the .NET SDK version in global.json. Install it from https://dotnet.microsoft.com/download/dotnet/10.0 or with dotnet-install --version <that version>."
+  }
+}

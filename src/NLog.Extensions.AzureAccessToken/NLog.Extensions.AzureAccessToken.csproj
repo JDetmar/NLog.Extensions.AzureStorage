@@ -13,8 +13,7 @@
 
     <Description>NLog AccessTokenLayoutRenderer for application authentication and acquire AccessToken for resource.</Description>
     <Authors>jdetmar</Authors>
-    <CurrentYear>$([System.DateTime]::Now.ToString(yyyy))</CurrentYear>
-    <Copyright>Copyright (c) $(CurrentYear) - jdetmar</Copyright>
+    <Copyright>Copyright (c) 2017 - jdetmar</Copyright>
 
     <PackageTags>NLog;Azure;AccessToken;Authentication;AppAuthentication</PackageTags>
     <PackageIcon>logo64.png</PackageIcon>

@@ -1,0 +1,15 @@
+<Project>
+  <!-- Reproducible builds: the same commit, SDK (global.json) and lock files give byte-identical DLLs.
+       Automatic on GitHub Actions; pass -p:ContinuousIntegrationBuild=true to rebuild a release elsewhere. -->
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <!-- CI passes -p:RestoreLockedMode=true itself; keying it off GITHUB_ACTIONS would also lock
+         Dependabot's restores (it runs with GITHUB_ACTIONS set) and stop it updating lock files. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+</Project>
