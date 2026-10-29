@@ -6,21 +6,19 @@
           BeforeTargets="CoreCompile"
           DependsOnTargets="GenerateAssemblyInfo;GenerateTargetFrameworkMonikerAttribute"
           Condition="'$(ContinuousIntegrationBuild)' == 'true'">
-    <NormalizeLineEndings Files="@(Compile)" Directory="$(MSBuildProjectDirectory)/$(BaseIntermediateOutputPath)" />
+    <NormalizeLineEndings Files="$(GeneratedAssemblyInfoFile);$(TargetFrameworkMonikerAssemblyAttributesPath)" />
   </Target>
 
   <UsingTask TaskName="NormalizeLineEndings" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
     <ParameterGroup>
       <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
-      <Directory Required="true" />
     </ParameterGroup>
     <Task>
       <Code Type="Fragment" Language="cs"><![CDATA[
-        var dir = System.IO.Path.GetFullPath(Directory);
         foreach (var file in Files)
         {
             var path = file.GetMetadata("FullPath");
-            if (!path.StartsWith(dir, StringComparison.OrdinalIgnoreCase))
+            if (!System.IO.File.Exists(path))
                 continue;
             var bytes = System.IO.File.ReadAllBytes(path);
             var lf = new System.Collections.Generic.List<byte>(bytes.Length);

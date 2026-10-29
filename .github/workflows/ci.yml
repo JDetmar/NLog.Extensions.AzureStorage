@@ -40,7 +40,7 @@ jobs:
       run: dotnet --version
 
     - name: Restore and Build
-      run: dotnet build src\NLog.Extensions.AzureStorage.sln -c Release --verbosity minimal
+      run: dotnet build src\NLog.Extensions.AzureStorage.sln -c Release -p:RestoreLockedMode=true --verbosity minimal
 
     - name: Upload build artifacts for matrix jobs
       uses: actions/upload-artifact@v4
@@ -88,7 +88,7 @@ jobs:
         name: build-output
 
     - name: Restore ${{ matrix.project }}
-      run: dotnet restore src\${{ matrix.project }}
+      run: dotnet restore src\${{ matrix.project }} --locked-mode
 
     - name: Pack ${{ matrix.project }}
       run: dotnet pack src\${{ matrix.project }} -c Release --no-build --verbosity minimal
@@ -155,7 +155,7 @@ jobs:
         global-json-file: global.json
 
     - name: Build
-      run: dotnet build src/NLog.Extensions.AzureStorage.sln -c Release --verbosity minimal
+      run: dotnet build src/NLog.Extensions.AzureStorage.sln -c Release -p:RestoreLockedMode=true --verbosity minimal
 
     - name: Download Windows build
       uses: actions/download-artifact@v4

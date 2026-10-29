@@ -74,7 +74,7 @@ and so [NLog.Extensions.AzureCosmosTable](https://www.nuget.org/packages/NLog.Ex
 The DLLs in each NuGet package are built reproducibly, so you can check that a package was built from its source commit.
 CI enforces this on every commit by rebuilding on Linux and requiring DLLs byte-identical to the Windows build that gets packed.
 
-Install the .NET SDK version pinned in `global.json`, then build the package's tag (`<PackageId>-<Version>`, also recorded as `commit` in the package's `.nuspec`):
+Install exactly the .NET SDK version pinned in `global.json` (any other version is refused), then build the package's tag (`<PackageId>-<Version>`, also recorded as `commit` in the package's `.nuspec`):
 
 ```bash
 git clone https://github.com/JDetmar/NLog.Extensions.AzureStorage.git

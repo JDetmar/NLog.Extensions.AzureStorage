@@ -38,7 +38,9 @@ After merge: Bump version in affected `.csproj` files and update `<PackageReleas
 ### SDK and Lock Files
 
 Builds are reproducible, so the .NET SDK is pinned in `global.json` and every project has a committed `packages.lock.json`.
-CI restores in locked mode and fails if a lock file is out of date.
+Building locally, including the `dotnet test` commands above, needs exactly that SDK version installed; any other version fails with a message pointing here.
+CI restores in locked mode (`-p:RestoreLockedMode=true`) and fails if a lock file is out of date.
+Dependabot's NuGet PRs update the lock files themselves.
 
 The lock files include SDK-bundled packages such as `Microsoft.NET.ILLink.Tasks`, so a Dependabot PR that bumps `global.json` also needs fresh lock files.
 Install the new SDK, run this, and push the result to the PR:
